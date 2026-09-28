@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PoGO Battle Randomiser – New Session</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; background:#020617; color:#e5e7eb; margin:0; }
+    .container { max-width:480px; margin:0 auto; padding:1.5rem; }
+    label { display:block; margin-top:1rem; }
+    select, button {
+      width:100%; padding:0.6rem 0.8rem; border-radius:999px;
+      border:1px solid #4b5563; background:#020617; color:#e5e7eb;
+    }
+    button {
+      margin-top:1.5rem; background:#22c55e; color:#022c22;
+      border:none; font-weight:600; cursor:pointer;
+    }
+    input[type="number"] {
+      width:3rem; padding:0.3rem 0.4rem;
+      border-radius:999px; border:1px solid #4b5563;
+      background:#020617; color:#e5e7eb;
+      text-align:center; font-size:0.85rem;
+    }
+    input[type="checkbox"] {
+      width:auto;
+    }
+    .rule-row {
+      display:flex;
+      align-items:center;
+      gap:0.5rem;
+      margin-top:0.25rem;
+      font-size:0.9rem;
+    }
+    .rule-row span {
+      flex:1;
+    }
+    details {
+      margin-top:0.75rem;
+      border:1px solid #1f2937;
+      border-radius:12px;
+      padding:0.5rem 0.75rem 0.75rem;
+    }
+    summary {
+      list-style:none;
+      cursor:pointer;
+      font-size:0.9rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    summary::-webkit-details-marker { display:none; }
+    .caret {
+      font-size:0.8rem;
+      opacity:0.7;
+      transition:transform 0.15s ease-out;
+    }
+    details[open] .caret {
+      transform:rotate(90deg);
+    }
+    .section-hint {
+      margin:0.25rem 0 0.5rem;
+      font-size:0.75rem;
+      color:#9ca3af;
+    }
+    .cup-row {
+      display:flex;
+      align-items:center;
+      gap:0.5rem;
+      margin-top:0.25rem;
+      font-size:0.85rem;
+    }
+    .cup-row span {
+      flex:1;
+    }
+    .locked {
+      opacity:0.35;
+    }
+    .locked input {
+      cursor:not-allowed;
+    }
+    textarea {
+      width:100%;
+      min-height:3rem;
+      border-radius:12px;
+      border:1px solid #4b5563;
+      background:#020617;
+      color:#e5e7eb;
+      padding:0.4rem 0.6rem;
+      font-size:0.85rem;
+      resize:vertical;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Pokémon GO Battle League Randomiser</h1>
+    <p>Create a new session for your lobby screen.</p>
+
+    <form method="post">
+      <!-- Chaos / profile selection -->
+      <label>
+        Chaos profile
+        <select name="randomness_level" id="randomness_level">
+          <option value="1">1 – Chill (league flavoured)</option>
+          <option value="2">2 – Spicy</option>
+          <option value="3">3 – Full goblin chaos</option>
+          <option value="custom">Custom</option>
+        </select>
+      </label>
+
+      <!-- CUP SETTINGS -->
+      <details>
+        <summary>
+          <span>Cup settings (static filter)</span>
+          <span class="caret">▶</span>
+        </summary>
+        <p class="section-hint">
+          Add your own filter base here, and ban these randomisers below. Example: @dragon, dragon - untick moves and typing randomisers. 
+        </p>
+		
+		<label style="margin-top:0.5rem;">
+		  Load custom Cup
+		  <select id="custom_cup_select" name="custom_cup">
+			<option value="">None</option>
+			{% for cup in custom_cups %}
+			  <option value="{{ cup.filename }}">{{ cup.name }}</option>
+			{% endfor %}
+		  </select>
+		</label>
+		
+        <label class="cup-row">
+          <input type="checkbox" name="enable_cup" id="enable_cup">
+          <span>Enable static Cup filter for this session</span>
+        </label>
+
+        <label style="margin-top:0.5rem;">
+          Cup league
+          <select name="cup_league" id="cup_league">
+            {% for key, league in leagues.items() %}
+              <option value="{{ key }}" {% if key == "master" %}selected{% endif %}>
+                {{ league.display }}
+              </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label style="margin-top:0.5rem;">
+          Static Cup search (prepended to every battle)
+          <textarea name="cup_search" id="cup_search"
+            placeholder="@dragon for Dragon-type fast or charged moves, or any PoGO search string"></textarea>
+        </label>
+
+        <label style="margin-top:0.5rem; display:flex; align-items:center; gap:0.5rem; font-size:0.9rem;">
+          <span style="flex:1;">Target number of battles in this session</span>
+          <input type="number" name="battle_limit" id="battle_limit" min="1" max="50" value="5" style="width:3.5rem;">
+        </label>
+
+        <p class="section-hint">Lock rule families to the Cup (these will be greyed out below).</p>
+
+		<div style="margin-top:0.25rem;">
+		  <label class="cup-row" data-family="type">
+			<input type="checkbox" class="cup-lock">
+			<span>🧬 Type rules</span>
+		  </label>
+
+		  <label class="cup-row" data-family="move">
+			<input type="checkbox" class="cup-lock">
+			<span>⚡ Random Move typing</span>
+		  </label>
+
+		  <label class="cup-row" data-family="cp">
+			<input type="checkbox" class="cup-lock">
+			<span>📊 CP Limit</span>
+		  </label>
+
+		  <label class="cup-row" data-family="region">
+			<input type="checkbox" class="cup-lock">
+			<span>🌍 Random Region</span>
+		  </label>
+
+		  <label class="cup-row" data-family="shiny">
+			<input type="checkbox" class="cup-lock">
+			<span>✨ Shiny</span>
+		  </label>
+
+		  <label class="cup-row" data-family="legendary">
+			<input type="checkbox" class="cup-lock">
+			<span>👑 Legendary, Mythical, Ultra Beasts</span>
+		  </label>
+
+		  <label class="cup-row" data-family="shadow">
+			<input type="checkbox" class="cup-lock">
+			<span>👻 Shadow / Purified rules</span>
+		  </label>
+
+		  <label class="cup-row" data-family="recent">
+			<input type="checkbox" class="cup-lock">
+			<span>⏱️ Catch Cup (Last 90 days)</span>
+		  </label>
+
+		  <label class="cup-row" data-family="xl">
+			<input type="checkbox" class="cup-lock">
+			<span>🦶 XL & XXL</span>
+		  </label>
+
+		  <label class="cup-row" data-family="xs">
+			<input type="checkbox" class="cup-lock">
+			<span>🐾 XS & XXS</span>
+		  </label>
+
+		  <label class="cup-row" data-family="meta">
+			<input type="checkbox" class="cup-lock">
+			<span>🚫 Meta moves banned</span>
+		  </label>
+
+		  <label class="cup-row" data-family="mega">
+			<input type="checkbox" class="cup-lock">
+			<span>🧬 Mega Allowed</span>
+		  </label>
+
+		  <label class="cup-row" data-family="weather">
+			<input type="checkbox" class="cup-lock">
+			<span>⛈️ Weather boosted attacks (@Weather)</span>
+		  </label>
+		</div>
+
+      </details>
+
+		<!-- BASIC SETTINGS -->
+		<details open>
+		  <summary>
+			<span>Basic</span>
+			<span class="caret">▶</span>
+		  </summary>
+		  <p class="section-hint">
+			These are the core random rules. The chaos profile sets defaults for them.
+		  </p>
+
+		  <label class="rule-row" data-family="shiny">
+			<input type="checkbox" name="enable_shiny" checked>
+			<span>✨ Shiny</span>
+			<input type="number" name="weight_shiny" min="0" max="10" value="3">
+		  </label>
+
+		  <label class="rule-row" data-family="legendary">
+			<input type="checkbox" name="enable_legendary" checked>
+			<span>👑 Legendary, Mythical, Ultra Beasts</span>
+			<input type="number" name="weight_legendary" min="0" max="10" value="3">
+		  </label>
+
+		  <label class="rule-row" data-family="cp">
+			<input type="checkbox" name="enable_cp" checked>
+			<span>📊 CP Limit</span>
+			<input type="number" name="weight_cp" min="0" max="10" value="3">
+		  </label>
+
+		  <label class="rule-row" data-family="type">
+			<input type="checkbox" name="enable_type" checked>
+			<span>🧬 Random Typing</span>
+			<input type="number" name="weight_type" min="0" max="10" value="3">
+		  </label>
+
+		  <label class="rule-row" data-family="region">
+			<input type="checkbox" name="enable_region" checked>
+			<span>🌍 Random Region</span>
+			<input type="number" name="weight_region" min="0" max="10" value="3">
+		  </label>
+
+		  <label class="rule-row" data-family="move">
+			<input type="checkbox" name="enable_move" checked>
+			<span>⚡ Random Move Typing</span>
+			<input type="number" name="weight_move" min="0" max="10" value="3">
+		  </label>
+
+		  <label class="rule-row" data-family="shadow">
+			<input type="checkbox" name="enable_shadow" checked>
+			<span>👻 Shadow & Purified</span>
+			<input type="number" name="weight_shadow" min="0" max="10" value="3">
+		  </label>
+
+		  <label class="rule-row" data-family="recent">
+			<input type="checkbox" name="enable_recent" checked>
+			<span>⏱️ Catch Cup (last 90 days)</span>
+			<input type="number" name="weight_recent" min="0" max="10" value="3">
+		  </label>
+
+		  <label class="rule-row" data-family="xl">
+			<input type="checkbox" name="enable_xl" checked>
+			<span>🦶 XL & XXL</span>
+			<input type="number" name="weight_xl" min="0" max="10" value="3">
+		  </label>
+		</details>
+
+
+		<!-- EXPERIMENTAL SETTINGS -->
+		<details>
+		  <summary>
+			<span>Experimental</span>
+			<span class="caret">▶</span>
+		  </summary>
+		  <p class="section-hint">
+			Extra spice. Good for higher chaos profiles or themed cups.
+		  </p>
+
+		  <label class="rule-row" data-family="meta">
+			<input type="checkbox" name="enable_meta" checked>
+			<span>🚫 Meta moves banned</span>
+			<input type="number" name="weight_meta" min="0" max="10" value="3">
+		  </label>
+
+		  <label class="rule-row" data-family="mega">
+			<input type="checkbox" name="enable_mega" checked>
+			<span>🧬 Mega Allowed</span>
+			<input type="number" name="weight_mega" min="0" max="10" value="3">
+		  </label>
+
+		  <label class="rule-row" data-family="buddy">
+			<input type="checkbox" name="enable_buddy" checked>
+			<span>🤝 Buddy 3 & 4</span>
+			<input type="number" name="weight_buddy" min="0" max="10" value="3">
+		  </label>
+
+		  <label class="rule-row" data-family="xs">
+			<input type="checkbox" name="enable_xs" checked>
+			<span>🐾 XXS & XS</span>
+			<input type="number" name="weight_xs" min="0" max="10" value="3">
+		  </label>
+
+		  <label class="rule-row" data-family="weather">
+			<input type="checkbox" name="enable_weather">
+			<span>⛈️ Weather boosted attacks (@Weather)</span>
+			<input type="number" name="weight_weather" min="0" max="10" value="0">
+		  </label>
+
+		  <label class="rule-row" data-family="mega_lvl">
+			<input type="checkbox" name="enable_mega_l">
+			<span>🔶 Mega level 2-3</span>
+			<input type="number" name="weight_mega_l" min="0" max="10" value="0">
+		  </label>
+		</details>
+      <button type="submit">Start Battle?</button>
+    </form>
+
+    {% if sessions %}
+      <hr style="margin:2rem 0;border-color:#1f2937;">
+      <h2>Resume a session</h2>
+      <ul>
+        {% for sid in sessions %}
+          <li>
+            <a href="{{ url_for('session_view', session_id=sid) }}" style="color:#93c5fd;">
+              {{ sid }}
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+
+<script>
+  const chaosSelect = document.getElementById('randomness_level');
+  const ruleRows = document.querySelectorAll('.rule-row');
+  const cupLocks = document.querySelectorAll('.cup-lock');
+  const enableCup = document.getElementById('enable_cup');
+  const cupSearch = document.getElementById('cup_search');
+  const cupLeague = document.getElementById('cup_league');
+  const battleLimit = document.getElementById('battle_limit');
+  const customCupSelect = document.getElementById('custom_cup_select');
+  const customCups      = {{ custom_cups|tojson|safe }};
+
+  // Same idea as before: presets for Chill / Spicy / Goblin
+  const PRESETS = {
+    "1": { // Chill
+      shiny:{e:true,w:1}, legendary:{e:true,w:1}, cp:{e:true,w:1},
+      type:{e:true,w:4}, region:{e:true,w:2}, move:{e:true,w:1},
+      meta:{e:false,w:0}, shadow:{e:true,w:1}, recent:{e:true,w:1},
+      mega:{e:true,w:1}, xl:{e:true,w:1}, xs:{e:true,w:1}, buddy:{e:true,w:1},
+      weather:{e:false,w:0}, mega_lvl:{e:false,w:0},
+    },
+    "2": { // Spicy
+      shiny:{e:true,w:2}, legendary:{e:true,w:2}, cp:{e:true,w:3},
+      type:{e:true,w:3}, region:{e:true,w:2}, move:{e:true,w:3},
+      meta:{e:true,w:1}, shadow:{e:true,w:2}, recent:{e:true,w:2},
+      mega:{e:true,w:2}, xl:{e:true,w:2}, xs:{e:true,w:1}, buddy:{e:true,w:1},
+      weather:{e:false,w:0}, mega_lvl:{e:false,w:0},
+    },
+    "3": { // Full goblin chaos
+      shiny:{e:true,w:3}, legendary:{e:true,w:3}, cp:{e:true,w:4},
+      type:{e:true,w:2}, region:{e:true,w:3}, move:{e:true,w:4},
+      meta:{e:true,w:2}, shadow:{e:true,w:3}, recent:{e:true,w:3},
+      mega:{e:true,w:3}, xl:{e:true,w:3}, xs:{e:true,w:1}, buddy:{e:true,w:1},
+      weather:{e:false,w:0}, mega_lvl:{e:false,w:0},
+    }
+  };
+
+  let applyingPreset = false;
+
+  function applyPreset(level) {
+    const preset = PRESETS[level];
+    if (!preset) return;
+    applyingPreset = true;
+    Object.entries(preset).forEach(([family, cfg]) => {
+      const row = document.querySelector(`.rule-row[data-family="${family}"]`);
+      if (!row) return;
+      const cb = row.querySelector('input[type="checkbox"]');
+      const num = row.querySelector('input[type="number"]');
+      if (!cb || !num) return;
+      cb.checked = cfg.e;
+      num.value = cfg.w;
+      num.disabled = !cfg.e;
+      if (!cfg.e) num.value = '0';
+    });
+    applyingPreset = false;
+    syncCupLocks(); // keep locks respected even after preset
+  }
+
+  function markCustomFromCup() {
+    if (chaosSelect && chaosSelect.value !== 'custom') {
+      chaosSelect.value = 'custom';
+    }
+  }
+
+  function applyCupToForm(cup) {
+    if (!cup) return;
+
+    // Cup filter bits
+    if (enableCup) {
+      enableCup.checked = !!cup.enabled;
+    }
+    if (cupSearch) {
+      cupSearch.value = cup.search || "";
+    }
+    if (cupLeague && cup.league) {
+      cupLeague.value = cup.league;
+    }
+    if (battleLimit) {
+      if (cup.battles !== null && cup.battles !== undefined) {
+        battleLimit.value = cup.battles;
+      }
+    }
+
+    // Randomisers: families map onto .rule-row[data-family="..."]
+    if (cup.families) {
+      Object.entries(cup.families).forEach(([family, cfg]) => {
+        const row = document.querySelector(`.rule-row[data-family="${family}"]`);
+        if (!row) return;
+
+        const cb  = row.querySelector('input[type="checkbox"]');
+        const num = row.querySelector('input[type="number"]');
+        if (!cb || !num) return;
+
+        let enabled = cfg.enabled;
+        let weight  = cfg.weight;
+
+        // If both are None, don't override existing UI / preset for that family
+        if (enabled === null && weight === null) {
+          return;
+        }
+
+        // If only weight is given, infer enabled from it
+        if (enabled === null && weight !== null) {
+          enabled = weight > 0;
+        }
+
+        if (enabled !== null) {
+          cb.checked = !!enabled;
+          num.disabled = !enabled;
+          if (!enabled) {
+            // disabled => force weight 0
+            weight = 0;
+          }
+        }
+
+        if (weight !== null) {
+          num.value = String(weight);
+        }
+      });
+    }
+
+    markCustomFromCup();
+    syncCupLocks();
+  }
+
+  if (customCupSelect) {
+    customCupSelect.addEventListener('change', () => {
+      const filename = customCupSelect.value;
+      if (!filename) return;
+
+      const cup = customCups.find(c => c.filename === filename);
+      if (!cup) return;
+
+      applyCupToForm(cup);
+    });
+  }
+
+  function markCustomIfNeeded() {
+    if (applyingPreset) return;
+    if (chaosSelect.value !== 'custom') {
+      chaosSelect.value = 'custom';
+    }
+  }
+
+  function initRuleRowBehaviour() {
+    ruleRows.forEach(row => {
+      const cb  = row.querySelector('input[type="checkbox"]');
+      const num = row.querySelector('input[type="number"]');
+      if (!cb || !num) return;
+
+      function syncDisabled() {
+        num.disabled = !cb.checked;
+        if (!cb.checked) {
+          num.value = '0';
+        } else if (num.value === '0') {
+          num.value = '1';
+        }
+      }
+
+      cb.addEventListener('change', () => {
+        syncDisabled();
+        markCustomIfNeeded();
+      });
+
+      num.addEventListener('input', () => {
+        markCustomIfNeeded();
+      });
+
+      syncDisabled();
+    });
+  }
+
+  function syncCupLocks() {
+    cupLocks.forEach(lockCb => {
+      const row = lockCb.closest('.cup-row');
+      const family = row.getAttribute('data-family');
+      const target = document.querySelector(`.rule-row[data-family="${family}"]`);
+      if (!target) return;
+      const tCb  = target.querySelector('input[type="checkbox"]');
+      const tNum = target.querySelector('input[type="number"]');
+      if (!tCb || !tNum) return;
+
+      if (lockCb.checked && enableCup.checked) {
+        target.classList.add('locked');
+        tCb.checked = false;
+        tCb.disabled = true;
+        tNum.disabled = true;
+        tNum.value = '0';
+      } else {
+        target.classList.remove('locked');
+        tCb.disabled = false;
+        // restore enabled state based on checkbox
+        tNum.disabled = !tCb.checked;
+        if (tCb.checked && tNum.value === '0') {
+          tNum.value = '1';
+        }
+      }
+    });
+  }
+
+  function markCustomFromCup() {
+    markCustomIfNeeded();
+  }
+
+  chaosSelect.addEventListener('change', () => {
+    const val = chaosSelect.value;
+    if (PRESETS[val]) {
+      applyPreset(val);
+    }
+    // Custom leaves everything as is
+  });
+
+  cupLocks.forEach(cb => {
+    cb.addEventListener('change', () => {
+      syncCupLocks();
+      markCustomFromCup();
+    });
+  });
+
+  if (enableCup) {
+    enableCup.addEventListener('change', () => {
+      syncCupLocks();
+      markCustomFromCup();
+    });
+  }
+
+  [cupSearch, cupLeague, battleLimit].forEach(input => {
+    if (!input) return;
+    input.addEventListener('input', markCustomFromCup);
+    input.addEventListener('change', markCustomFromCup);
+  });
+
+  // Initialise everything
+  initRuleRowBehaviour();
+  applyPreset(chaosSelect.value || "1");
+  syncCupLocks();
+</script>
+</body>
+</html>

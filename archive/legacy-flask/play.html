@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Battle – {{ session_id }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; background:#020617; color:#e5e7eb; margin:0; }
+    .container { max-width:480px; margin:0 auto; padding:1.5rem; }
+    button {
+      width:100%; padding:0.7rem; border-radius:999px;
+      border:none; background:#3b82f6; color:#eff6ff;
+      font-size:1rem; font-weight:600; cursor:pointer; margin-top:1rem;
+    }
+    code {
+      word-break:break-all; background:#0b1120; padding:0.4rem 0.5rem;
+      border-radius:8px; display:block; margin-top:0.5rem;
+    }
+    ul { padding-left:1.25rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Hi, {{ player_name }}</h1>
+    <p>Session: <strong>{{ session_id }}</strong></p>
+
+    <div id="status">Waiting for host to start…</div>
+    <div id="round-info" style="margin-top:1rem;"></div>
+    <button id="copy-btn" style="display:none;">Copy search string</button>
+  </div>
+
+	<script>
+	  const sessionId = "{{ session_id }}";
+	  const playerName = "{{ player_name }}";
+
+	  let lastRound = 0;
+	  let lastSearch = "";
+	  let currentSearch = "";
+
+	  async function pollState() {
+		try {
+		  const res = await fetch(`/api/session/${sessionId}/state?ts=` + Date.now());
+		  if (!res.ok) return;
+		  const data = await res.json();
+		  const round = data.current_round_data;
+
+		  if (!round) {
+			document.getElementById('status').textContent = 'Waiting for host to start…';
+			document.getElementById('round-info').innerHTML = '';
+			document.getElementById('copy-btn').style.display = 'none';
+			lastRound = 0;
+			lastSearch = "";
+			currentSearch = "";
+			return;
+		  }
+
+		  document.getElementById('status').textContent = '';
+
+		  // Only redraw if something actually changed
+		  if (round.round !== lastRound || round.search_string !== lastSearch) {
+			currentSearch = round.search_string;
+			lastRound = round.round;
+			lastSearch = round.search_string;
+			renderRound(round);
+		  }
+		} catch (e) {
+		  // ignore for now
+		}
+	  }
+
+		function renderRound(round) {
+		  const info = document.getElementById('round-info');
+		  const rulesHtml = round.rules.map(r => `<li>${r.display}</li>`).join('');
+
+		  const playersHtml =
+			round.players && round.players.length === 2
+			  ? `<p><strong>Battle:</strong> ${round.players[0]} vs ${round.players[1]}</p>`
+			  : '';
+
+		  info.innerHTML = `
+			<h2>Round ${round.round}</h2>
+			${playersHtml}
+			<p>Paste this into Pokémon GO:</p>
+			<textarea id="search-string"
+					  readonly
+					  rows="2"
+					  style="width:100%;border-radius:8px;background:#0b1120;color:#e5e7eb;border:none;padding:0.5rem;overflow-x:auto;">${round.search_string}</textarea>
+			<h3>Rules</h3>
+			<ul>${rulesHtml}</ul>
+		  `;
+
+		const ta = document.getElementById('search-string');
+		ta.addEventListener('focus', () => ta.select());
+		ta.addEventListener('click', () => ta.select());
+
+		document.getElementById('copy-btn').style.display = 'block';
+		document.getElementById('copy-btn').textContent = 'Copy search string';
+	  }
+
+	  async function copySearch() {
+		const ta = document.getElementById('search-string');
+		if (!ta) return;
+
+		ta.focus();
+		ta.select();
+
+		let copied = false;
+
+		// Preferred: new clipboard API in secure contexts (https / localhost)
+		if (navigator.clipboard && window.isSecureContext) {
+		  try {
+			await navigator.clipboard.writeText(ta.value);
+			copied = true;
+		  } catch (e) {
+			copied = false;
+		  }
+		}
+
+		// Fallback: old-school execCommand (often still works over plain http)
+		if (!copied) {
+		  try {
+			copied = document.execCommand('copy');
+		  } catch (e) {
+			copied = false;
+		  }
+		}
+
+		const btn = document.getElementById('copy-btn');
+		if (copied) {
+		  btn.textContent = 'Copied!';
+		} else {
+		  // At least leave it selected so they can long-press → Copy
+		  btn.textContent = 'Text selected, copy manually';
+		}
+
+		// Don't re-render, so the selection stays until they tap elsewhere
+		setTimeout(() => {
+		  btn.textContent = 'Copy search string';
+		}, 2000);
+	  }
+
+	  document.getElementById('copy-btn').addEventListener('click', copySearch);
+
+	  setInterval(pollState, 2000);
+	  pollState();
+	</script>
+</body>
+</html>

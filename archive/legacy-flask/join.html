@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Join session {{ session_id }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; background:#020617; color:#e5e7eb; margin:0; }
+    .container { max-width:480px; margin:0 auto; padding:1.5rem; }
+    input {
+      width:100%; padding:0.6rem 0.8rem; margin-top:0.25rem;
+      border-radius:999px; border:1px solid #4b5563;
+      background:#020617; color:#e5e7eb;
+    }
+    label { display:block; margin-top:1rem; font-size:0.9rem; }
+    button {
+      margin-top:1.5rem; width:100%; padding:0.7rem;
+      border-radius:999px; border:none; background:#22c55e;
+      color:#022c22; font-size:1rem; font-weight:600; cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Join Battle</h1>
+    <p>Session: <strong>{{ session_id }}</strong></p>
+    <form method="post">
+      <label>
+        Handle
+        <input type="text" name="name" required maxlength="20" placeholder="Trainer name">
+      </label>
+      <label>
+        Emoji / icon (optional)
+        <input type="text" name="avatar" maxlength="4" placeholder="🕷️">
+      </label>
+      <button type="submit">Join</button>
+    </form>
+  </div>
+</body>
+</html>

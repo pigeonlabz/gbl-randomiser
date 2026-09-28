@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111815">
+  <meta name="description" content="Generate a fun Pokémon GO Battle League search filter for friend battles.">
+  <title>Pokémon GO GBL Randomiser</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <p class="eyebrow">A tiny friend-battle tool</p>
+      <h1>Pokémon GO GBL Randomiser</h1>
+      <p class="intro">Get a fresh Pokémon search filter for your next battle.</p>
+    </header>
+
+    <section class="result-panel" aria-labelledby="result-title">
+      <div class="result-heading">
+        <h2 id="result-title">Your battle filter</h2>
+        <button class="button button-secondary" id="copy-filter" type="button">Copy</button>
+      </div>
+      <label class="visually-hidden" for="search-output">Pokémon GO search string</label>
+      <textarea id="search-output" rows="2" readonly spellcheck="false" aria-describedby="copy-status"></textarea>
+      <p id="copy-status" class="status" role="status" aria-live="polite"></p>
+      <h3>Rules</h3>
+      <ul id="rule-list" class="rule-list" aria-live="polite"></ul>
+      <p id="generation-note" class="generation-note" role="status" aria-live="polite"></p>
+    </section>
+
+    <form id="filter-form" class="controls">
+      <div class="control-grid">
+        <label class="control" for="league-select">
+          <span>League</span>
+          <select id="league-select" name="league">
+            <option value="little">Little Cup</option>
+            <option value="great" selected>Great League</option>
+            <option value="ultra">Ultra League</option>
+            <option value="master">Master League</option>
+          </select>
+        </label>
+
+        <label class="control" for="mutator-count">
+          <span>Mutators</span>
+          <select id="mutator-count" name="count">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+        </label>
+      </div>
+
+      <fieldset class="randomness-control">
+        <legend>Randomness</legend>
+        <div class="choice-row">
+          <label class="choice"><input id="randomness-chill" type="radio" name="randomness" value="chill" checked><span>Chill</span></label>
+          <label class="choice"><input id="randomness-spicy" type="radio" name="randomness" value="spicy"><span>Spicy</span></label>
+          <label class="choice"><input id="randomness-chaos" type="radio" name="randomness" value="chaos"><span>Chaos</span></label>
+        </div>
+      </fieldset>
+
+      <button class="button button-primary" type="submit">Generate New Filter</button>
+
+      <details id="advanced-settings" class="advanced-settings">
+        <summary>
+          <span>Advanced Settings</span>
+          <span id="advanced-customised" class="customised" hidden>Customised</span>
+        </summary>
+        <div class="advanced-content">
+          <label class="control static-control" for="static-filter">
+            <span>Static filter</span>
+            <input id="static-filter" name="static-filter" type="text" autocomplete="off" placeholder="e.g. @dragon or !shadow">
+            <small>Added to every generated search. Useful for custom Cups or house rules.</small>
+          </label>
+
+          <fieldset class="family-fieldset">
+            <legend>Rule families</legend>
+            <div id="primary-family-controls" class="family-grid"></div>
+          </fieldset>
+
+          <details class="additional-families">
+            <summary>Additional rule families</summary>
+            <div id="additional-family-controls" class="family-grid"></div>
+          </details>
+
+          <button id="reset-advanced" class="button button-secondary reset-button" type="button">Reset advanced settings</button>
+        </div>
+      </details>
+    </form>
+
+    <footer>
+      <p>Unofficial community tool. Not affiliated with Niantic, Pokémon, Nintendo, or The Pokémon Company.</p>
+      <p class="attribution">A PigeonLabs project</p>
+    </footer>
+  </main>
+
+  <script src="./rule-data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

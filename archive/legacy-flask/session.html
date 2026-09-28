@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PoGO Battle Lobby – {{ session_id }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; background:#0b1120; color:#e5e7eb; margin:0; }
+    .container { max-width:1100px; margin:0 auto; padding:1.5rem; }
+    h1, h2, h3 { margin:0.2rem 0; }
+    .top { display:flex; flex-wrap:wrap; gap:2rem; margin-top:1rem; }
+    .panel { background:#020617; border-radius:12px; padding:1rem 1.25rem; }
+    .players { margin-top:1.5rem; }
+    .player { padding:0.5rem 0.75rem; border-radius:8px; background:#111827; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.75rem; }
+    .avatar { font-size:1.8rem; width:2.2rem; text-align:center; }
+    button {
+      padding:0.6rem 1.4rem; border-radius:999px;
+      border:none; cursor:pointer; font-size:1rem;
+    }
+    .primary { background:#3b82f6; color:white; }
+  </style>
+  <p><a href="/" style="color:#9ca3af;text-decoration:underline;">➕ New session</a></p>
+</head>
+<body>
+  <div class="container">
+    <h1>Pokémon GO Battle League Randomiser</h1>
+    <h2>Session: {{ session_id }}</h2>
+    <p>League: <strong>{{ league_display }}</strong> · Chaos level: <strong>{{ randomness_level }}</strong></p>
+
+    <div class="top">
+      <div class="panel">
+        <h3>Join on your phone</h3>
+        <img src="/qrcode/{{ session_id }}.png" alt="Join QR" style="max-width:240px;width:100%;background:white;border-radius:8px;">
+        <p>Or visit: <strong>{{ join_url }}</strong></p>
+      </div>
+
+      <div class="panel" style="flex:1 1 260px;">
+        <h3>Controls</h3>
+		<button id="next-round" class="primary">Start / Next Battle</button>
+		<button id="reroll" class="secondary" style="margin-left:0.5rem;">Reroll Battle</button>
+		<div id="current-round" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+
+	<div class="players">
+	  <h3>Players</h3>
+	  <div id="players-list"></div>
+	</div>
+
+	<div class="players" style="margin-top:1.5rem;">
+	  <h3>Scoreboard</h3>
+	  <div id="scoreboard"></div>
+	</div>
+
+<div id="winner-modal"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:50;align-items:center;justify-content:center;">
+  <div style="background:#020617;border-radius:12px;padding:1rem 1.25rem;max-width:320px;width:90%;">
+    <h3 id="winner-modal-title">Who won?</h3>
+    <form id="winner-form">
+      <div id="winner-options" style="margin-top:0.75rem;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1rem;">
+        <button type="button" id="winner-cancel"
+                style="padding:0.4rem 0.9rem;border-radius:999px;border:none;background:#374151;color:#e5e7eb;">
+          Cancel
+        </button>
+        <button type="submit"
+                style="padding:0.4rem 0.9rem;border-radius:999px;border:none;background:#22c55e;color:#022c22;font-weight:600;">
+          Confirm
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+	<script>
+		const sessionId = "{{ session_id }}";
+		let latestPlayers = [];
+		let latestRoundNumber = 0;
+		let latestRoundPlayers = [];
+
+
+	  async function fetchState() {
+		try {
+		  const res = await fetch(`/api/session/${sessionId}/state?ts=` + Date.now());
+		  if (!res.ok) return;
+		  const data = await res.json();
+		  renderPlayers(data.players || []);
+		  renderCurrentRound(data.current_round_data || null);
+		} catch (e) {
+		  // ignore for now
+		  console.error('fetchState error', e);
+		}
+	  }
+
+	  function renderPlayers(players) {
+		const container = document.getElementById('players-list');
+		container.innerHTML = '';
+		if (!players.length) {
+		  container.innerHTML = '<p>No players yet.</p>';
+		  return;
+		}
+		players.forEach(p => {
+		  const div = document.createElement('div');
+		  div.className = 'player';
+		  div.innerHTML = `
+			<div class="avatar">${p.avatar || "😀"}</div>
+			<div>${p.name}</div>
+		  `;
+		  container.appendChild(div);
+		});
+	  }
+
+		function renderCurrentRound(round) {
+		  const el = document.getElementById('current-round');
+		  if (!round) {
+			latestRoundNumber = 0;
+			latestRoundPlayers = [];
+			el.innerHTML = '<p>No battle started yet.</p>';
+			return;
+		  }
+
+		  latestRoundNumber = round.round;
+		  latestRoundPlayers = (round.players || []).slice();
+
+		  const rulesHtml = round.rules.map(r => `<li>${r.display}</li>`).join('');
+		  const playersHtml =
+			round.players && round.players.length === 2
+			  ? `<p><strong>Battle:</strong> ${round.players[0]} vs ${round.players[1]}</p>`
+			  : '';
+
+		  el.innerHTML = `
+			<h4>Round ${round.round}</h4>
+			${playersHtml}
+			<p><strong>Search:</strong> <code>${round.search_string}</code></p>
+			<ul>${rulesHtml}</ul>
+		  `;
+		}
+		
+		function openWinnerModal(roundNumber, roundPlayers) {
+	  const modal = document.getElementById('winner-modal');
+	  const title = document.getElementById('winner-modal-title');
+	  const options = document.getElementById('winner-options');
+
+	  title.textContent = `Who won round ${roundNumber}?`;
+	  options.innerHTML = '';
+
+	  const playersForRound = (roundPlayers && roundPlayers.length === 2)
+		? roundPlayers
+		: latestPlayers.map(p => p.name);
+
+	  if (!playersForRound.length) {
+		options.innerHTML = '<p>No players joined yet. You can skip.</p>';
+	  } else {
+		playersForRound.forEach((name, idx) => {
+		  const id = `winner-${idx}`;
+		  options.insertAdjacentHTML('beforeend', `
+			<label style="display:flex;align-items:center;gap:0.4rem;margin-top:0.25rem;">
+			  <input type="radio" name="winner" value="${name}" id="${id}">
+			  <span>${name}</span>
+			</label>
+		  `);
+		});
+	  }
+
+	  // Draw / skip options
+	  options.insertAdjacentHTML('beforeend', `
+		<label style="display:flex;align-items:center;gap:0.4rem;margin-top:0.5rem;font-size:0.9rem;">
+		  <input type="radio" name="winner" value="draw">
+		  <span>Draw</span>
+		</label>
+		<label style="display:flex;align-items:center;gap:0.4rem;margin-top:0.25rem;font-size:0.9rem;">
+		  <input type="radio" name="winner" value="skip" checked>
+		  <span>Skip / no result</span>
+		</label>
+	  `);
+
+	  modal.style.display = 'flex';
+	}
+
+	function closeWinnerModal() {
+	  const modal = document.getElementById('winner-modal');
+	  modal.style.display = 'none';
+	}
+
+	// Hook up modal buttons
+	document.getElementById('winner-cancel').addEventListener('click', () => {
+	  closeWinnerModal();
+	});
+
+	document.getElementById('winner-form').addEventListener('submit', async (e) => {
+	  e.preventDefault();
+	  const choice = document.querySelector('input[name="winner"]:checked');
+	  const winner = choice ? choice.value : 'skip';
+
+	  closeWinnerModal();
+
+	  // record result
+	  await fetch(`/api/session/${sessionId}/result`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+		  round: latestRoundNumber,
+		  winner: winner,
+		}),
+	  });
+
+	  // then move to the next round
+	  const res = await fetch(`/api/session/${sessionId}/next_round`, { method: 'POST' });
+	  if (!res.ok) return;
+	  const round = await res.json();
+	  renderCurrentRound({
+		round: round.round,
+		search_string: round.search_string,
+		rules: round.rules,
+		players: round.players || [],
+	  });
+	  fetchState();
+	});
+
+	
+		document.getElementById('next-round').addEventListener('click', async () => {
+		  // If there hasn't been a round yet, just start one
+		  if (!latestRoundNumber) {
+			const res = await fetch(`/api/session/${sessionId}/next_round`, { method: 'POST' });
+			if (!res.ok) return;
+			const round = await res.json();
+			renderCurrentRound({
+			  round: round.round,
+			  search_string: round.search_string,
+			  rules: round.rules,
+			  players: round.players || [],
+			});
+			fetchState();
+			return;
+		  }
+
+		  // Otherwise, ask who won the current round
+		  openWinnerModal(latestRoundNumber, latestRoundPlayers);
+		});
+
+
+	  // Poll every 2 seconds
+	  setInterval(fetchState, 2000);
+	  fetchState();
+	  
+		document.getElementById('reroll').addEventListener('click', async () => {
+		  const res = await fetch(`/api/session/${sessionId}/reroll`, {
+			method: 'POST'
+		  });
+
+		  if (!res.ok) {
+			alert('No round to reroll yet!');
+			return;
+		  }
+
+		  const round = await res.json();
+
+		  renderCurrentRound({
+			round: round.round,
+			search_string: round.search_string,
+			rules: round.rules,
+			players: latestRoundPlayers   // keep the same A vs B etc.
+		  });
+
+		  fetchState(); // refresh scores / players from server
+		});
+	</script>
+
+</body>
+</html>
