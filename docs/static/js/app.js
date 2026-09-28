@@ -33,30 +33,30 @@
     { id: "mega", label: "Mega", description: "Uses Mega-related eligibility or progress.", ruleFamilies: ["mega", "mega-level"], primary: true },
     { id: "meta-moves", label: "Meta moves", description: "Excludes selected powerful or commonly used moves.", ruleFamilies: ["meta-moves"], primary: true },
     { id: "type-matchups", label: "Type matchups", description: "Uses battle matchup and type-effectiveness restrictions.", ruleFamilies: ["type-effectiveness"] },
-    { id: "special-moves", label: "Special moves", description: "Uses special or unusual move-related filters.", ruleFamilies: ["move-special"] },
     { id: "acquisition", label: "How it was obtained", description: "Uses traits such as Lucky, Traded, Hatched, or Costume.", ruleFamilies: ["origin", "origin-special", "year"] },
     { id: "battle-stats", label: "Appraisal / IVs", description: "Uses appraisal star ranges or battle-stat filters.", ruleFamilies: ["appraisal", "hp", "iv-attack", "iv-defense", "iv-hp", "iv-combo"] },
     { id: "collection", label: "Collection traits", description: "Uses unusual collection and inventory traits.", ruleFamilies: ["lucky", "costume", "candy", "candy-xl", "powered-xl", "distance", "background", "copy-count", "buddy-candy"] },
     { id: "special-forms", label: "Special forms", description: "Uses Dynamax, Gigantamax, or other special forms.", ruleFamilies: ["max", "max-count", "max-move", "special-status"] }
   ];
+  const additionalFamilyIds = new Set(advancedFamilies.filter((definition) => !definition.primary).map((definition) => definition.id));
 
   const profileDefaults = {
     chill: {
       shiny: 3, rarity: 2, cp: 2, "pokemon-type": 9, region: 8, "move-typing": 5,
       "rocket-status": 4, "recent-catch": 6, "xl-size": 4, "xs-size": 4, buddy: 4,
-      weather: 3, mega: 2, "meta-moves": 0, "type-matchups": 2, "special-moves": 3,
+      weather: 3, mega: 2, "meta-moves": 0, "type-matchups": 2,
       acquisition: 4, "battle-stats": 3, collection: 2, "special-forms": 1
     },
     spicy: {
       shiny: 5, rarity: 5, cp: 5, "pokemon-type": 6, region: 4, "move-typing": 7,
       "rocket-status": 5, "recent-catch": 5, "xl-size": 5, "xs-size": 4, buddy: 5,
-      weather: 6, mega: 5, "meta-moves": 4, "type-matchups": 5, "special-moves": 6,
+      weather: 6, mega: 5, "meta-moves": 4, "type-matchups": 5,
       acquisition: 5, "battle-stats": 5, collection: 5, "special-forms": 4
     },
     chaos: {
       shiny: 5, rarity: 6, cp: 7, "pokemon-type": 4, region: 4, "move-typing": 8,
       "rocket-status": 5, "recent-catch": 5, "xl-size": 6, "xs-size": 5, buddy: 4,
-      weather: 7, mega: 7, "meta-moves": 8, "type-matchups": 7, "special-moves": 6,
+      weather: 7, mega: 7, "meta-moves": 8, "type-matchups": 7,
       acquisition: 6, "battle-stats": 7, collection: 7, "special-forms": 8
     }
   };
@@ -90,6 +90,9 @@
   const extraFilterInput = document.getElementById("extra-filter");
   const primaryFamilyControls = document.getElementById("primary-family-controls");
   const additionalFamilyControls = document.getElementById("additional-family-controls");
+  const additionalFamiliesToggle = document.getElementById("additional-families-enabled");
+  const additionalFamilyWarning = document.getElementById("additional-family-warning");
+  const additionalFamilyState = document.getElementById("additional-family-state");
   const filterSummary = document.getElementById("filter-summary");
   const searchOutput = document.getElementById("search-output");
   const ruleList = document.getElementById("rule-list");
@@ -102,6 +105,7 @@
 
   const familyControlElements = new Map();
   let familySettings = {};
+  let additionalFamiliesEnabled = false;
   let activeProfile = "chill";
   let currentCup = null;
   let currentState = null;
@@ -112,12 +116,18 @@
   let copyFeedbackTimer = null;
 
   function makeRuleDisplay(rule) {
-    const year = new Date().getFullYear();
     const display = Object.assign({}, rule);
     display.settingFamily = settingForRuleFamily.get(rule.family) || "collection";
-    display.search = String(rule.search || "")
-      .replaceAll("yearCURRENT", "year" + year)
-      .replaceAll("yearPREVIOUS", "year" + (year - 1));
+    display.search = String(rule.search || "");
+    const calendarYear = rule.meta && rule.meta.calendarYear;
+    if (calendarYear) {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const targetYear = calendarYear === "current" ? currentYear : currentYear - 1;
+      display.search = DATA.yearToAgeRange(targetYear, now);
+      display.label = "Caught in " + targetYear;
+      display.explain = "Caught in " + targetYear + ".";
+    }
     return display;
   }
 
@@ -229,6 +239,7 @@
     pool.forEach((rule) => {
       const setting = familySettings[rule.settingFamily];
       if (!setting || !setting.enabled || setting.weight <= 0) return;
+      if (!additionalFamiliesEnabled && additionalFamilyIds.has(rule.settingFamily)) return;
       if (isFamilyBlockedByCup(rule.settingFamily)) return;
       if (!canAdd(rule, selected) || !isAllowedForLeague(rule, league)) return;
       const groupId = rule.weightGroup || rule.family;
@@ -331,6 +342,10 @@
         : definition.description;
       updateRangeProgress(elements.range);
     });
+    additionalFamiliesToggle.checked = additionalFamiliesEnabled;
+    additionalFamilyControls.classList.toggle("is-opted-out", !additionalFamiliesEnabled);
+    additionalFamilyWarning.hidden = !additionalFamiliesEnabled;
+    additionalFamilyState.textContent = additionalFamiliesEnabled ? "Included in generation" : "Not participating";
     customBadge.hidden = activeProfile !== "custom";
   }
 
@@ -762,6 +777,12 @@
     loadProfileDefaults("chill");
     updateProfileChoices();
     updateCupControls();
+
+    additionalFamiliesToggle.addEventListener("change", () => {
+      additionalFamiliesEnabled = additionalFamiliesToggle.checked;
+      syncFamilyControls();
+      markConfigPending();
+    });
 
     document.querySelectorAll('input[name="randomness"]').forEach((input) => {
       input.addEventListener("change", () => {

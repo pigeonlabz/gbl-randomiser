@@ -10,6 +10,70 @@ window.GBL_RULE_DATA = (() => {
     "kalos", "alola", "galar", "hisui", "paldea"
   ];
 
+  // Curated set of signature, exclusive, Community Day, and meta-defining moves.
+  // Keep these as display names so Pokémon GO search syntax preserves spaces/apostrophes.
+  const META_MOVES = [
+    "Hydro Cannon",
+    "Blast Burn",
+    "Frenzy Plant",
+    "Meteor Mash",
+    "Smack Down",
+    "Aqua Tail",
+    "Volt Switch",
+    "Icicle Spear",
+    "Precipice Blades",
+    "Sunsteel Strike",
+    "Aeroblast",
+    "Payback",
+    "Psystrike",
+    "Sacred Fire",
+    "Ice Burn",
+    "Origin Pulse",
+    "Spacial Rend",
+    "Roar of Time",
+    "Moongeist Beam",
+    "Dragon Ascent",
+    "Glaciate",
+    "Fusion Bolt",
+    "Fusion Flare",
+    "Nature's Madness",
+    "Oblivion Wing",
+    "Behemoth Blade",
+    "Behemoth Bash",
+    "Shadow Force",
+    "Sacred Sword",
+    "Double Iron Bash",
+    "Geomancy",
+    "Bleakwind Storm",
+    "Sandsear Storm",
+    "Wildbolt Storm",
+    "Doom Desire",
+    "Techno Blast",
+    "Rock Wrecker",
+    "V-create"
+  ];
+
+  // Calendar years are approximated with whole local calendar dates because
+  // Pokémon GO's age search uses rolling day buckets, not calendar boundaries.
+  const yearToAgeRange = (year, now = new Date()) => {
+    const targetYear = Number(year);
+    if (!Number.isInteger(targetYear)) throw new TypeError("year must be an integer");
+
+    const dayNumber = (y, month, day) => {
+      const date = new Date(0);
+      date.setUTCHours(0, 0, 0, 0);
+      date.setUTCFullYear(y, month, day);
+      return date.getTime() / 86400000;
+    };
+    const today = dayNumber(now.getFullYear(), now.getMonth(), now.getDate());
+    const yearStart = dayNumber(targetYear, 0, 1);
+    const nextYearStart = dayNumber(targetYear + 1, 0, 1);
+    const yearEnd = nextYearStart - 1;
+    const minAge = Math.max(0, today - yearEnd);
+    const maxAge = Math.max(0, today - yearStart);
+    return `age${Math.min(minAge, maxAge)}-${Math.max(minAge, maxAge)}`;
+  };
+
   const title = (value) => value.charAt(0).toUpperCase() + value.slice(1);
 
   const rule = (id, label, search, pool, family, options = {}) => ({
@@ -190,15 +254,11 @@ window.GBL_RULE_DATA = (() => {
       explain: "Pokemon that know at least one move super-effective against Water-type targets."
     }),
 
-    rule("meta-moves-banned", "No listed meta moves", "!@Hydro Cannon&!@Blast Burn&!@Frenzy Plant&!@Meteor Mash&!@Smack Down&!@Aqua Tail&!@Volt Switch&!@Icicle Spear&!@Precipice Blades&!@Sunsteel Strike&!@Aeroblast&!@Payback&!@Psystrike&!@Sacred Fire&!@Ice Burn", "chaos", "meta-moves", {
+    rule("meta-moves-banned", "No listed meta moves", META_MOVES.map((move) => `!@${move}`).join("&"), "chaos", "meta-moves", {
       scarcity: 4,
-      explain: "Exclude the legacy list of commonly used moves. The list may need updating over time."
+      explain: "Exclude the curated list of meta-defining, signature, and exclusive moves. The list may need updating over time."
     }),
 
-    rule("special-move", "Special move", "@special", "spicy", "move-special", {
-      scarcity: 2,
-      explain: "Pokemon with a special move not currently learnable with a normal TM."
-    }),
     rule("weather-move", "Weather-boosted attack now", "@weather", "spicy", "move-weather", {
       scarcity: 2,
       explain: "Pokemon with one or more attacks boosted by the current weather."
@@ -242,11 +302,13 @@ window.GBL_RULE_DATA = (() => {
       explain: "Pokemon with no buddy history."
     }),
 
-    rule("year-current", "Caught this year", "yearCURRENT", "spicy", "year", {
-      explain: "Pokemon acquired during the current calendar year."
+    rule("year-current", "Caught this year", "", "spicy", "year", {
+      meta: { calendarYear: "current" },
+      explain: "Caught in the current calendar year."
     }),
-    rule("year-previous", "Caught last year", "yearPREVIOUS", "spicy", "year", {
-      explain: "Pokemon acquired during the previous calendar year."
+    rule("year-previous", "Caught last year", "", "spicy", "year", {
+      meta: { calendarYear: "previous" },
+      explain: "Caught in the previous calendar year."
     }),
 
     rule("hp-150", "150 HP or less", "hp-150", "spicy", "hp", {
@@ -429,5 +491,5 @@ window.GBL_RULE_DATA = (() => {
     master: { label: "Master League", description: "Master League: no CP limit.", search: "", maxCp: null }
   };
 
-  return { leagues, rules, types: TYPES, regions: REGIONS };
+  return { leagues, rules, types: TYPES, regions: REGIONS, yearToAgeRange };
 })();

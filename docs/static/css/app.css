@@ -301,7 +301,15 @@ select:focus, input:focus { border-color: var(--line-strong); box-shadow: 0 0 0 
 .family-setting :disabled { cursor: not-allowed; }
 .additional-families { border-top: 1px solid rgba(160, 125, 190, 0.2); padding-top: 12px; }
 .additional-families > summary { color: var(--text-muted); font-size: 0.78rem; }
-.additional-families .family-grid { margin-top: 11px; }
+.additional-family-options { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; margin-top: 12px; }
+.additional-family-toggle { display: flex; align-items: center; gap: 8px; min-height: 40px; color: var(--text); font-size: 0.76rem; font-weight: 750; cursor: pointer; }
+.additional-family-toggle input { width: 17px; height: 17px; margin: 0; accent-color: var(--accent-strong); }
+.additional-family-toggle input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.additional-family-state { color: var(--text-muted); font-size: 0.67rem; text-align: right; }
+.additional-family-warning { margin: 0 0 10px; border-left: 3px solid rgba(234, 190, 111, 0.68); border-radius: 0 7px 7px 0; background: rgba(117, 82, 34, 0.16); padding: 8px 10px; color: #e8d6b8; font-size: 0.72rem; line-height: 1.45; }
+.additional-family-warning[hidden] { display: none; }
+.additional-family-controls { margin-top: 8px; transition: opacity 120ms ease, filter 120ms ease; }
+.additional-family-controls.is-opted-out { opacity: 0.5; filter: saturate(0.6); }
 .reset-button { justify-self: start; min-height: 40px; padding: 8px 12px; font-size: 0.77rem; }
 
 .result-heading { position: relative; z-index: 1; align-items: center; margin-bottom: 18px; }
@@ -410,6 +418,8 @@ h3 { font-size: 1rem; }
   .profile-choice small { font-size: 0.65rem; }
   .family-grid { grid-template-columns: minmax(0, 1fr); }
   .family-setting { grid-template-columns: minmax(0, 1fr) minmax(104px, 0.72fr); }
+  .additional-family-options { justify-content: flex-start; }
+  .additional-family-state { margin-left: 25px; text-align: left; }
   .result-heading { align-items: flex-start; }
   .battle-status { max-width: 130px; font-size: 0.62rem; }
   .search-heading { align-items: center; }

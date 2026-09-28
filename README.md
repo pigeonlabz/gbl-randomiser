@@ -1,27 +1,7 @@
-# Pokémon GO GBL Randomiser
+# GBL Randomiser GitHub Pages build
 
-A tiny, static page that makes a random Pokémon GO search filter for friendly Battle League challenges. It runs in the browser with plain HTML, CSS, and JavaScript; there are no dependencies or build steps.
+This folder is a self-contained static website. It uses local HTML, CSS, JavaScript, and artwork; it does not call a backend or API.
 
-Made by **PigeonLabs**.
+The Cup selector contains bundled snapshots of the Cup presets found in the legacy project. The browser cannot discover or load new Cup files from a server folder on GitHub Pages, and shared battle sessions or server-side match tracking are not available. A visitor can still enter a custom Cup search prefix and optionally track a battle target in the current page.
 
-## Use it
-
-Open [`docs/index.html`](docs/index.html), choose a league, mutator count, and randomness level, then select **Generate New Filter**. Copy the search string into Pokémon GO.
-
-Example filter:
-
-```text
-cp0-1500&shiny&age0-30
-```
-
-## GitHub Pages
-
-In the repository settings, enable GitHub Pages with branch **main** and folder **/docs**. The site is already organized for that source; no build or deployment workflow is needed.
-
-## Local development
-
-Open `docs/index.html` directly in a browser. Edit `docs/index.html`, `docs/styles.css`, and `docs/app.js`; the rule vocabulary is in `docs/rule-data.js`.
-
-The old Flask/session prototype is kept under `archive/legacy-flask/` for reference and is not part of the published site. Artwork with unclear redistribution rights is kept locally under `archive/unverified-artwork/` and excluded from the public release by `.gitignore`.
-
-This is an unofficial community tool developed by **PigeonLabs**. It is not affiliated with, endorsed by, or sponsored by Niantic, Pokémon, Nintendo, or The Pokémon Company. Pokémon and related names are trademarks of their respective owners.
+The rule catalog and weighted Chill, Spicy, and Chaos profile values are ported from the current source project's static rule data and generator. Individual family settings switch the profile to Custom.

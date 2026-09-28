@@ -135,7 +135,15 @@
 
             <details class="additional-families">
               <summary>Additional rule families</summary>
-              <div id="additional-family-controls" class="family-grid"></div>
+              <div class="additional-family-options">
+                <label class="additional-family-toggle" for="additional-families-enabled">
+                  <input id="additional-families-enabled" type="checkbox" aria-describedby="additional-family-warning">
+                  <span>Enable additional rule families</span>
+                </label>
+                <span id="additional-family-state" class="additional-family-state" aria-live="polite">Not participating</span>
+              </div>
+              <p id="additional-family-warning" class="additional-family-warning" hidden>These rules can create very restrictive or occasionally unusable filter combinations. Test generated filters before relying on them.</p>
+              <div id="additional-family-controls" class="family-grid additional-family-controls is-opted-out"></div>
             </details>
 
             <button id="reset-advanced" class="button button-secondary reset-button" type="button">Reset rule settings</button>
