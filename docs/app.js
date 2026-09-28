@@ -1,10 +1,19 @@
 (() => {
   const { leagues, rules, types, regions } = window.GBL_RULE_DATA;
+  const TYPE_ICONS = Object.fromEntries(types.map((type) => [type, `./assets/types/${type}.png`]));
+  const RULE_ICONS = { cp: "cp", shiny: "shiny", rare: "rare", region: "region", shadow: "shadow", purified: "purified", recent: "recent", xl: "xl", xs: "xs", "meta-ban": "meta-ban", mega: "mega", buddy: "buddy", weather: "weather", "mega-level": "mega-level" };
+  const ruleVisuals = window.GBL_RULE_VISUALS;
+  const titleType = (type) => type.charAt(0).toUpperCase() + type.slice(1);
+  const themeIndex = window.crypto && window.crypto.getRandomValues
+    ? window.crypto.getRandomValues(new Uint32Array(1))[0] % types.length
+    : Math.floor(Math.random() * types.length);
+  document.documentElement.dataset.theme = types[themeIndex];
   const form = document.getElementById("filter-form");
   const leagueSelect = document.getElementById("league-select");
   const mutatorCount = document.getElementById("mutator-count");
   const staticFilterInput = document.getElementById("static-filter");
   const ruleList = document.getElementById("rule-list");
+  const filterSummary = document.getElementById("filter-summary");
   const searchOutput = document.getElementById("search-output");
   const copyButton = document.getElementById("copy-filter");
   const copyStatus = document.getElementById("copy-status");
@@ -13,26 +22,26 @@
   const resetAdvancedButton = document.getElementById("reset-advanced");
 
   const advancedFamilies = [
-    { id: "shiny", label: "Shiny", ruleFamilies: ["visual-status"], primary: true },
-    { id: "rarity", label: "Legendary / Mythical / Ultra Beast", ruleFamilies: ["rarity"], primary: true },
-    { id: "cp", label: "CP restriction", ruleFamilies: ["cp"], primary: true },
-    { id: "pokemon-type", label: "Pokémon typing", ruleFamilies: ["pokemon-type"], primary: true },
-    { id: "region", label: "Region", ruleFamilies: ["region"], primary: true },
-    { id: "move-typing", label: "Move typing", ruleFamilies: ["move-type", "move-slot"], primary: true },
-    { id: "rocket-status", label: "Shadow / Purified", ruleFamilies: ["rocket-status"], primary: true },
-    { id: "recent-catch", label: "Recent catch", ruleFamilies: ["age"], primary: true },
-    { id: "xl-size", label: "XL / XXL", ruleFamilies: ["size-xl"], primary: true },
-    { id: "xs-size", label: "XS / XXS", ruleFamilies: ["size-xs"], primary: true },
-    { id: "buddy", label: "Buddy", ruleFamilies: ["buddy"], primary: true },
-    { id: "weather", label: "Weather", ruleFamilies: ["move-weather"], primary: true },
-    { id: "mega", label: "Mega", ruleFamilies: ["mega", "mega-level"], primary: true },
-    { id: "meta-moves", label: "Meta move restrictions", ruleFamilies: ["meta-moves"], primary: true },
-    { id: "type-matchups", label: "Type matchups", ruleFamilies: ["type-effectiveness"] },
-    { id: "special-moves", label: "Special moves", ruleFamilies: ["move-special"] },
-    { id: "acquisition", label: "Acquisition and origin", ruleFamilies: ["origin", "origin-special", "year"] },
-    { id: "battle-stats", label: "Appraisal and battle stats", ruleFamilies: ["appraisal", "hp", "iv-attack", "iv-defense", "iv-hp", "iv-combo"] },
-    { id: "collection", label: "Other collection traits", ruleFamilies: ["lucky", "costume", "candy", "candy-xl", "powered-xl", "distance", "background", "copy-count", "buddy-candy"] },
-    { id: "special-forms", label: "Max and special forms", ruleFamilies: ["max", "max-count", "max-move", "special-status"] }
+    { id: "shiny", label: "Shiny", description: "Restricts the battle to shiny Pokémon.", ruleFamilies: ["visual-status"], primary: true },
+    { id: "rarity", label: "Legendary / Mythical", description: "Uses Legendary, Mythical, or Ultra Beast Pokémon.", ruleFamilies: ["rarity"], primary: true },
+    { id: "cp", label: "Extra CP limit", description: "Adds an additional random CP cap.", ruleFamilies: ["cp"], primary: true },
+    { id: "pokemon-type", label: "Pokémon types", description: "Allows or bans selected Pokémon types.", ruleFamilies: ["pokemon-type"], primary: true },
+    { id: "region", label: "Region", description: "Uses regions such as Kanto, Johto, Hoenn, or Paldea.", ruleFamilies: ["region"], primary: true },
+    { id: "move-typing", label: "Move types", description: "Requires or bans moves of selected types.", ruleFamilies: ["move-type", "move-slot"], primary: true },
+    { id: "rocket-status", label: "Shadow / Purified", description: "Uses Shadow, Purified, or excludes those Pokémon.", ruleFamilies: ["rocket-status"], primary: true },
+    { id: "recent-catch", label: "Recent catches", description: "Restricts the pool by when Pokémon were caught.", ruleFamilies: ["age"], primary: true },
+    { id: "xl-size", label: "XL / XXL", description: "Uses oversized Pokémon.", ruleFamilies: ["size-xl"], primary: true },
+    { id: "xs-size", label: "XS / XXS", description: "Uses unusually small Pokémon.", ruleFamilies: ["size-xs"], primary: true },
+    { id: "buddy", label: "Buddy", description: "Uses Pokémon matching buddy-progress requirements.", ruleFamilies: ["buddy"], primary: true },
+    { id: "weather", label: "Weather", description: "Uses weather-related move filters.", ruleFamilies: ["move-weather"], primary: true },
+    { id: "mega", label: "Mega", description: "Uses Mega-related eligibility or progress.", ruleFamilies: ["mega", "mega-level"], primary: true },
+    { id: "meta-moves", label: "Meta moves", description: "Excludes selected powerful or commonly used moves.", ruleFamilies: ["meta-moves"], primary: true },
+    { id: "type-matchups", label: "Type matchups", description: "Uses battle matchup and type-effectiveness restrictions.", ruleFamilies: ["type-effectiveness"] },
+    { id: "special-moves", label: "Special moves", description: "Uses special or unusual move-related filters.", ruleFamilies: ["move-special"] },
+    { id: "acquisition", label: "How it was obtained", description: "Uses traits such as Lucky, Traded, Hatched, or Costume.", ruleFamilies: ["origin", "origin-special", "year"] },
+    { id: "battle-stats", label: "Appraisal / IVs", description: "Uses appraisal star ranges or battle-stat filters.", ruleFamilies: ["appraisal", "hp", "iv-attack", "iv-defense", "iv-hp", "iv-combo"] },
+    { id: "collection", label: "Collection traits", description: "Uses unusual collection and inventory traits.", ruleFamilies: ["lucky", "costume", "candy", "candy-xl", "powered-xl", "distance", "background", "copy-count", "buddy-candy"] },
+    { id: "special-forms", label: "Special forms", description: "Uses Dynamax, Gigantamax, or other special forms.", ruleFamilies: ["max", "max-count", "max-move", "special-status"] }
   ];
 
   const profileDefaults = {
@@ -124,7 +133,10 @@
       scarcity: 1,
       label,
       explain,
-      search: selected.map((value) => `!${termPrefix}${value}`).join("&")
+      search: selected.map((value) => `!${termPrefix}${value}`).join("&"),
+      meta: family === "pokemon-type" ? { types: selected }
+        : family === "move-type" ? { move_types: selected }
+        : undefined
     };
   }
 
@@ -229,6 +241,11 @@
       checkbox.id = `family-${definition.id}-enabled`;
       const title = document.createElement("span");
       title.textContent = definition.label;
+      const helper = document.createElement("small");
+      helper.className = "family-description";
+      helper.id = "family-" + definition.id + "-description";
+      helper.textContent = definition.description;
+      checkbox.setAttribute("aria-describedby", helper.id);
       toggleLabel.appendChild(checkbox);
       toggleLabel.appendChild(title);
 
@@ -240,25 +257,28 @@
       range.min = "0";
       range.max = "10";
       range.step = "1";
-      range.setAttribute("aria-label", `${definition.label} weight`);
+      range.setAttribute("aria-label", definition.label + " likelihood");
       const output = document.createElement("output");
       output.htmlFor = range.id;
       weightLabel.appendChild(range);
       weightLabel.appendChild(output);
 
       row.appendChild(toggleLabel);
+      row.appendChild(helper);
       row.appendChild(weightLabel);
       container.appendChild(row);
-      familyControlElements.set(definition.id, { checkbox, range, output });
+      familyControlElements.set(definition.id, { checkbox, range, output, row });
 
       checkbox.addEventListener("change", () => {
         familySettings[definition.id].enabled = checkbox.checked;
+        row.classList.toggle("is-disabled", !checkbox.checked);
         updateCustomisedState();
         markConfigPending();
       });
       range.addEventListener("input", () => {
         familySettings[definition.id].weight = Number(range.value);
         output.textContent = range.value;
+        updateRangeProgress(range);
         updateCustomisedState();
         markConfigPending();
       });
@@ -274,14 +294,24 @@
     syncFamilyControls();
   }
 
+  function updateRangeProgress(range) {
+    const minimum = Number(range.min) || 0;
+    const maximum = Number(range.max) || 10;
+    const value = Number(range.value) || 0;
+    const progress = maximum > minimum ? ((value - minimum) / (maximum - minimum)) * 100 : 0;
+    range.style.setProperty("--range-progress", progress + "%");
+  }
+
   function syncFamilyControls() {
     advancedFamilies.forEach((definition) => {
       const elements = familyControlElements.get(definition.id);
       if (!elements) return;
       const setting = familySettings[definition.id];
       elements.checkbox.checked = setting.enabled;
+      elements.row.classList.toggle("is-disabled", !setting.enabled);
       elements.range.value = String(setting.weight);
       elements.output.textContent = String(setting.weight);
+      updateRangeProgress(elements.range);
     });
   }
 
@@ -330,23 +360,127 @@
     render();
   }
 
+  function addIndicator(iconWrap, value, className, label) {
+    if (!value) return;
+    const indicator = document.createElement("span");
+    indicator.className = `visual-indicator ${className}`;
+    indicator.textContent = value;
+    indicator.setAttribute("aria-label", label);
+    iconWrap.appendChild(indicator);
+  }
+
+  function makeVisualIcon(src, alt, size, spec) {
+    const wrapper = document.createElement("span");
+    wrapper.className = "visual-icon";
+    wrapper.setAttribute("aria-hidden", "true");
+    const icon = document.createElement("img");
+    icon.src = src;
+    icon.alt = alt;
+    icon.width = size;
+    icon.height = size;
+    icon.loading = "lazy";
+    icon.addEventListener("error", () => wrapper.classList.add("visual-icon--missing"), { once: true });
+    wrapper.appendChild(icon);
+    addIndicator(wrapper, spec.move ? "@" : "", "visual-indicator--move", "Move type");
+    addIndicator(wrapper, spec.banned ? "!" : "", "visual-indicator--ban", "Banned");
+    return wrapper;
+  }
+
+  function createRuleVisual(rule, className = "rule-visual") {
+    const spec = ruleVisuals.resolve(rule);
+    const visual = document.createElement("span");
+    visual.className = className;
+    visual.setAttribute("aria-hidden", "true");
+
+    if (spec.kind === "types") {
+      spec.types.forEach((type) => {
+        const source = TYPE_ICONS[type];
+        if (source) visual.appendChild(makeVisualIcon(source, `${titleType(type)} type`, 24, spec));
+      });
+    } else if (spec.kind === "rule" && RULE_ICONS[spec.icon]) {
+      visual.appendChild(makeVisualIcon(`./assets/icons/rules/${RULE_ICONS[spec.icon]}.svg`, `${spec.icon} rule`, 24, spec));
+    } else {
+      const marker = document.createElement("span");
+      marker.className = "rule-marker";
+      visual.appendChild(marker);
+    }
+    return visual;
+  }
+
+  function summaryLabel(rule, spec) {
+    if (spec.kind === "types") {
+      const names = spec.types.map(titleType).join(" + ");
+      return `${spec.banned ? "No " : ""}${names}${spec.move ? " move" : ""}`;
+    }
+    return rule.label || rule.explain || "Rule";
+  }
+
+  function renderFilterSummary() {
+    filterSummary.replaceChildren();
+    const leagueChip = document.createElement("span");
+    leagueChip.className = "filter-chip";
+    leagueChip.setAttribute("role", "listitem");
+    if (currentState.league.maxCp) {
+      leagueChip.appendChild(makeVisualIcon("./assets/icons/rules/cp.svg", "CP limit", 22, {}));
+      const cpLabel = document.createElement("span");
+      cpLabel.textContent = `${currentState.league.maxCp} CP`;
+      leagueChip.appendChild(cpLabel);
+      leagueChip.setAttribute("aria-label", `${currentState.league.label}: maximum ${currentState.league.maxCp} CP`);
+    } else {
+      const leagueLabel = document.createElement("span");
+      leagueLabel.textContent = currentState.league.label;
+      leagueChip.appendChild(leagueLabel);
+    }
+    filterSummary.appendChild(leagueChip);
+
+    currentState.selected.forEach((rule) => {
+      const spec = ruleVisuals.resolve(rule);
+      const chip = document.createElement("span");
+      chip.className = "filter-chip";
+      chip.setAttribute("role", "listitem");
+      chip.appendChild(createRuleVisual(rule, "rule-visual rule-visual--chip"));
+      const label = document.createElement("span");
+      label.className = "filter-chip-label";
+      label.textContent = summaryLabel(rule, spec);
+      chip.appendChild(label);
+      filterSummary.appendChild(chip);
+    });
+    filterSummary.setAttribute("role", "list");
+    filterSummary.setAttribute("aria-label", "Active filter summary");
+  }
+
+  function applyTypeBackground() {
+    const selectedTypes = ruleVisuals.backgroundTypes(currentState.selected);
+    const images = selectedTypes.map((type) => `url("./assets/background/types/${type}.svg")`);
+    const positions = ["8% 14%", "76% 24%", "42% 82%"].slice(0, selectedTypes.length);
+    document.documentElement.style.setProperty("--theme-bg-image", images.join(", "));
+    document.documentElement.style.setProperty("--theme-bg-position", positions.join(", "));
+  }
+
+  function appendRuleRow(rule, descriptionText) {
+    const item = document.createElement("li");
+    item.appendChild(createRuleVisual(rule));
+    const description = document.createElement("span");
+    description.className = "rule-description";
+    description.textContent = descriptionText;
+    item.appendChild(description);
+    ruleList.appendChild(item);
+  }
+
   function render() {
     ruleList.replaceChildren();
+    renderFilterSummary();
+    applyTypeBackground();
 
-    const leagueItem = document.createElement("li");
-    leagueItem.textContent = currentState.league.description;
-    ruleList.appendChild(leagueItem);
+    const leagueRule = { id: "league-limit", family: currentState.league.maxCp ? "cp" : "", label: currentState.league.label };
+    appendRuleRow(leagueRule, currentState.league.description);
 
     if (currentState.staticFilter) {
-      const staticItem = document.createElement("li");
-      staticItem.textContent = `Static filter: ${currentState.staticFilter}`;
-      ruleList.appendChild(staticItem);
+      appendRuleRow({ id: "static-filter", family: "", label: "Static filter" }, `Static filter: ${currentState.staticFilter}`);
     }
 
     currentState.selected.forEach((rule) => {
-      const item = document.createElement("li");
-      item.textContent = rule.explain || rule.label;
-      ruleList.appendChild(item);
+      appendRuleRow(rule, rule.explain || rule.label);
     });
 
     searchOutput.value = currentState.search;
