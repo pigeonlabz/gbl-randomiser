@@ -371,6 +371,59 @@
     return selected;
   }
 
+  function cpSearchForRange(minCp, maxCp) {
+    if (maxCp === Infinity) return minCp > 0 ? "cp" + minCp + "-" : "";
+    if (minCp <= 0) return "cp0-" + maxCp;
+    return "cp" + minCp + "-" + maxCp;
+  }
+
+  function normalizeCpConstraint(league, selectedRules) {
+    const generatedRule = selectedRules.find((rule) => rule.family === "cp") || null;
+    if (!generatedRule) {
+      return {
+        generatedRule: null,
+        minCp: league.minCp == null ? 0 : league.minCp,
+        maxCp: league.maxCp == null ? Infinity : league.maxCp,
+        search: league.search
+      };
+    }
+
+    const leagueMin = league.minCp == null ? 0 : league.minCp;
+    const leagueMax = league.maxCp == null ? Infinity : league.maxCp;
+    const generatedMin = generatedRule.minCp == null ? 0 : generatedRule.minCp;
+    const generatedMax = generatedRule.maxCp == null ? Infinity : generatedRule.maxCp;
+    const minCp = Math.max(leagueMin, generatedMin);
+    const maxCp = Math.min(leagueMax, generatedMax);
+    const unchanged = minCp === generatedMin && maxCp === generatedMax;
+
+    return {
+      generatedRule: generatedRule,
+      minCp: minCp,
+      maxCp: maxCp,
+      search: unchanged ? generatedRule.search : cpSearchForRange(minCp, maxCp)
+    };
+  }
+
+  function cpRangeSummary(range) {
+    if (range.minCp === 0 && Number.isFinite(range.maxCp)) return range.maxCp.toLocaleString() + " CP";
+    if (range.minCp === range.maxCp) return range.minCp.toLocaleString() + " CP";
+    if (!Number.isFinite(range.maxCp)) return range.minCp.toLocaleString() + "+ CP";
+    return range.minCp.toLocaleString() + "–" + range.maxCp.toLocaleString() + " CP";
+  }
+
+  function cpRangeDescription(league, range) {
+    if (range.minCp === 0 && Number.isFinite(range.maxCp)) {
+      return league.label + ": maximum " + range.maxCp.toLocaleString() + " CP.";
+    }
+    if (range.minCp === range.maxCp) {
+      return league.label + ": Pokémon with exactly " + range.minCp.toLocaleString() + " CP.";
+    }
+    if (!Number.isFinite(range.maxCp)) {
+      return league.label + ": Pokémon with at least " + range.minCp.toLocaleString() + " CP.";
+    }
+    return league.label + ": Pokémon from " + range.minCp.toLocaleString() + " through " + range.maxCp.toLocaleString() + " CP.";
+  }
+
   function generate() {
     const league = leagues[leagueSelect.value] || leagues.great;
     const profile = activeProfile;
@@ -378,12 +431,15 @@
     const pool = allRules();
     let selected = [];
     let search = "";
+    let cpConstraint = null;
     const cupPrefix = getStaticCupPrefix();
     const extraFilter = getExtraFilter();
 
     for (let attempt = 0; attempt < 30; attempt += 1) {
       selected = chooseSelection(profile, league, requestedCount, pool);
-      const parts = [league.search, cupPrefix, extraFilter].concat(selected.map((rule) => rule.search)).filter(Boolean);
+      cpConstraint = normalizeCpConstraint(league, selected);
+      const otherRules = selected.filter((rule) => rule.family !== "cp");
+      const parts = [cpConstraint.search, cupPrefix, extraFilter].concat(otherRules.map((rule) => rule.search)).filter(Boolean);
       search = parts.join("&");
       if (search !== previousSearch || attempt === 29) break;
     }
@@ -391,6 +447,7 @@
     currentState = {
       league: league,
       selected: selected,
+      cpConstraint: cpConstraint,
       search: search,
       requestedCount: requestedCount,
       cupPrefix: cupPrefix,
@@ -524,12 +581,19 @@
   function renderSummary() {
     filterSummary.replaceChildren();
     const leagueRule = { id: "league-limit", family: "cp" };
-    const leagueLabel = currentState.league.maxCp
-      ? currentState.league.label.replace(" League", "") + " · " + currentState.league.maxCp.toLocaleString() + " CP"
-      : currentState.league.label;
+    const cpConstraint = currentState.cpConstraint;
+    const leagueName = currentState.league.label.replace(" League", "");
+    const leagueLabel = cpConstraint.generatedRule
+      ? leagueName + " · " + cpRangeSummary(cpConstraint)
+      : currentState.league.maxCp
+        ? leagueName + " · " + currentState.league.maxCp.toLocaleString() + " CP"
+        : currentState.league.label;
     createSummaryChip(leagueLabel, "league", leagueRule);
     if (currentState.cupName) createSummaryChip(currentState.cupName, "cup", null);
-    currentState.selected.forEach((rule) => createSummaryChip(getSummaryLabel(rule), "", rule));
+    currentState.selected.forEach((rule) => {
+      if (rule.family === "cp") return;
+      createSummaryChip(getSummaryLabel(rule), "", rule);
+    });
   }
 
   function backgroundTypesForRules(selectedRules) {
@@ -569,14 +633,20 @@
     searchOutput.value = currentState.search;
     renderSummary();
     ruleList.replaceChildren();
-    appendRuleRow({ id: "league-limit", family: "cp" }, currentState.league.description);
+    const leagueCpDescription = currentState.cpConstraint.generatedRule
+      ? cpRangeDescription(currentState.league, currentState.cpConstraint)
+      : currentState.league.description;
+    appendRuleRow({ id: "league-limit", family: "cp" }, leagueCpDescription);
     if (currentState.cupName) {
       appendRuleRow({ id: "cup-prefix", family: "" }, currentState.cupName + " filter: " + currentState.cupPrefix);
     }
     if (currentState.extraFilter) {
       appendRuleRow({ id: "extra-filter", family: "" }, "Additional search terms: " + currentState.extraFilter);
     }
-    currentState.selected.forEach((rule) => appendRuleRow(rule, rule.explain || rule.label));
+    currentState.selected.forEach((rule) => {
+      if (rule.family === "cp") return;
+      appendRuleRow(rule, rule.explain || rule.label);
+    });
     applyTypeBackground();
     updateBattleStatus();
     updateGenerationNote();
