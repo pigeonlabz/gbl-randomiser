@@ -4,184 +4,146 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17111e">
-  <meta name="description" content="Make a Pokémon GO Battle League filter for your next friendly battle.">
-  <title>GBL Randomiser — PigeonLabs</title>
+  <meta name="description" content="Generate a fun Pokémon GO Battle League search filter for friend battles.">
+  <title>Pokémon GO GBL Randomiser</title>
   <link rel="icon" type="image/svg+xml" href="./static/favicon.svg">
   <link rel="stylesheet" href="./static/css/app.css">
 </head>
 <body>
   <main class="shell">
     <header class="masthead">
-      <div class="brand-line">
-        <span class="brand-mark" aria-hidden="true">GBL</span>
-        <p class="eyebrow">PigeonLabs · GBLR</p>
-      </div>
-      <h1>GBL <span>Randomiser</span></h1>
-      <p class="intro">Click generate for a new filter</p>
+      <p class="eyebrow">A tiny friend-battle tool</p>
+      <h1>Pokémon GO GBL Randomiser</h1>
+      <p class="intro">Get a fresh Pokémon search filter for your next battle.</p>
     </header>
 
-    <div class="workspace">
-      <form id="filter-form" class="panel controls-panel">
-        <div class="panel-heading">
-          <div>
-            <p class="section-kicker">01 / Configure</p>
-            <h2>Set the rules</h2>
-          </div>
-          <span class="heading-spark" aria-hidden="true">✦</span>
-        </div>
+    <section class="result-panel" aria-labelledby="result-title">
+      <div class="result-heading">
+        <h2 id="result-title">Your battle filter</h2>
+        <span id="battle-status" class="battle-progress" aria-live="polite"></span>
+        <button class="button button-secondary" id="copy-filter" type="button">Copy</button>
+      </div>
+      <div id="filter-summary" class="filter-summary" role="list" aria-label="Active filter summary"></div>
+      <label class="visually-hidden" for="search-output">Pokémon GO search string</label>
+      <textarea id="search-output" rows="2" readonly spellcheck="false" wrap="soft" aria-describedby="copy-status"></textarea>
+      <p id="copy-status" class="status" role="status" aria-live="polite"></p>
+      <h3>Rules</h3>
+      <ul id="rule-list" class="rule-list" aria-live="polite"></ul>
+      <p id="generation-note" class="generation-note" role="status" aria-live="polite"></p>
+    </section>
 
-        <div class="control-grid">
-          <label class="control" for="cup-select">
-            <span>Cup preset</span>
-            <select id="cup-select" name="cup">
-              <option value="">No Cup</option>
-              <option value="element">Element Cup</option>
-              <option value="fantasy">Fantasy Cup</option>
-              <option value="fossil">Fossil Cup</option>
-              <option value="halloween">Halloween Cup</option>
-              <option value="holiday">Holiday Cup</option>
-              <option value="jungle">Jungle Cup</option>
-              <option value="love">Love Cup</option>
-              <option value="rock">Rock Cup</option>
-              <option value="scroll">Scroll Cup</option>
-              <option value="custom">Custom Cup filter…</option>
-            </select>
-          </label>
-
-          <label class="control" for="league-select">
-            <span>League</span>
-            <select id="league-select" name="league">
-              <option value="little">Little Cup · 500 CP</option>
-              <option value="great" selected>Great League · 1,500 CP</option>
-              <option value="ultra">Ultra League · 2,500 CP</option>
-              <option value="master">Master League · no cap</option>
-            </select>
-          </label>
-
-          <label class="control" for="mutator-count">
-            <span>Challenge rules</span>
-            <select id="mutator-count" name="count">
-              <option value="1">1 rule</option>
-              <option value="2" selected>2 rules</option>
-              <option value="3">3 rules</option>
-              <option value="4">4 rules</option>
-              <option value="5">5 rules</option>
-              <option value="6">6 rules</option>
-            </select>
-          </label>
-
-          <label class="control" for="battle-target">
-            <span>Battle target <small>optional</small></span>
-            <input id="battle-target" name="battle-target" type="number" min="1" max="99" inputmode="numeric" placeholder="No limit">
-          </label>
-        </div>
-
-        <label class="control cup-prefix-control" for="cup-prefix">
-          <span>Cup search prefix</span>
-          <input id="cup-prefix" name="cup-prefix" type="text" autocomplete="off" spellcheck="false" placeholder="Pick a Cup or enter terms such as rock&!@rock">
-          <small id="cup-help">The Cup and league terms are added before your random rules.</small>
+    <form id="filter-form" class="controls">
+      <div class="control-grid">
+        <label class="control" for="league-select">
+          <span>League</span>
+          <select id="league-select" name="league">
+            <option value="little">Little Cup</option>
+            <option value="great" selected>Great League</option>
+            <option value="ultra">Ultra League</option>
+            <option value="master">Master League</option>
+          </select>
         </label>
 
-        <fieldset id="cup-locks" class="cup-locks" disabled>
-          <legend>Let the Cup filter handle</legend>
-          <label><input id="cup-lock-types" type="checkbox"><span>Pokémon types</span></label>
-          <label><input id="cup-lock-moves" type="checkbox"><span>Move types</span></label>
-          <p id="cup-lock-note">Cup presets can reserve rule families already covered by their filter.</p>
-        </fieldset>
+        <label class="control" for="mutator-count">
+          <span>Mutators</span>
+          <select id="mutator-count" name="count">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+        </label>
+      </div>
 
-        <fieldset class="profile-fieldset">
-          <legend>Randomness</legend>
-          <div class="profile-grid" role="radiogroup" aria-label="Randomness profile">
-            <label class="profile-choice">
-              <input type="radio" name="randomness" value="chill" checked>
-              <span><strong>Chill</strong><small>Easygoing picks</small></span>
+      <fieldset class="randomness-control">
+        <legend>Randomness</legend>
+        <div class="choice-row" role="radiogroup" aria-label="Randomness profile">
+          <label class="choice"><input id="randomness-chill" type="radio" name="randomness" value="chill" checked><span>Chill</span></label>
+          <label class="choice"><input id="randomness-spicy" type="radio" name="randomness" value="spicy"><span>Spicy</span></label>
+          <label class="choice"><input id="randomness-chaos" type="radio" name="randomness" value="chaos"><span>Chaos</span></label>
+        </div>
+      </fieldset>
+
+      <button class="button button-primary" type="submit">Generate New Filter</button>
+
+      <details id="advanced-settings" class="advanced-settings">
+        <summary>
+          <span>Advanced Settings</span>
+          <span id="custom-badge" class="customised" hidden>Customised</span>
+        </summary>
+        <div class="advanced-content">
+          <div class="cup-controls-grid">
+            <label class="control" for="cup-select">
+              <span>Cup preset</span>
+              <select id="cup-select" name="cup">
+                <option value="">No Cup</option>
+                <option value="element">Element Cup</option>
+                <option value="fantasy">Fantasy Cup</option>
+                <option value="fossil">Fossil Cup</option>
+                <option value="halloween">Halloween Cup</option>
+                <option value="holiday">Holiday Cup</option>
+                <option value="jungle">Jungle Cup</option>
+                <option value="love">Love Cup</option>
+                <option value="rock">Rock Cup</option>
+                <option value="scroll">Scroll Cup</option>
+                <option value="custom">Custom Cup filter…</option>
+              </select>
             </label>
-            <label class="profile-choice">
-              <input type="radio" name="randomness" value="spicy">
-              <span><strong>Spicy</strong><small>More twists</small></span>
+
+            <label class="control" for="battle-target">
+              <span>Battle target <small>optional</small></span>
+              <input id="battle-target" name="battle-target" type="number" min="1" max="99" inputmode="numeric" placeholder="No limit">
             </label>
-            <label class="profile-choice profile-chaos">
-              <input type="radio" name="randomness" value="chaos">
-              <span><strong>Full goblin chaos</strong><small>Unpredictable pool</small></span>
-            </label>
-            <label class="profile-choice">
-              <input type="radio" name="randomness" value="custom">
-              <span><strong>Custom</strong><small>Your own mix</small></span>
+
+            <label class="control cup-prefix-control" for="cup-prefix">
+              <span>Cup search prefix</span>
+              <input id="cup-prefix" name="cup-prefix" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. rock&!@rock">
+              <small id="cup-help">Cup filters are bundled with this static page. New server-loaded Cups and shared battle sessions need a server.</small>
             </label>
           </div>
-        </fieldset>
 
-        <button class="button button-primary generate-button" type="submit">
-          <span aria-hidden="true">✦</span> Generate New Filter
-        </button>
+          <fieldset id="cup-locks" class="cup-locks" disabled>
+            <legend>Let the Cup filter handle</legend>
+            <label><input id="cup-lock-types" type="checkbox"><span>Pokémon types</span></label>
+            <label><input id="cup-lock-moves" type="checkbox"><span>Move types</span></label>
+            <p id="cup-lock-note">Choose any overlapping rule families to pause while this Cup filter is active.</p>
+          </fieldset>
 
-        <details class="advanced-settings">
-          <summary>
-            <span>Advanced settings</span>
-            <span id="custom-badge" class="custom-badge" hidden>Custom</span>
-          </summary>
-          <div class="advanced-content">
-            <label class="control extra-filter-control" for="extra-filter">
-              <span>Extra search terms</span>
-              <input id="extra-filter" name="extra-filter" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. !shadow or tag:practice">
-              <small>Added to every filter. Useful for house rules and your own saved Cup terms.</small>
-            </label>
+          <label class="control static-control" for="extra-filter">
+            <span>Extra search terms</span>
+            <input id="extra-filter" name="extra-filter" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. !shadow or tag:practice">
+            <small>Added to every filter. Useful for house rules and your own saved Cup terms.</small>
+          </label>
 
-            <fieldset class="family-fieldset">
-              <legend>Rule families</legend>
-              <p class="family-guidance">Turn a family off or adjust how often it appears. Changes switch the profile to Custom.</p>
-              <div id="primary-family-controls" class="family-grid"></div>
-            </fieldset>
+          <fieldset class="family-fieldset">
+            <legend>Rule families</legend>
+            <p class="family-guidance">Higher likelihood makes a family more likely to be selected.</p>
+            <div id="primary-family-controls" class="family-grid"></div>
+          </fieldset>
 
-            <details class="additional-families">
-              <summary>Additional rule families</summary>
-              <div class="additional-family-options">
-                <label class="additional-family-toggle" for="additional-families-enabled">
-                  <input id="additional-families-enabled" type="checkbox" aria-describedby="additional-family-warning">
-                  <span>Enable additional rule families</span>
-                </label>
-                <span id="additional-family-state" class="additional-family-state" aria-live="polite">Not participating</span>
-              </div>
-              <p id="additional-family-warning" class="additional-family-warning" hidden>These rules can create very restrictive or occasionally unusable filter combinations. Test generated filters before relying on them.</p>
-              <div id="additional-family-controls" class="family-grid additional-family-controls is-opted-out"></div>
-            </details>
+          <details class="additional-families">
+            <summary>Additional rule families</summary>
+            <div class="additional-family-options">
+              <label class="additional-family-toggle" for="additional-families-enabled">
+                <input id="additional-families-enabled" type="checkbox" aria-describedby="additional-family-warning">
+                <span>Enable additional rule families</span>
+              </label>
+              <span id="additional-family-state" class="additional-family-state" aria-live="polite">Not participating</span>
+            </div>
+            <p id="additional-family-warning" class="additional-family-warning" hidden>These rules can create very restrictive or occasionally unusable filter combinations. Test generated filters before relying on them.</p>
+            <div id="additional-family-controls" class="family-grid additional-family-controls is-opted-out"></div>
+          </details>
 
-            <button id="reset-advanced" class="button button-secondary reset-button" type="button">Reset rule settings</button>
-          </div>
-        </details>
-      </form>
-
-      <section class="panel result-panel" aria-labelledby="result-title">
-        <div class="panel-heading result-heading">
-          <div>
-            <p class="section-kicker">02 / Your roll</p>
-            <h2 id="result-title">Your battle filter</h2>
-          </div>
-          <span id="battle-status" class="battle-status" aria-live="polite">Ready</span>
+          <button id="reset-advanced" class="button button-secondary reset-button" type="button">Reset rule settings</button>
         </div>
+      </details>
+    </form>
 
-        <div id="filter-summary" class="filter-summary" role="list" aria-label="Filter summary"></div>
-
-        <div class="search-heading">
-          <label for="search-output">Pokémon GO search string</label>
-          <button id="copy-filter" class="button button-copy" type="button">Copy</button>
-        </div>
-        <textarea id="search-output" rows="3" readonly spellcheck="false" wrap="soft" aria-describedby="copy-status"></textarea>
-        <p id="copy-status" class="copy-status" role="status" aria-live="polite"></p>
-
-        <div class="rules-heading">
-          <h3>Rules</h3>
-          <span class="rules-heading-note">What this filter means</span>
-        </div>
-        <ul id="rule-list" class="rule-list" aria-live="polite"></ul>
-        <p id="generation-note" class="generation-note" role="status" aria-live="polite"></p>
-      </section>
-    </div>
-
-    <footer class="site-footer">
+    <footer>
       <p>Unofficial community tool. Not affiliated with Niantic, Pokémon, Nintendo, or The Pokémon Company.</p>
-      <p class="static-note">Cup presets are bundled with this page. Server-loaded Cup files and shared battle sessions need a server and are not part of this static version.</p>
-      <p class="attribution">Made by PigeonLabs</p>
+      <p class="attribution">A PigeonLabs project</p>
     </footer>
   </main>
 
