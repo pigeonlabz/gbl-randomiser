@@ -74,43 +74,6 @@
           <span id="custom-badge" class="customised" hidden>Customised</span>
         </summary>
         <div class="advanced-content">
-          <div class="cup-controls-grid">
-            <label class="control" for="cup-select">
-              <span>Cup preset</span>
-              <select id="cup-select" name="cup">
-                <option value="">No Cup</option>
-                <option value="element">Element Cup</option>
-                <option value="fantasy">Fantasy Cup</option>
-                <option value="fossil">Fossil Cup</option>
-                <option value="halloween">Halloween Cup</option>
-                <option value="holiday">Holiday Cup</option>
-                <option value="jungle">Jungle Cup</option>
-                <option value="love">Love Cup</option>
-                <option value="rock">Rock Cup</option>
-                <option value="scroll">Scroll Cup</option>
-                <option value="custom">Custom Cup filter…</option>
-              </select>
-            </label>
-
-            <label class="control" for="battle-target">
-              <span>Battle target <small>optional</small></span>
-              <input id="battle-target" name="battle-target" type="number" min="1" max="99" inputmode="numeric" placeholder="No limit">
-            </label>
-
-            <label class="control cup-prefix-control" for="cup-prefix">
-              <span>Cup search prefix</span>
-              <input id="cup-prefix" name="cup-prefix" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. rock&!@rock">
-              <small id="cup-help">Cup filters are bundled with this static page. New server-loaded Cups and shared battle sessions need a server.</small>
-            </label>
-          </div>
-
-          <fieldset id="cup-locks" class="cup-locks" disabled>
-            <legend>Let the Cup filter handle</legend>
-            <label><input id="cup-lock-types" type="checkbox"><span>Pokémon types</span></label>
-            <label><input id="cup-lock-moves" type="checkbox"><span>Move types</span></label>
-            <p id="cup-lock-note">Choose any overlapping rule families to pause while this Cup filter is active.</p>
-          </fieldset>
-
           <label class="control static-control" for="extra-filter">
             <span>Extra search terms</span>
             <input id="extra-filter" name="extra-filter" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. !shadow or tag:practice">
@@ -134,6 +97,52 @@
             </div>
             <p id="additional-family-warning" class="additional-family-warning" hidden>These rules can create very restrictive or occasionally unusable filter combinations. Test generated filters before relying on them.</p>
             <div id="additional-family-controls" class="family-grid additional-family-controls is-opted-out"></div>
+          </details>
+
+          <details class="cup-settings">
+            <summary>Cup settings</summary>
+            <label class="cup-settings-toggle" for="cup-settings-enabled">
+              <input id="cup-settings-enabled" type="checkbox" aria-controls="cup-settings-fields">
+              <span>Enable Cup settings</span>
+            </label>
+            <fieldset id="cup-settings-fields" class="cup-settings-fields" disabled>
+              <div class="cup-controls-grid">
+                <label class="control" for="cup-select">
+                  <span>Cup preset</span>
+                  <select id="cup-select" name="cup">
+                    <option value="">No Cup</option>
+                    <option value="element">Element Cup</option>
+                    <option value="fantasy">Fantasy Cup</option>
+                    <option value="fossil">Fossil Cup</option>
+                    <option value="halloween">Halloween Cup</option>
+                    <option value="holiday">Holiday Cup</option>
+                    <option value="jungle">Jungle Cup</option>
+                    <option value="love">Love Cup</option>
+                    <option value="rock">Rock Cup</option>
+                    <option value="scroll">Scroll Cup</option>
+                    <option value="custom">Custom Cup filter…</option>
+                  </select>
+                </label>
+
+                <label class="control" for="battle-target">
+                  <span>Battle target <small>optional</small></span>
+                  <input id="battle-target" name="battle-target" type="number" min="1" max="99" inputmode="numeric" placeholder="No limit">
+                </label>
+
+                <label class="control cup-prefix-control" for="cup-prefix">
+                  <span>Cup search prefix</span>
+                  <input id="cup-prefix" name="cup-prefix" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. rock&!@rock">
+                  <small id="cup-help">Cup filters are bundled with this static page. New server-loaded Cups and shared battle sessions need a server.</small>
+                </label>
+              </div>
+
+              <fieldset id="cup-locks" class="cup-locks" disabled>
+                <legend>Let the Cup filter handle</legend>
+                <label><input id="cup-lock-types" type="checkbox"><span>Pokémon types</span></label>
+                <label><input id="cup-lock-moves" type="checkbox"><span>Move types</span></label>
+                <p id="cup-lock-note">Choose any overlapping rule families to pause while this Cup filter is active.</p>
+              </fieldset>
+            </fieldset>
           </details>
 
           <button id="reset-advanced" class="button button-secondary reset-button" type="button">Reset rule settings</button>

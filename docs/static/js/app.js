@@ -80,6 +80,8 @@
   const DEFAULT_BACKGROUND_TYPES = ["steel", "water", "fairy"];
 
   const form = document.getElementById("filter-form");
+  const cupSettingsToggle = document.getElementById("cup-settings-enabled");
+  const cupSettingsFields = document.getElementById("cup-settings-fields");
   const cupSelect = document.getElementById("cup-select");
   const cupPrefixInput = document.getElementById("cup-prefix");
   const cupLocks = document.getElementById("cup-locks");
@@ -296,6 +298,7 @@
   }
 
   function getStaticCupPrefix() {
+    if (!cupSettingsToggle.checked) return "";
     return cupPrefixInput.value.trim().replace(/^&+|&+$/g, "");
   }
   function getExtraFilter() {
@@ -727,7 +730,9 @@
     previousSearch = search;
     configPending = false;
     generatedCount += 1;
-    const target = Math.max(0, Math.min(99, Number(battleTargetInput.value) || 0));
+    const target = cupSettingsToggle.checked
+      ? Math.max(0, Math.min(99, Number(battleTargetInput.value) || 0))
+      : 0;
     if (target > 0 && battleCount >= target) battleCount = 0;
     battleCount += 1;
     render();
@@ -895,7 +900,9 @@
   }
 
   function updateBattleStatus() {
-    const target = Math.max(0, Math.min(99, Number(battleTargetInput.value) || 0));
+    const target = cupSettingsToggle.checked
+      ? Math.max(0, Math.min(99, Number(battleTargetInput.value) || 0))
+      : 0;
     battleStatus.textContent = target ? "Battle " + battleCount + " of " + target : "Filter " + generatedCount;
   }
 
@@ -951,13 +958,10 @@
 
   function updateCupControls() {
     const hasPrefix = Boolean(getStaticCupPrefix());
+    cupSettingsFields.disabled = !cupSettingsToggle.checked;
     cupLocks.disabled = !hasPrefix;
     cupLockTypes.disabled = !hasPrefix;
     cupLockMoves.disabled = !hasPrefix;
-    if (!hasPrefix) {
-      cupLockTypes.checked = false;
-      cupLockMoves.checked = false;
-    }
     const lockNames = [];
     if (cupLockTypes.checked && hasPrefix) lockNames.push("Pokémon type rules");
     if (cupLockMoves.checked && hasPrefix) lockNames.push("move type rules");
@@ -1040,6 +1044,11 @@
     additionalFamiliesToggle.addEventListener("change", () => {
       additionalFamiliesEnabled = additionalFamiliesToggle.checked;
       syncFamilyControls();
+      markConfigPending();
+    });
+
+    cupSettingsToggle.addEventListener("change", () => {
+      updateCupControls();
       markConfigPending();
     });
 
