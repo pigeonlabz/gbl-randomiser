@@ -841,6 +841,7 @@
     if (rule.id === "cup-prefix") return String(description || "").replace(" filter: ", " · ");
 
     const shortLabels = {
+      "rare-any": "Legendary / Mythical / Ultra Beast",
       shiny: "Shiny only",
       shadow: "Shadow only",
       purified: "Purified only",

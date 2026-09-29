@@ -546,7 +546,7 @@ h2 { font-size: 1.2rem; }
 .rule-visual .visual-icon { width: 24px; height: 24px; }
 .rule-marker { display: block; width: 9px; height: 9px; margin: 7px auto 0; border: 2px solid var(--accent); border-radius: 50%; opacity: 0.8; }
 .rule-description { min-width: 0; overflow-wrap: anywhere; }
-.manual-rules-control { margin-top: 16px; }
+.manual-rules-control { margin-top: 18px; }
 .manual-rules-control input[type="text"] {
   width: 100%;
   min-width: 0;
