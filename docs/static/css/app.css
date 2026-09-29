@@ -530,8 +530,8 @@ h2 { font-size: 1.2rem; }
 .generation-note { min-height: 1.4em; margin: 8px 0 0; color: var(--text-muted); font-size: 0.88rem; }
 .generation-note:empty { display: none; }
 .filter-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 0 0 13px; min-width: 0; }
-.filter-chip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-alt); color: var(--text); padding: 5px 9px; font-size: 0.78rem; font-weight: 750; line-height: 1.25; overflow-wrap: anywhere; }
-.filter-chip-label { min-width: 0; }
+.filter-chip { display: inline-flex; align-items: center; justify-content: center; gap: 0; min-width: 34px; min-height: 34px; max-width: 100%; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-alt); color: var(--text); padding: 4px; }
+.filter-chip .rule-visual--chip .visual-icon { width: 22px; height: 22px; }
 .visual-icon { position: relative; display: inline-grid; flex: 0 0 auto; width: 24px; height: 24px; place-items: center; }
 .visual-icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .visual-icon--missing img { visibility: hidden; }
@@ -539,6 +539,9 @@ h2 { font-size: 1.2rem; }
 .visual-indicator { position: absolute; z-index: 1; display: grid; min-width: 12px; height: 12px; place-items: center; border: 1px solid var(--panel); border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 9px; font-weight: 900; line-height: 1; }
 .visual-indicator--move { right: -3px; bottom: -2px; }
 .visual-indicator--ban { top: -3px; right: -3px; background: #f08b98; color: #30171a; }
+.filter-chip .visual-indicator { font-size: 0; }
+.filter-chip .visual-indicator--move::after { width: 4px; height: 4px; border-radius: 50%; background: var(--accent-ink); content: ""; }
+.filter-chip .visual-indicator--ban::after { width: 1px; height: 8px; background: #30171a; content: ""; transform: rotate(45deg); }
 .rule-list { display: grid; gap: 9px; margin: 9px 0 0; padding: 0; color: var(--text); list-style: none; }
 .rule-list li { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
 .rule-visual { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 2px; min-width: 26px; padding-top: 1px; }

@@ -819,8 +819,13 @@
     const chip = document.createElement("span");
     chip.className = "filter-chip" + (modifier ? " filter-chip--" + modifier : "");
     chip.setAttribute("role", "listitem");
-    if (visualRule) chip.appendChild(createRuleVisual(visualRule, "rule-visual rule-visual--chip"));
-    else {
+    chip.setAttribute("aria-label", label);
+    chip.title = label;
+    if (visualRule) {
+      const visual = createRuleVisual(visualRule, "rule-visual rule-visual--chip");
+      visual.querySelectorAll(".visual-indicator").forEach((indicator) => { indicator.textContent = ""; });
+      chip.appendChild(visual);
+    } else {
       const marker = document.createElement("span");
       marker.className = "rule-visual rule-visual--chip";
       marker.setAttribute("aria-hidden", "true");
@@ -829,10 +834,6 @@
       marker.appendChild(dot);
       chip.appendChild(marker);
     }
-    const text = document.createElement("span");
-    text.className = "filter-chip-label";
-    text.textContent = label;
-    chip.appendChild(text);
     filterSummary.appendChild(chip);
   }
 
