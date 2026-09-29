@@ -12,9 +12,8 @@
 <body>
   <main class="shell">
     <header class="masthead">
-      <p class="eyebrow">A tiny friend-battle tool</p>
-      <h1>Pokémon GO GBL Randomiser</h1>
-      <p class="intro">Get a fresh Pokémon search filter for your next battle.</p>
+      <p class="eyebrow">PigeonLabz</p>
+      <h1>Pokémon GO GBL<br>Randomiser</h1>
     </header>
 
     <section class="result-panel" aria-labelledby="result-title">
@@ -30,6 +29,11 @@
       <h3>Rules</h3>
       <ul id="rule-list" class="rule-list" aria-live="polite"></ul>
       <p id="generation-note" class="generation-note" role="status" aria-live="polite"></p>
+      <label class="control manual-rules-control" for="extra-filter">
+        <span>Custom manual rules</span>
+        <input id="extra-filter" name="extra-filter" form="filter-form" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. !shadow or tag:practice">
+        <small>Applies on top of all filters.</small>
+      </label>
     </section>
 
     <form id="filter-form" class="controls">
@@ -74,12 +78,6 @@
           <span id="custom-badge" class="customised" hidden>Customised</span>
         </summary>
         <div class="advanced-content">
-          <label class="control static-control" for="extra-filter">
-            <span>Extra search terms</span>
-            <input id="extra-filter" name="extra-filter" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. !shadow or tag:practice">
-            <small>Added to every filter. Useful for house rules and your own saved Cup terms.</small>
-          </label>
-
           <fieldset class="family-fieldset">
             <legend>Rule families</legend>
             <p class="family-guidance">Higher likelihood makes a family more likely to be selected.</p>

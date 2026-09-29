@@ -684,17 +684,11 @@
     return range.minCp.toLocaleString() + "–" + range.maxCp.toLocaleString() + " CP";
   }
 
-  function cpRangeDescription(league, range) {
-    if (range.minCp === 0 && Number.isFinite(range.maxCp)) {
-      return league.label + ": maximum " + range.maxCp.toLocaleString() + " CP.";
-    }
-    if (range.minCp === range.maxCp) {
-      return league.label + ": Pokémon with exactly " + range.minCp.toLocaleString() + " CP.";
-    }
-    if (!Number.isFinite(range.maxCp)) {
-      return league.label + ": Pokémon with at least " + range.minCp.toLocaleString() + " CP.";
-    }
-    return league.label + ": Pokémon from " + range.minCp.toLocaleString() + " through " + range.maxCp.toLocaleString() + " CP.";
+  function cpRangeDescription(range) {
+    if (range.minCp === 0 && Number.isFinite(range.maxCp)) return "Max " + range.maxCp.toLocaleString() + " CP";
+    if (range.minCp === range.maxCp) return "Exactly " + range.minCp.toLocaleString() + " CP";
+    if (!Number.isFinite(range.maxCp)) return range.minCp > 0 ? range.minCp.toLocaleString() + "+ CP" : "No CP cap";
+    return range.minCp.toLocaleString() + "–" + range.maxCp.toLocaleString() + " CP";
   }
 
   function generate() {
@@ -842,13 +836,40 @@
     filterSummary.appendChild(chip);
   }
 
+  function compactRuleDescription(rule, description) {
+    if (rule.id === "league-limit") return cpRangeDescription(currentState.cpConstraint);
+    if (rule.id === "cup-prefix") return String(description || "").replace(" filter: ", " · ");
+
+    const shortLabels = {
+      shiny: "Shiny only",
+      shadow: "Shadow only",
+      purified: "Purified only",
+      "not-shadow": "Exclude Shadow",
+      "not-purified": "Exclude Purified"
+    };
+    if (shortLabels[rule.id]) return shortLabels[rule.id];
+
+    let text = rule.label || description || rule.explain || "Rule";
+    if (rule.family === "age") {
+      text = text
+        .replace(/^Caught in last /i, "Last ")
+        .replace(/^Caught within the last /i, "Last ")
+        .replace(/^Caught within /i, "Within ")
+        .replace(/^Caught about /i, "")
+        .replace(/^Caught (?=\d+.*days ago$)/i, "");
+    }
+    if (String(rule.id).indexOf("type-banned-") === 0) text = text.replace(/^No (.+?) type Pokémon$/i, "No $1 typing");
+    if (String(rule.id).indexOf("move-type-banned-") === 0) text = text.replace(/^No (.+?) type moves$/i, "No $1 moves");
+    if (String(rule.id).indexOf("region-banned-") === 0) text = text.replace(/^No Pokémon from /i, "Not from ");
+    return String(text).replaceAll("Pokemon", "Pokémon").replace(/[.]+$/, "");
+  }
+
   function appendRuleRow(rule, description) {
     const row = document.createElement("li");
     row.appendChild(createRuleVisual(rule, "rule-visual"));
     const text = document.createElement("span");
     text.className = "rule-description";
-    text.textContent = String(description || rule.explain || rule.label || "Rule")
-      .replaceAll("Pokemon", "Pokémon");
+    text.textContent = compactRuleDescription(rule, description);
     row.appendChild(text);
     ruleList.appendChild(row);
   }
@@ -910,15 +931,9 @@
     searchOutput.value = currentState.search;
     renderSummary();
     ruleList.replaceChildren();
-    const leagueCpDescription = currentState.cpConstraint.generatedRule
-      ? cpRangeDescription(currentState.league, currentState.cpConstraint)
-      : currentState.league.description;
-    appendRuleRow({ id: "league-limit", family: "cp" }, leagueCpDescription);
+    appendRuleRow({ id: "league-limit", family: "cp" }, cpRangeDescription(currentState.cpConstraint));
     if (currentState.cupName) {
       appendRuleRow({ id: "cup-prefix", family: "" }, currentState.cupName + " filter: " + currentState.cupPrefix);
-    }
-    if (currentState.extraFilter) {
-      appendRuleRow({ id: "extra-filter", family: "" }, "Additional search terms: " + currentState.extraFilter);
     }
     currentState.selected.forEach((rule) => {
       if (rule.family === "cp") return;

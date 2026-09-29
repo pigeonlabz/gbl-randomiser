@@ -469,7 +469,6 @@ body::before { position: fixed; z-index: 0; inset: 0; background-image: var(--th
   font-size: 0.8rem;
   font-weight: 750;
   letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 h1 {
   max-width: 16ch;
@@ -477,8 +476,6 @@ h1 {
   font-size: clamp(1.9rem, 6vw, 3rem);
   line-height: 1.08;
 }
-.intro { margin: 10px 0 0; color: var(--text-muted); }
-
 .result-panel, .controls {
   position: relative;
   isolation: isolate;
@@ -511,7 +508,7 @@ h1 {
 }
 h2, h3 { margin: 0; color: var(--text-strong); }
 h2 { font-size: 1.2rem; }
-h3 { margin-top: 20px; font-size: 1rem; }
+.result-panel h3 { margin-top: 8px; font-size: 1rem; }
 
 #search-output {
   display: block;
@@ -529,6 +526,7 @@ h3 { margin-top: 20px; font-size: 1rem; }
   line-height: 1.5;
 }
 .status { min-height: 1.4em; margin: 6px 0 0; color: var(--accent); font-size: 0.9rem; }
+.status:empty { display: none; }
 .generation-note { min-height: 1.4em; margin: 8px 0 0; color: var(--text-muted); font-size: 0.88rem; }
 .generation-note:empty { display: none; }
 .filter-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 0 0 13px; min-width: 0; }
@@ -548,6 +546,19 @@ h3 { margin-top: 20px; font-size: 1rem; }
 .rule-visual .visual-icon { width: 24px; height: 24px; }
 .rule-marker { display: block; width: 9px; height: 9px; margin: 7px auto 0; border: 2px solid var(--accent); border-radius: 50%; opacity: 0.8; }
 .rule-description { min-width: 0; overflow-wrap: anywhere; }
+.manual-rules-control { margin-top: 16px; }
+.manual-rules-control input[type="text"] {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-alt);
+  color: var(--text);
+  padding: 8px 11px;
+}
+.manual-rules-control small { color: var(--text-muted); font-size: 0.84rem; font-weight: 400; line-height: 1.4; }
+.manual-rules-control input:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 
 .controls { display: grid; gap: 20px; }
 .control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -631,16 +642,6 @@ legend { margin-bottom: 8px; font-weight: 700; }
   font-weight: 700;
 }
 .advanced-content { display: grid; gap: 18px; padding-top: 18px; }
-.static-control input[type="text"] {
-  width: 100%;
-  min-height: 44px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel-alt);
-  color: var(--text);
-  padding: 8px 11px;
-}
-.static-control small { color: var(--text-muted); font-weight: 400; }
 .family-fieldset { display: grid; gap: 9px; }
 .family-guidance { margin: -4px 0 0; color: var(--text-muted); font-size: 0.86rem; }
 .family-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -690,7 +691,7 @@ legend { margin-bottom: 8px; font-weight: 700; }
 .family-weight input[type="range"]::-webkit-slider-thumb { width: 16px; height: 16px; margin-top: -5px; appearance: none; border: 2px solid var(--panel); border-radius: 50%; background: var(--slider-thumb); box-shadow: 0 0 0 1px var(--border-strong); }
 .family-weight input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: 2px solid var(--panel); border-radius: 50%; background: var(--slider-thumb); box-shadow: 0 0 0 1px var(--border-strong); }
 .family-weight output { color: var(--text); font-size: 0.8rem; text-align: right; font-variant-numeric: tabular-nums; }
-.family-toggle input:focus-visible, .family-weight input:focus-visible, .static-control input:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.family-toggle input:focus-visible, .family-weight input:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .additional-families { border-top: 1px solid var(--border); padding-top: 12px; }
 .additional-families > summary { color: var(--text-muted); font-size: 0.9rem; }
 .additional-families .family-grid { margin-top: 12px; }
@@ -743,7 +744,7 @@ footer p { margin: 0; }
 .cup-settings-fields { display: grid; gap: 14px; margin-top: 8px; }
 .cup-settings-fields:disabled { opacity: 0.52; }
 .cup-prefix-control { grid-column: 1 / -1; }
-.cup-prefix-control small, .static-control small { color: var(--text-muted); font-size: 0.84rem; font-weight: 400; line-height: 1.4; }
+.cup-prefix-control small { color: var(--text-muted); font-size: 0.84rem; font-weight: 400; line-height: 1.4; }
 .cup-locks { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; border: 0; }
 .cup-locks legend { flex-basis: 100%; margin-bottom: 0; }
 .cup-locks label { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); font-weight: 600; }
