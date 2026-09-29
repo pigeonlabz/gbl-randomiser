@@ -647,7 +647,7 @@ legend { margin-bottom: 8px; font-weight: 700; }
 .family-setting {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(112px, 0.86fr);
-  grid-template-areas: "toggle likelihood" "description likelihood";
+  grid-template-areas: "heading likelihood" "description likelihood" "limits limits";
   align-items: center;
   gap: 4px 10px;
   min-width: 0;
@@ -656,11 +656,22 @@ legend { margin-bottom: 8px; font-weight: 700; }
   background: var(--panel-alt);
   padding: 9px 10px;
 }
-.family-toggle { grid-area: toggle; display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 0.88rem; font-weight: 650; color: var(--text-strong); }
+.family-heading { grid-area: heading; display: flex; align-items: center; gap: 4px; min-width: 0; }
+.family-toggle { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 0.88rem; font-weight: 650; color: var(--text-strong); }
 .family-toggle input { width: 17px; height: 17px; flex: 0 0 auto; accent-color: var(--accent); }
 .family-description { grid-area: description; display: block; margin-left: 25px; color: var(--text-muted); font-size: 0.74rem; font-weight: 400; line-height: 1.35; }
 .family-setting.is-disabled .family-toggle span { color: var(--text-subtle); }
 .family-toggle span { overflow-wrap: anywhere; }
+.family-limit-button { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; }
+.family-limit-button:hover, .family-limit-button[aria-expanded="true"] { border-color: var(--border); background: var(--panel); color: var(--text-strong); }
+.family-limit-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.family-limit-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.family-limits { grid-area: limits; display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 4px 0 0 25px; padding-top: 8px; border-top: 1px solid var(--border); }
+.family-limits[hidden] { display: none; }
+.family-limit-control { display: flex; align-items: center; gap: 6px; min-height: 36px; color: var(--text-muted); font-size: 0.76rem; }
+.family-limit-control select, .family-limit-control input[type="date"] { min-height: 34px; max-width: 100%; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text); padding: 4px 7px; font: inherit; }
+.family-limit-control select { min-width: 62px; }
+.family-limit-control input:focus-visible, .family-limit-control select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .family-weight {
   grid-area: likelihood;
   display: grid;
@@ -751,4 +762,7 @@ footer p { margin: 0; }
   .additional-family-options { justify-content: flex-start; }
   .additional-family-state { margin-left: 25px; }
   .battle-progress { text-align: left; }
+  .family-setting { grid-template-columns: minmax(0, 1fr) minmax(94px, 0.72fr); gap: 4px 7px; padding: 9px 8px; }
+  .family-limits { margin-left: 0; }
+  .family-limit-control--date { flex: 1 1 100%; justify-content: space-between; }
 }

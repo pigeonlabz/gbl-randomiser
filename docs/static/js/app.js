@@ -24,16 +24,17 @@
     { id: "pokemon-type", label: "Pokémon types", description: "Allows or bans selected Pokémon types.", ruleFamilies: ["pokemon-type"], primary: true },
     { id: "region", label: "Region", description: "Uses regions such as Kanto, Johto, Hoenn, or Paldea.", ruleFamilies: ["region"], primary: true },
     { id: "move-typing", label: "Move types", description: "Requires or bans moves of selected types.", ruleFamilies: ["move-type", "move-slot"], primary: true },
-    { id: "rocket-status", label: "Shadow / Purified", description: "Uses Shadow, Purified, or excludes those Pokémon.", ruleFamilies: ["rocket-status"], primary: true },
-    { id: "recent-catch", label: "Recent catches", description: "Restricts the pool by when Pokémon were caught.", ruleFamilies: ["age"], primary: true },
+    { id: "shadow", label: "Shadow", description: "Uses Shadow Pokémon or excludes them.", ruleFamilies: ["shadow"], primary: true },
+    { id: "time", label: "Time", description: "Restricts catches by age or date range.", ruleFamilies: ["age"], primary: true, limits: "time" },
     { id: "xl-size", label: "XL / XXL", description: "Uses oversized Pokémon.", ruleFamilies: ["size-xl"], primary: true },
-    { id: "xs-size", label: "XS / XXS", description: "Uses unusually small Pokémon.", ruleFamilies: ["size-xs"], primary: true },
-    { id: "buddy", label: "Buddy", description: "Uses Pokémon matching buddy-progress requirements.", ruleFamilies: ["buddy"], primary: true },
+    { id: "xs-size", label: "XS / XXS", description: "Uses unusually small Pokémon.", ruleFamilies: ["size-xs"] },
+    { id: "buddy", label: "Buddy", description: "Uses Pokémon matching buddy-progress requirements.", ruleFamilies: ["buddy"], primary: true, limits: "buddy" },
     { id: "weather", label: "Weather", description: "Uses weather-related move filters.", ruleFamilies: ["move-weather"], primary: true },
-    { id: "mega", label: "Mega", description: "Uses Mega-related eligibility or progress.", ruleFamilies: ["mega", "mega-level"], primary: true },
-    { id: "meta-moves", label: "Meta moves", description: "Excludes selected powerful or commonly used moves.", ruleFamilies: ["meta-moves"], primary: true },
-    { id: "type-matchups", label: "Type matchups", description: "Uses battle matchup and type-effectiveness restrictions.", ruleFamilies: ["type-effectiveness"] },
-    { id: "acquisition", label: "How it was obtained", description: "Uses traits such as Lucky, Traded, Hatched, or Costume.", ruleFamilies: ["origin", "origin-special", "year"] },
+    { id: "mega", label: "Mega", description: "Uses Mega-related eligibility or progress.", ruleFamilies: ["mega", "mega-level"], primary: true, limits: "mega" },
+    { id: "meta-moves", label: "Meta moves", description: "Excludes selected powerful or commonly used moves.", ruleFamilies: ["meta-moves"] },
+    { id: "purified", label: "Purified", description: "Uses Purified Pokémon or excludes them.", ruleFamilies: ["purified"] },
+    { id: "type-matchups", label: "Type matchups", description: "Uses battle matchup and type-effectiveness restrictions.", ruleFamilies: ["type-effectiveness"], primary: true },
+    { id: "acquisition", label: "How it was obtained", description: "Uses traits such as Lucky, Traded, Hatched, or Costume.", ruleFamilies: ["origin", "origin-special", "year"], primary: true },
     { id: "battle-stats", label: "Appraisal / IVs", description: "Uses appraisal star ranges or battle-stat filters.", ruleFamilies: ["appraisal", "hp", "iv-attack", "iv-defense", "iv-hp", "iv-combo"] },
     { id: "collection", label: "Collection traits", description: "Uses unusual collection and inventory traits.", ruleFamilies: ["lucky", "costume", "candy", "candy-xl", "powered-xl", "distance", "background", "copy-count", "buddy-candy"] },
     { id: "special-forms", label: "Special forms", description: "Uses Dynamax, Gigantamax, or other special forms.", ruleFamilies: ["max", "max-count", "max-move", "special-status"] }
@@ -43,19 +44,19 @@
   const profileDefaults = {
     chill: {
       shiny: 3, rarity: 2, cp: 2, "pokemon-type": 9, region: 8, "move-typing": 5,
-      "rocket-status": 4, "recent-catch": 6, "xl-size": 4, "xs-size": 4, buddy: 4,
+      shadow: 4, time: 6, purified: 1, "xl-size": 4, "xs-size": 4, buddy: 4,
       weather: 3, mega: 2, "meta-moves": 0, "type-matchups": 2,
       acquisition: 4, "battle-stats": 3, collection: 2, "special-forms": 1
     },
     spicy: {
       shiny: 5, rarity: 5, cp: 5, "pokemon-type": 6, region: 4, "move-typing": 7,
-      "rocket-status": 5, "recent-catch": 5, "xl-size": 5, "xs-size": 4, buddy: 5,
+      shadow: 5, time: 5, purified: 2, "xl-size": 5, "xs-size": 4, buddy: 5,
       weather: 6, mega: 5, "meta-moves": 4, "type-matchups": 5,
       acquisition: 5, "battle-stats": 5, collection: 5, "special-forms": 4
     },
     chaos: {
       shiny: 5, rarity: 6, cp: 7, "pokemon-type": 4, region: 4, "move-typing": 8,
-      "rocket-status": 5, "recent-catch": 5, "xl-size": 6, "xs-size": 5, buddy: 4,
+      shadow: 5, time: 5, purified: 2, "xl-size": 6, "xs-size": 5, buddy: 4,
       weather: 7, mega: 7, "meta-moves": 8, "type-matchups": 7,
       acquisition: 6, "battle-stats": 7, collection: 7, "special-forms": 8
     }
@@ -104,6 +105,13 @@
   const resetAdvancedButton = document.getElementById("reset-advanced");
 
   const familyControlElements = new Map();
+  const familyLimitElements = new Map();
+  const DEFAULT_OLDEST_CATCH_DATE = "2016-07-06";
+  const familyLimits = {
+    buddy: { min: "", max: "" },
+    mega: { min: "", max: "" },
+    time: { newerDate: "", oldestDate: DEFAULT_OLDEST_CATCH_DATE }
+  };
   let familySettings = {};
   let additionalFamiliesEnabled = false;
   let activeProfile = "chill";
@@ -129,6 +137,106 @@
       display.explain = "Caught in " + targetYear + ".";
     }
     return display;
+  }
+
+  function dateInputDay(value) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+    if (!match) return null;
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const result = Date.UTC(year, month, day) / 86400000;
+    const check = new Date(result * 86400000);
+    if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month || check.getUTCDate() !== day) return null;
+    return result;
+  }
+
+  function currentUtcDay(now = new Date()) {
+    return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000;
+  }
+
+  function localDateInputValue(now = new Date()) {
+    const pad = (value) => String(value).padStart(2, "0");
+    return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+  }
+
+  function makeTimeRule(now = new Date()) {
+    const setting = familyLimits.time;
+    const today = currentUtcDay(now);
+    const newerDateDay = dateInputDay(setting.newerDate);
+    const oldestDateDay = dateInputDay(setting.oldestDate) ?? dateInputDay(DEFAULT_OLDEST_CATCH_DATE);
+    const lowerAge = Math.max(0, Math.min(today, today - (newerDateDay == null ? today : newerDateDay)));
+    const upperAge = Math.max(lowerAge, today - Math.min(today, oldestDateDay));
+    const minimumAge = randomInteger(lowerAge, upperAge);
+    const maximumAge = randomInteger(minimumAge, upperAge);
+    const search = minimumAge === 0 && maximumAge === 0 ? "age0" : "age" + minimumAge + "-" + maximumAge;
+    let label;
+    let explain;
+    if (minimumAge === 0 && maximumAge === 0) {
+      label = "Caught in last 24 hours";
+      explain = "Caught within the last 24 hours.";
+    } else if (minimumAge === maximumAge) {
+      label = "Caught about " + maximumAge + " days ago";
+      explain = "Caught about " + maximumAge + " days ago.";
+    } else if (minimumAge === 0) {
+      const unit = maximumAge === 1 ? "day" : "days";
+      label = "Caught within " + maximumAge + " " + unit;
+      explain = "Caught within the last " + maximumAge + " " + unit + ".";
+    } else {
+      const minUnit = minimumAge === 1 ? "day" : "days";
+      const maxUnit = maximumAge === 1 ? "day" : "days";
+      label = "Caught " + minimumAge + "–" + maximumAge + " days ago";
+      explain = "Caught between " + minimumAge + " " + minUnit + " and " + maximumAge + " " + maxUnit + " ago.";
+    }
+    return {
+      id: "age-generated-" + minimumAge + "-" + maximumAge,
+      family: "age", settingFamily: "time", pool: "core", scarcity: 1,
+      label: label, explain: explain, search: search
+    };
+  }
+
+  function makeBoundedBuddyRules() {
+    const bounds = familyLimits.buddy;
+    if (bounds.min === "" && bounds.max === "") return [];
+    const minimum = bounds.min === "" ? 0 : Number(bounds.min);
+    const maximum = bounds.max === "" ? 5 : Number(bounds.max);
+    const results = [];
+    for (let min = minimum; min <= maximum; min += 1) {
+      for (let max = min; max <= maximum; max += 1) {
+        const search = "buddy" + min + "-" + max;
+        results.push({
+          id: "buddy-range-" + min + "-" + max,
+          family: "buddy", settingFamily: "buddy", pool: "spicy",
+          scarcity: max - min >= 3 ? 1 : 2,
+          label: min === max ? "Buddy level " + min : "Buddy levels " + min + "–" + max,
+          explain: min === max
+            ? "Pokémon with Buddy level " + min + "."
+            : "Pokémon with Buddy progress from level " + min + " through " + max + ".",
+          search: search
+        });
+      }
+    }
+    return results;
+  }
+
+  function makeBoundedMegaRules() {
+    const bounds = familyLimits.mega;
+    if (bounds.min === "" && bounds.max === "") return [];
+    const minimum = bounds.min === "" ? 1 : Number(bounds.min);
+    const maximum = bounds.max === "" ? 4 : Number(bounds.max);
+    const levels = [
+      { level: 1, label: "Base", pool: "spicy", scarcity: 2 },
+      { level: 2, label: "High", pool: "spicy", scarcity: 3 },
+      { level: 3, label: "Max", pool: "spicy", scarcity: 3 },
+      { level: 4, label: "Super Max", pool: "chaos", scarcity: 4 }
+    ];
+    return levels.filter((entry) => entry.level >= minimum && entry.level <= maximum).map((entry) => ({
+      id: "mega-level-bounded-" + entry.level,
+      family: "mega-level", settingFamily: "mega", pool: entry.pool, scarcity: entry.scarcity,
+      label: entry.label + " Mega Level",
+      explain: "Pokémon at " + entry.label + " Mega Level.",
+      search: "mega" + entry.level
+    }));
   }
 
   function randomInteger(min, max) {
@@ -177,7 +285,14 @@
       makeExclusionRule("region-banned", "region", regions, ""),
       makeExclusionRule("move-type-banned", "move-type", types, "@")
     ];
-    return rules.filter((rule) => rule.pool !== "reference").map(makeRuleDisplay).concat(generatedExclusions);
+    const hasBuddyBounds = familyLimits.buddy.min !== "" || familyLimits.buddy.max !== "";
+    const hasMegaBounds = familyLimits.mega.min !== "" || familyLimits.mega.max !== "";
+    const sourceRules = rules.filter((rule) => rule.pool !== "reference" && rule.family !== "age" &&
+      !(hasBuddyBounds && rule.family === "buddy") &&
+      !(hasMegaBounds && (rule.family === "mega" || rule.family === "mega-level")));
+    return sourceRules.map(makeRuleDisplay).concat(
+      makeTimeRule(), makeBoundedBuddyRules(), makeBoundedMegaRules(), generatedExclusions
+    );
   }
 
   function getStaticCupPrefix() {
@@ -234,6 +349,120 @@
     return weighted[weighted.length - 1].item;
   }
 
+  function makeLimitSelect(labelText, maximum, minimum = 0) {
+    const label = document.createElement("label");
+    label.className = "family-limit-control";
+    const text = document.createElement("span");
+    text.textContent = labelText;
+    const select = document.createElement("select");
+    select.setAttribute("aria-label", labelText + " bound");
+    select.add(new Option("Any", ""));
+    for (let value = minimum; value <= maximum; value += 1) select.add(new Option(String(value), String(value)));
+    label.append(text, select);
+    return { label: label, input: select };
+  }
+
+  function createFamilyLimitControls(definition) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "family-limit-button";
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-label", "Configure " + definition.label + " limits");
+    const panelId = "family-" + definition.id + "-limits";
+    button.setAttribute("aria-controls", panelId);
+    button.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14M7 3v4m6 1v4m-4 1v4"/></svg>';
+
+    const panel = document.createElement("div");
+    panel.id = panelId;
+    panel.className = "family-limits";
+    panel.hidden = true;
+    button.addEventListener("click", () => {
+      const open = panel.hidden;
+      panel.hidden = !open;
+      button.setAttribute("aria-expanded", String(open));
+    });
+
+    const controls = { button: button, panel: panel, inputs: [] };
+    if (definition.limits === "buddy" || definition.limits === "mega") {
+      const maximum = definition.limits === "buddy" ? 5 : 4;
+      const minimum = definition.limits === "buddy" ? 0 : 1;
+      const noun = definition.limits === "buddy" ? "Buddy" : "Mega Level";
+      const lower = makeLimitSelect("≥ " + noun, maximum, minimum);
+      const upper = makeLimitSelect("≤ " + noun, maximum, minimum);
+      lower.input.id = "family-" + definition.id + "-min";
+      upper.input.id = "family-" + definition.id + "-max";
+      panel.append(lower.label, upper.label);
+      controls.inputs = [lower.input, upper.input];
+      controls.inputs.forEach((input, index) => input.addEventListener("change", () => {
+        const key = definition.limits;
+        const bounds = familyLimits[key];
+        bounds[index === 0 ? "min" : "max"] = input.value;
+        const low = bounds.min === "" ? 0 : Number(bounds.min);
+        const high = bounds.max === "" ? maximum : Number(bounds.max);
+        if (low > high) bounds[index === 0 ? "max" : "min"] = input.value;
+        controls.inputs[0].value = bounds.min;
+        controls.inputs[1].value = bounds.max;
+        markProfileCustom();
+        markConfigPending();
+      }));
+    } else if (definition.limits === "time") {
+      const newerLabel = document.createElement("label");
+      newerLabel.className = "family-limit-control family-limit-control--date";
+      const newerText = document.createElement("span");
+      newerText.textContent = "Caught on or before";
+      const newerInput = document.createElement("input");
+      newerInput.type = "date";
+      newerInput.id = "family-time-newer-date";
+      newerInput.setAttribute("aria-label", "Newest allowed catch date");
+      newerLabel.append(newerText, newerInput);
+
+      const oldestLabel = document.createElement("label");
+      oldestLabel.className = "family-limit-control family-limit-control--date";
+      const oldestText = document.createElement("span");
+      oldestText.textContent = "Caught on or after";
+      const oldestInput = document.createElement("input");
+      oldestInput.type = "date";
+      oldestInput.id = "family-time-oldest-date";
+      oldestInput.setAttribute("aria-label", "Oldest allowed catch date");
+      oldestLabel.append(oldestText, oldestInput);
+      panel.append(newerLabel, oldestLabel);
+      controls.inputs = [newerInput, oldestInput];
+      const updateTimeBounds = (changedIndex) => {
+        let newer = familyLimits.time.newerDate;
+        let oldest = familyLimits.time.oldestDate;
+        if (newer && oldest && oldest > newer) {
+          if (changedIndex === 0) oldest = newer;
+          else newer = oldest;
+          familyLimits.time.newerDate = newer;
+          familyLimits.time.oldestDate = oldest;
+          newerInput.value = newer;
+          oldestInput.value = oldest;
+        }
+        newerInput.min = oldest || "";
+        oldestInput.max = newer || localDateInputValue();
+      };
+      newerInput.addEventListener("change", () => {
+        familyLimits.time.newerDate = newerInput.value;
+        updateTimeBounds(0);
+        markProfileCustom();
+        markConfigPending();
+      });
+      oldestInput.addEventListener("change", () => {
+        familyLimits.time.oldestDate = oldestInput.value || DEFAULT_OLDEST_CATCH_DATE;
+        oldestInput.value = familyLimits.time.oldestDate;
+        updateTimeBounds(1);
+        markProfileCustom();
+        markConfigPending();
+      });
+      controls.sync = () => {
+        newerInput.value = familyLimits.time.newerDate;
+        oldestInput.value = familyLimits.time.oldestDate;
+        updateTimeBounds(-1);
+      };
+    }
+    return controls;
+  }
+
   function chooseNextRule(pool, selected, profile, league) {
     const availableGroups = new Map();
     pool.forEach((rule) => {
@@ -259,6 +488,8 @@
     definitions.forEach((definition) => {
       const row = document.createElement("div");
       row.className = "family-setting";
+      const heading = document.createElement("div");
+      heading.className = "family-heading";
       const toggleLabel = document.createElement("label");
       toggleLabel.className = "family-toggle";
       const checkbox = document.createElement("input");
@@ -272,6 +503,12 @@
       helper.textContent = definition.description;
       checkbox.setAttribute("aria-describedby", helper.id);
       toggleLabel.append(checkbox, title);
+      heading.appendChild(toggleLabel);
+      let limitControls = null;
+      if (definition.limits) {
+        limitControls = createFamilyLimitControls(definition);
+        heading.appendChild(limitControls.button);
+      }
 
       const weightLabel = document.createElement("label");
       weightLabel.className = "family-weight";
@@ -285,9 +522,11 @@
       const output = document.createElement("output");
       output.htmlFor = range.id;
       weightLabel.append(range, output);
-      row.append(toggleLabel, helper, weightLabel);
+      row.append(heading, helper, weightLabel);
+      if (limitControls) row.appendChild(limitControls.panel);
       container.appendChild(row);
       familyControlElements.set(definition.id, { checkbox: checkbox, range: range, output: output, row: row, helper: helper });
+      if (limitControls) familyLimitElements.set(definition.id, limitControls);
 
       checkbox.addEventListener("change", () => {
         familySettings[definition.id].enabled = checkbox.checked;
@@ -308,9 +547,18 @@
     const defaults = profileDefaults[profile] || profileDefaults.chill;
     familySettings = {};
     advancedFamilies.forEach((definition) => {
+      const legacyFamily = definition.id === "shadow" || definition.id === "purified" ? "rocket-status" :
+        definition.id === "time" ? "recent-catch" : null;
+      const legacyWeight = definition.id === "shadow" || definition.id === "purified"
+        ? (defaults.shadow_purified ?? defaults[legacyFamily])
+        : legacyFamily && defaults[legacyFamily];
+      let weight = defaults[definition.id];
+      if (weight == null && legacyWeight != null) {
+        weight = definition.id === "purified" ? Math.min(2, legacyWeight) : legacyWeight;
+      }
       familySettings[definition.id] = {
         enabled: true,
-        weight: defaults[definition.id] == null ? 1 : defaults[definition.id]
+        weight: weight == null ? 1 : weight
       };
     });
     syncFamilyControls();
@@ -341,6 +589,13 @@
         ? definition.description + " Paused while this Cup prefix handles it."
         : definition.description;
       updateRangeProgress(elements.range);
+      const limits = familyLimitElements.get(definition.id);
+      if (limits && limits.sync) limits.sync();
+      if (limits && limits.inputs.length && definition.limits !== "time") {
+        const bounds = familyLimits[definition.limits];
+        limits.inputs[0].value = bounds.min;
+        limits.inputs[1].value = bounds.max;
+      }
     });
     additionalFamiliesToggle.checked = additionalFamiliesEnabled;
     additionalFamilyControls.classList.toggle("is-opted-out", !additionalFamiliesEnabled);
@@ -525,7 +780,7 @@
       const validTypes = rawTypes.map((value) => String(value).toLowerCase()).filter((value) => types.includes(value));
       if (validTypes.length) return { kind: "types", types: validTypes, move: family !== "pokemon-type", banned: banned };
     }
-    if (family === "rocket-status") {
+    if (family === "shadow" || family === "purified") {
       if (id === "shadow" || id === "not-shadow") return { kind: "rule", icon: "shadow", banned: id === "not-shadow" };
       if (id === "purified" || id === "not-purified") return { kind: "rule", icon: "purified", banned: id === "not-purified" };
     }
@@ -765,6 +1020,10 @@
 
   function resetAdvancedSettings() {
     loadProfileDefaults(activeProfile);
+    familyLimits.buddy = { min: "", max: "" };
+    familyLimits.mega = { min: "", max: "" };
+    familyLimits.time = { newerDate: "", oldestDate: DEFAULT_OLDEST_CATCH_DATE };
+    syncFamilyControls();
     updateProfileChoices();
     extraFilterInput.value = "";
     customBadge.hidden = true;

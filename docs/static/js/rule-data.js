@@ -199,19 +199,23 @@ window.GBL_RULE_DATA = (() => {
       scarcity: 2,
       explain: "Shiny Pokemon only."
     }),
-    rule("shadow", "Shadow", "shadow", "core", "rocket-status", {
+    rule("shadow", "Shadow", "shadow", "core", "shadow", {
+      exclusiveGroup: "shadow-purified",
       explain: "Shadow Pokemon only."
     }),
-    rule("purified", "Purified", "purified", "core", "rocket-status", {
+    rule("purified", "Purified", "purified", "core", "purified", {
+      exclusiveGroup: "shadow-purified",
       explain: "Purified Pokemon only."
     }),
-    rule("not-purified", "No Purified Pokemon", "!purified", "core", "rocket-status", {
+    rule("not-purified", "No Purified Pokemon", "!purified", "core", "purified", {
       width: "broad",
+      exclusiveGroup: "shadow-purified",
       explain: "Exclude Purified Pokemon."
     }),
-    rule("not-shadow", "No Shadow Pokemon", "!shadow", "core", "rocket-status", {
+    rule("not-shadow", "No Shadow Pokemon", "!shadow", "core", "shadow", {
       width: "broad",
       tags: ["ban-shadow"],
+      exclusiveGroup: "shadow-purified",
       explain: "Exclude Shadow Pokemon."
     }),
 
