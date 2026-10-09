@@ -90,6 +90,7 @@ window.GBL_RULE_DATA = (() => {
     weightGroup: options.weightGroup || null,
     maxCp: options.maxCp || null,
     minCp: options.minCp || null,
+    ...(options.role ? { role: options.role } : {}),
     ...(options.meta ? { meta: options.meta } : {})
   });
 
@@ -152,7 +153,7 @@ window.GBL_RULE_DATA = (() => {
       width: "broad",
       explain: "Pokemon caught in the last 30 days."
     }),
-    rule("age-today", "Caught in last 24 hours", "age0", "core", "age", {
+    rule("age-today", "Caught in last 24 hours", "age0", "reference", "age", {
       scarcity: 2,
       explain: "Pokemon caught within the last 24 hours."
     }),
@@ -277,7 +278,7 @@ window.GBL_RULE_DATA = (() => {
       explain: "Costumed event Pokemon."
     }),
     rule("candy-mid", "100-200 family Candy", "countcandy100-200", "spicy", "candy", {
-      scarcity: 2,
+      scarcity: 4,
       explain: "Pokemon whose evolution family has 100 to 200 Candy."
     }),
     rule("candy-high", "At least 100 family Candy", "countcandy100-", "spicy", "candy", {
@@ -306,11 +307,26 @@ window.GBL_RULE_DATA = (() => {
       explain: "Pokemon with no buddy history."
     }),
 
-    rule("year-current", "Caught this year", "", "spicy", "year", {
+    rule("age-month-to-year", "Caught 30-365 days ago", "age30-365", "core", "age", {
+      width: "broad",
+      explain: "Pokemon caught from 30 to 365 days ago."
+    }),
+    rule("age-year-plus", "Caught at least 365 days ago", "age365-", "core", "age", {
+      width: "broad",
+      explain: "Pokemon caught at least 365 days ago."
+    }),
+    rule("age-three-years-plus", "Caught at least 1000 days ago", "age1000-", "spicy", "age", {
+      width: "broad",
+      explain: "Pokemon caught at least 1000 days ago."
+    }),
+
+    // Keep the calendar-year conversions for reference/display compatibility;
+    // rolling age bands above are the only time rules in the random pool.
+    rule("year-current", "Caught this year", "", "reference", "year", {
       meta: { calendarYear: "current" },
       explain: "Caught in the current calendar year."
     }),
-    rule("year-previous", "Caught last year", "", "spicy", "year", {
+    rule("year-previous", "Caught last year", "", "reference", "year", {
       meta: { calendarYear: "previous" },
       explain: "Caught in the previous calendar year."
     }),
@@ -341,17 +357,17 @@ window.GBL_RULE_DATA = (() => {
       explain: "Pokemon with CP 1500 or higher."
     }),
 
-    rule("iv-zero-attack", "0 Attack IV band", "0attack", "spicy", "iv-attack", {
+    rule("iv-low-attack", "0-5 Attack IV band", "0attack,1attack", "spicy", "iv-attack", {
       scarcity: 2,
-      explain: "Pokemon with exactly 0 Attack IV."
+      explain: "Pokemon with Attack IV from the 0 or 1 appraisal bands (0-5)."
     }),
-    rule("iv-max-defense", "15 Defense IV", "4defense", "spicy", "iv-defense", {
+    rule("iv-high-defense", "11-15 Defense IV band", "3defense,4defense", "spicy", "iv-defense", {
       scarcity: 2,
-      explain: "Pokemon with exactly 15 Defense IV."
+      explain: "Pokemon with Defense IV from the 3 or 4 appraisal bands (11-15)."
     }),
-    rule("iv-max-hp", "15 HP IV", "4hp", "spicy", "iv-hp", {
+    rule("iv-mid-hp", "1-10 HP IV band", "1hp,2hp", "spicy", "iv-hp", {
       scarcity: 2,
-      explain: "Pokemon with exactly 15 HP IV."
+      explain: "Pokemon with HP IV from the 1 or 2 appraisal bands (1-10)."
     }),
     rule("iv-pvpish", "0/15/15 IV bands", "0attack&4defense&4hp", "chaos", "iv-combo", {
       scarcity: 4,
@@ -404,21 +420,25 @@ window.GBL_RULE_DATA = (() => {
       scarcity: 3,
       explain: "Gigantamax Pokemon."
     }),
-    rule("dynamax-unlocked", "Dynamax with unlocked Max moves", "dynamax1-", "spicy", "max-count", {
+    rule("dynamax-unlocked", "Dynamax with unlocked Max moves", "dynamax1-", "reference", "max-count", {
       scarcity: 3,
       explain: "Dynamax Pokemon with at least one unlocked Max move."
     }),
-    rule("maxmove-leveled", "Max Move level 1-3", "maxmove1-3", "spicy", "max-move", {
+    rule("maxmove-any-level", "Any Max Move level", "maxmove1-3", "reference", "max-move", {
       scarcity: 3,
-      explain: "Pokemon matching the Max Move level range 1-3."
+      explain: "Reference search for Max Move levels 1-3; level 1 does not distinguish invested Pokemon."
     }),
-    rule("maxguard-leveled", "Max Guard level 1-3", "maxguard1-3", "spicy", "max-move", {
+    rule("maxmove-invested", "Max Move level 2-3", "maxmove2-3", "spicy", "max-move", {
       scarcity: 3,
-      explain: "Pokemon matching the Max Guard level range 1-3."
+      explain: "Pokemon with a Max Move powered to level 2 or 3."
     }),
-    rule("maxspirit-leveled", "Max Spirit level 1-3", "maxspirit1-3", "spicy", "max-move", {
+    rule("maxguard-invested", "Max Guard level 2-3", "maxguard2-3", "spicy", "max-move", {
       scarcity: 3,
-      explain: "Pokemon matching the Max Spirit level range 1-3."
+      explain: "Pokemon with Max Guard powered to level 2 or 3."
+    }),
+    rule("maxspirit-invested", "Max Spirit level 2-3", "maxspirit2-3", "spicy", "max-move", {
+      scarcity: 3,
+      explain: "Pokemon with Max Spirit powered to level 2 or 3."
     }),
 
     rule("egg-exclusive", "Egg-exclusive species", "eggsonly", "chaos", "origin-special", {
@@ -446,9 +466,14 @@ window.GBL_RULE_DATA = (() => {
       scarcity: 4,
       explain: "Pokemon with a rare background."
     }),
-    rule("location-background", "Location background", "locationbackground", "chaos", "background", {
+    rule("location-background", "Location background", "locationbackground", "reference", "background", {
       scarcity: 4,
       explain: "Pokemon with a location catch background."
+    }),
+    rule("exclude-location-background", "Exclude Location Backgrounds", "!locationbackground", "chaos", "background", {
+      role: "disqualifier_only",
+      scarcity: 4,
+      explain: "Exclude Pokemon with a location catch background."
     }),
     rule("special-background", "Special Background", "specialbackground", "chaos", "background", {
       scarcity: 4,
@@ -458,13 +483,23 @@ window.GBL_RULE_DATA = (() => {
       scarcity: 4,
       explain: "Pokemon with Adventure Effect-capable move/status under current client semantics."
     }),
-    rule("fusion", "Fusion", "fusion", "chaos", "special-status", {
+    rule("fusion", "Fusion", "fusion", "reference", "special-status", {
       scarcity: 4,
       explain: "Pokemon able to be fused or already fused under documented client semantics."
     }),
-    rule("hypertraining", "Hyper Training", "hypertraining", "chaos", "special-status", {
+    rule("exclude-fusion", "Exclude Fusion", "!fusion", "chaos", "special-status", {
+      role: "disqualifier_only",
+      scarcity: 4,
+      explain: "Exclude Pokemon able to be fused or already fused."
+    }),
+    rule("hypertraining", "Hyper Training", "hypertraining", "reference", "special-status", {
       scarcity: 4,
       explain: "Pokemon currently undergoing Hyper Training."
+    }),
+    rule("exclude-hypertraining", "Exclude Hyper Training", "!hypertraining", "chaos", "special-status", {
+      role: "disqualifier_only",
+      scarcity: 4,
+      explain: "Exclude Pokemon currently undergoing Hyper Training."
     }),
     rule("distance-far", "Caught at least 1000 km away", "distance1000-", "chaos", "distance", {
       scarcity: 4,

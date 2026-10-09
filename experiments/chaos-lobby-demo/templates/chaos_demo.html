@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Experimental Chaos Lobby Demo</title>
+  <style>
+    :root { color-scheme: dark; --bg:#17111e; --panel:#24192e; --border:#493653; --text:#f7f1fb; --muted:#c8b8d2; --accent:#d5a4f4; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.5 system-ui,sans-serif; }
+    main { max-width:1200px; margin:auto; padding:28px 20px 60px; }
+    h1,h2,h3,p { margin:0 0 12px; }
+    h1 { font-size:clamp(26px,5vw,38px); } h2 { font-size:21px; } h3 { font-size:19px; }
+    .eyebrow { color:var(--accent); font-size:12px; font-weight:800; letter-spacing:.12em; }
+    .muted,small { color:var(--muted); } small { font-size:13px; }
+    .panel,.player-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; }
+    .panel { margin-top:20px; }
+    .controls,.card-heading,.actions,.section-heading { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .section-heading,.card-heading { justify-content:space-between; }
+    .controls { align-items:end; } .controls label { min-width:210px; flex:1; }
+    label { display:block; font-size:14px; font-weight:600; }
+    input,select,textarea { display:block; width:100%; background:#1b1224; border:1px solid #624a70; border-radius:6px; color:var(--text); padding:10px; font:inherit; margin-top:5px; }
+    textarea { resize:vertical; min-height:86px; }
+    button { background:#382544; border:1px solid #624a70; color:var(--text); border-radius:6px; padding:10px 13px; font:inherit; font-size:14px; cursor:pointer; }
+    button:hover:enabled { border-color:var(--accent); background:#493154; }
+    button.primary { background:var(--accent); color:#24132f; font-weight:700; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    button.quiet { padding:5px 9px; background:transparent; }
+    :focus-visible { outline:2px solid #95dced; outline-offset:3px; }
+    .round-controls { margin-top:16px; }
+    #round-status { color:var(--accent); font-weight:600; }
+    #status { margin-top:14px; padding:10px 12px; border-left:3px solid var(--accent); background:#1b1224; }
+    #status[data-error="true"],.error { color:#ffb5b5; border-color:#dc8282; }
+    .warning { color:#e5ca95; font-size:13px; }
+    a { color:var(--accent); }
+    .players { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr)); gap:16px; margin-top:18px; }
+    .player-card { min-width:0; }
+    .badge { display:inline-block; color:var(--accent); font-size:12px; border:1px solid var(--border); padding:3px 7px; border-radius:5px; }
+    .role { font-size:23px; font-weight:750; margin:14px 0 3px; }
+    .league { color:var(--muted); }
+    ul { padding-left:20px; } .rules { min-height:55px; }
+    code { display:block; overflow-wrap:anywhere; white-space:pre-wrap; background:#130d19; border-radius:6px; padding:10px; font-size:13px; }
+    .search-label { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+    .allowance { margin:14px 0 10px; font-size:14px; }
+    .actions { gap:7px; } .actions button { padding:8px 10px; }
+    details { border-top:1px solid var(--border); margin-top:16px; padding-top:12px; }
+    summary { cursor:pointer; color:var(--muted); font-size:14px; } details p { margin-top:10px; font-size:14px; }
+    #event-history { margin:0; padding-left:22px; max-height:260px; overflow:auto; }
+    #event-history li { padding:5px 0; } time { color:var(--muted); font-size:12px; margin-right:8px; }
+    dialog { width:min(560px,calc(100% - 32px)); max-height:90vh; overflow:auto; color:var(--text); background:var(--panel); border:1px solid #624a70; border-radius:12px; padding:24px; }
+    dialog::backdrop { background:#08040bba; } dialog label { margin-top:14px; }
+    dialog .actions { margin-top:20px; justify-content:end; }
+    #edit-error { margin-top:12px; }
+    [hidden] { display:none !important; }
+    @media (max-width:550px) { main { padding:20px 12px 40px; } .panel,.player-card { padding:16px; } .controls label { min-width:100%; } }
+  </style>
+  <script src="../static/chaos_demo_engine.js" defer></script>
+  <script src="../static/chaos_demo.js" defer></script>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">EXPERIMENTAL CHAOS LOBBY DEMO</p>
+    <h1>One round. Different kinds of chaos.</h1>
+    <p class="muted">Host a mock lobby and try asymmetric Pokémon rules. Each card can be changed independently.</p>
+    <small>Browser-only demo · GitHub Pages ready. State lives in this tab; refreshing starts over. No accounts, joins or production sessions.</small>
+    <p id="server-hint" class="warning" role="alert" style="margin-top:14px">Loading demo controls… If they stay disabled, open this HTML file in a browser with JavaScript enabled. Keep the static folder alongside it. No Flask or backend is needed.</p>
+    <noscript><p class="error">This browser-only demo needs JavaScript enabled to add players and generate assignments.</p></noscript>
+  </header>
+  <section class="panel" aria-labelledby="lobby-heading">
+    <div class="section-heading"><h2 id="lobby-heading">Lobby</h2><span id="round-status">No round generated</span></div>
+    <form id="add-player-form" class="controls">
+      <label>Player name<input id="player-name" maxlength="40" autocomplete="off" placeholder="e.g. Tom" required></label>
+      <button id="add-player" type="submit" disabled>Add player</button>
+      <label>League for flexible roles
+        <select id="flexible-league">
+          <option value="random">Random per player</option>
+          <option>Great League</option><option>Ultra League</option><option>Master League</option>
+        </select>
+      </label>
+    </form>
+    <p><small>Hunter stays Ultra; Purist stays Great. League settings affect future rolls only. Up to 12 mock players.</small></p>
+    <div class="controls round-controls">
+      <button id="generate-round" class="primary" type="button">Generate Round</button>
+      <button id="reset-round" type="button" disabled>Reset Round</button>
+      <button id="new-round" type="button" disabled>New Round</button>
+      <button id="undo-demo" type="button" disabled>Undo last demo action</button>
+    </div>
+    <p><small>Reset restores originals and reroll allowances. New Round replaces all assignments. Whole-demo undo also recovers removed players and previous rounds.</small></p>
+    <div id="status" role="status" aria-live="polite">Add a few players, then generate your first round.</div>
+  </section>
+  <p class="warning" style="margin-top:18px">Personal CP caps can differ. Agree a shared battle format before playing; these cards do not configure a real battle. Searches use English Pokémon GO keywords.</p>
+  <section aria-label="Player assignments"><div id="players" class="players"></div></section>
+  <section class="panel" aria-labelledby="events-heading">
+    <div class="section-heading"><h2 id="events-heading">Event history</h2><small>Latest 30 events · this tab only</small></div>
+    <ol id="event-history" reversed><li class="muted">No events yet.</li></ol>
+  </section>
+  <details class="panel"><summary>Demo role guide</summary><div id="role-guide"></div>
+    <p class="muted">Player Reroll spends the current allowance; a new role does not refill it. Host Reroll is unlimited recovery. Edit can change the allowance or make it unlimited. Undo restores the assignment and its counters.</p>
+  </details>
+</main>
+<dialog id="edit-dialog" aria-labelledby="edit-title">
+  <form id="edit-form">
+    <h2 id="edit-title">Edit assignment</h2>
+    <p class="muted">Override the current card. The originally generated assignment stays available.</p>
+    <label>Role<select id="edit-role"></select></label>
+    <label>League<select id="edit-league"><option>Great League</option><option>Ultra League</option><option>Master League</option></select></label>
+    <label>Rules (one per line)<textarea id="edit-rules" rows="4" required maxlength="3600"></textarea></label>
+    <label>Pokémon GO search / filter<input id="edit-search" maxlength="500" autocomplete="off"></label>
+    <label>Total player reroll allowance<input id="edit-limit" type="number" min="0" max="99" step="1" placeholder="Blank = unlimited"></label>
+    <small>Blank means unlimited. Rerolls already used still count. Role selection is a label; edit the rules and search to match.</small>
+    <div id="edit-error" class="error" role="alert" hidden></div>
+    <div class="actions"><button id="edit-cancel" type="button">Cancel</button><button id="edit-save" class="primary" type="submit">Save override</button></div>
+  </form>
+</dialog>
+</body>
+</html>

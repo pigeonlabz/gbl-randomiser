@@ -1,0 +1,169 @@
+(function (root) {
+  const TYPE_LEANING_MULTIPLIERS = Object.freeze({ light: 2, medium: 4, strong: 8 });
+
+  function weightedPick(items, weightFor, random = Math.random) {
+    const weighted = items.map((item) => ({ item: item, weight: weightFor(item) })).filter((entry) => entry.weight > 0);
+    const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+    if (!total) return null;
+    let threshold = random() * total;
+    for (const entry of weighted) {
+      threshold -= entry.weight;
+      if (threshold < 0) return entry.item;
+    }
+    return weighted[weighted.length - 1].item;
+  }
+
+  function typeWeight(type, preferredTypes, strength, enabled) {
+    if (!enabled) return 1;
+    const preferred = preferredTypes.map((value) => String(value).toLowerCase());
+    return preferred.includes(String(type).toLowerCase())
+      ? TYPE_LEANING_MULTIPLIERS[strength] || TYPE_LEANING_MULTIPLIERS.medium
+      : 1;
+  }
+
+  function typeLeaningScopeEnabled(scope, selectedTypeCount, pokemonEnabled, moveEnabled) {
+    if (!selectedTypeCount) return false;
+    return scope === "pokemon" ? pokemonEnabled : moveEnabled;
+  }
+
+  function leagueCpUiState(leagueId, preference, checked, disabled) {
+    const isMaster = leagueId === "master";
+    const savedPreference = isMaster && !disabled ? Boolean(checked) : Boolean(preference);
+    return {
+      enabled: !isMaster,
+      checked: !isMaster && savedPreference,
+      preference: savedPreference
+    };
+  }
+
+  function weightedSample(values, count, weightFor, random = Math.random) {
+    const remaining = values.slice();
+    const selected = [];
+    const sampleCount = Math.max(0, Math.min(remaining.length, Math.floor(count)));
+    for (let index = 0; index < sampleCount; index += 1) {
+      const item = weightedPick(remaining, weightFor, random);
+      if (item == null) break;
+      selected.push(item);
+      remaining.splice(remaining.indexOf(item), 1);
+    }
+    return selected;
+  }
+
+  function canAddRule(rule, selected) {
+    if (selected.some((chosen) =>
+      chosen.id === rule.id ||
+      chosen.family === rule.family ||
+      (rule.exclusiveGroup && chosen.exclusiveGroup === rule.exclusiveGroup)
+    )) return false;
+    const hasTypeRule = selected.some((chosen) => chosen.family === "pokemon-type");
+    const hasEffectivenessRule = selected.some((chosen) => chosen.family === "type-effectiveness");
+    if ((rule.family === "pokemon-type" && hasEffectivenessRule) ||
+        (rule.family === "type-effectiveness" && hasTypeRule)) return false;
+    const individualIvFamilies = ["iv-attack", "iv-defense", "iv-hp"];
+    if ((rule.family === "iv-combo" && selected.some((chosen) => individualIvFamilies.includes(chosen.family))) ||
+        (individualIvFamilies.includes(rule.family) && selected.some((chosen) => chosen.family === "iv-combo"))) return false;
+    return true;
+  }
+
+  function chooseRule(pool, options = {}) {
+    const groupIdFor = options.groupIdFor || ((rule) => rule.weightGroup || rule.family);
+    const groupWeightFor = options.groupWeightFor || (() => 1);
+    const ruleWeightFor = options.ruleWeightFor || (() => 1);
+    const random = options.random || Math.random;
+    const groups = new Map();
+    pool.forEach((rule) => {
+      const groupId = groupIdFor(rule);
+      if (!groups.has(groupId)) groups.set(groupId, []);
+      groups.get(groupId).push(rule);
+    });
+    const groupChoices = Array.from(groups.entries()).map(([groupId, groupRules]) => ({
+      groupId: groupId,
+      rules: groupRules,
+      weight: groupRules.reduce((sum, rule) => sum + groupWeightFor(rule), 0) / groupRules.length
+    }));
+    const selectedGroup = weightedPick(groupChoices, (entry) => entry.weight, random);
+    return selectedGroup ? weightedPick(selectedGroup.rules, ruleWeightFor, random) : null;
+  }
+
+  function chooseChallengeRule(pool, options = {}) {
+    return chooseRule(pool.filter((rule) => rule.role !== "disqualifier_only"), options);
+  }
+
+  function chooseOptionalDisqualifier(pool, options = {}) {
+    const random = options.random || Math.random;
+    const chance = Math.max(0, Math.min(1, Number(options.chance) || 0));
+    if (random() >= chance) return null;
+    const disqualifiers = pool.filter((rule) => rule.role === "disqualifier_only");
+    return chooseRule(disqualifiers, options);
+  }
+
+  function combineSearch(parts) {
+    return parts.filter(Boolean).join("&");
+  }
+
+  function cpSearchForRange(minCp, maxCp) {
+    if (maxCp === Infinity) return minCp > 0 ? "cp" + minCp + "-" : "";
+    if (minCp <= 0) return "cp0-" + maxCp;
+    return "cp" + minCp + "-" + maxCp;
+  }
+
+  function normalizeCpConstraint(league, selectedRules) {
+    const generatedRule = selectedRules.find((rule) => rule.family === "cp") || null;
+    if (!generatedRule) {
+      return {
+        generatedRule: null,
+        minCp: league.minCp == null ? 0 : league.minCp,
+        maxCp: league.maxCp == null ? Infinity : league.maxCp,
+        search: league.search
+      };
+    }
+
+    const leagueMin = league.minCp == null ? 0 : league.minCp;
+    const leagueMax = league.maxCp == null ? Infinity : league.maxCp;
+    const generatedMin = generatedRule.minCp == null ? 0 : generatedRule.minCp;
+    const generatedMax = generatedRule.maxCp == null ? Infinity : generatedRule.maxCp;
+    const minCp = Math.max(leagueMin, generatedMin);
+    const maxCp = Math.min(leagueMax, generatedMax);
+    const unchanged = minCp === generatedMin && maxCp === generatedMax;
+
+    return {
+      generatedRule: generatedRule,
+      minCp: minCp,
+      maxCp: maxCp,
+      search: unchanged ? generatedRule.search : cpSearchForRange(minCp, maxCp)
+    };
+  }
+
+  function leagueWithOptionalCpLimit(league, enabled) {
+    if (enabled && league.maxCp) return league;
+    return Object.assign({}, league, { minCp: null, maxCp: null, search: "" });
+  }
+
+  function isAllowedForLeague(rule, league) {
+    if (!league.maxCp || rule.family !== "cp") return true;
+    if (rule.minCp != null && rule.minCp >= league.maxCp) return false;
+    if (rule.minCp == null && rule.maxCp != null && rule.maxCp >= league.maxCp) return false;
+    return true;
+  }
+
+  const api = Object.freeze({
+    TYPE_LEANING_MULTIPLIERS: TYPE_LEANING_MULTIPLIERS,
+    weightedPick: weightedPick,
+    typeWeight: typeWeight,
+    typeLeaningScopeEnabled: typeLeaningScopeEnabled,
+    leagueCpUiState: leagueCpUiState,
+    weightedSample: weightedSample,
+    canAddRule: canAddRule,
+    chooseRule: chooseRule,
+    chooseChallengeRule: chooseChallengeRule,
+    chooseOptionalDisqualifier: chooseOptionalDisqualifier,
+    combineSearch: combineSearch,
+    cpSearchForRange: cpSearchForRange,
+    normalizeCpConstraint: normalizeCpConstraint,
+    leagueWithOptionalCpLimit: leagueWithOptionalCpLimit,
+    isAllowedForLeague: isAllowedForLeague
+  });
+
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  if (root) root.GBL_RANDOMISER_UTILS = api;
+})(typeof window !== "undefined" ? window : globalThis);

@@ -1,5 +1,6 @@
 (() => {
   const DATA = window.GBL_RULE_DATA;
+  const GENERATOR_UTILS = window.GBL_RANDOMISER_UTILS;
   const leagues = DATA.leagues;
   const rules = DATA.rules;
   const types = DATA.types;
@@ -88,9 +89,15 @@
   const cupLockTypes = document.getElementById("cup-lock-types");
   const cupLockMoves = document.getElementById("cup-lock-moves");
   const leagueSelect = document.getElementById("league-select");
+  const leagueCpLimitInput = document.getElementById("league-cp-limit");
+  const leagueCpHelp = document.getElementById("league-cp-help");
   const mutatorCount = document.getElementById("mutator-count");
   const battleTargetInput = document.getElementById("battle-target");
   const extraFilterInput = document.getElementById("extra-filter");
+  const typeLeaningChips = document.getElementById("type-leaning-chips");
+  const typeLeaningAdd = document.getElementById("type-leaning-add");
+  const typeLeaningPokemon = document.getElementById("type-leaning-pokemon");
+  const typeLeaningMove = document.getElementById("type-leaning-move");
   const primaryFamilyControls = document.getElementById("primary-family-controls");
   const additionalFamilyControls = document.getElementById("additional-family-controls");
   const additionalFamiliesToggle = document.getElementById("additional-families-enabled");
@@ -117,6 +124,8 @@
   let familySettings = {};
   let additionalFamiliesEnabled = false;
   let activeProfile = "chill";
+  let leagueCpPreference = false;
+  let typeLeaning = { types: [], strength: "medium", pokemon: true, move: true };
   let currentCup = null;
   let currentState = null;
   let configPending = false;
@@ -169,29 +178,29 @@
     const oldestDateDay = dateInputDay(setting.oldestDate) ?? dateInputDay(DEFAULT_OLDEST_CATCH_DATE);
     const lowerAge = Math.max(0, Math.min(today, today - (newerDateDay == null ? today : newerDateDay)));
     const upperAge = Math.max(lowerAge, today - Math.min(today, oldestDateDay));
-    const minimumAge = randomInteger(lowerAge, upperAge);
-    const maximumAge = randomInteger(minimumAge, upperAge);
-    const search = minimumAge === 0 && maximumAge === 0 ? "age0" : "age" + minimumAge + "-" + maximumAge;
+    const search = lowerAge === upperAge
+      ? "age" + lowerAge
+      : "age" + lowerAge + "-" + upperAge;
     let label;
     let explain;
-    if (minimumAge === 0 && maximumAge === 0) {
+    if (lowerAge === 0 && upperAge === 0) {
       label = "Caught in last 24 hours";
       explain = "Caught within the last 24 hours.";
-    } else if (minimumAge === maximumAge) {
-      label = "Caught about " + maximumAge + " days ago";
-      explain = "Caught about " + maximumAge + " days ago.";
-    } else if (minimumAge === 0) {
-      const unit = maximumAge === 1 ? "day" : "days";
-      label = "Caught within " + maximumAge + " " + unit;
-      explain = "Caught within the last " + maximumAge + " " + unit + ".";
+    } else if (lowerAge === upperAge) {
+      label = "Caught about " + upperAge + " days ago";
+      explain = "Caught about " + upperAge + " days ago.";
+    } else if (lowerAge === 0) {
+      const unit = upperAge === 1 ? "day" : "days";
+      label = "Caught within " + upperAge + " " + unit;
+      explain = "Caught within the last " + upperAge + " " + unit + ".";
     } else {
-      const minUnit = minimumAge === 1 ? "day" : "days";
-      const maxUnit = maximumAge === 1 ? "day" : "days";
-      label = "Caught " + minimumAge + "–" + maximumAge + " days ago";
-      explain = "Caught between " + minimumAge + " " + minUnit + " and " + maximumAge + " " + maxUnit + " ago.";
+      const minUnit = lowerAge === 1 ? "day" : "days";
+      const maxUnit = upperAge === 1 ? "day" : "days";
+      label = "Caught " + lowerAge + "–" + upperAge + " days ago";
+      explain = "Caught between " + lowerAge + " " + minUnit + " and " + upperAge + " " + maxUnit + " ago.";
     }
     return {
-      id: "age-generated-" + minimumAge + "-" + maximumAge,
+      id: "age-generated-" + lowerAge + "-" + upperAge,
       family: "age", settingFamily: "time", pool: "core", scarcity: 1,
       label: label, explain: explain, search: search
     };
@@ -257,7 +266,10 @@
   }
 
   function makeExclusionRule(id, family, values, termPrefix) {
-    const selected = sampleTerms(values, 1, Math.min(3, values.length));
+    const leaningScope = family === "pokemon-type" ? "pokemon" : family === "move-type" ? "move" : null;
+    const selected = leaningScope && isTypeLeaningEnabled(leaningScope)
+      ? sampleWeightedTypes(values, 1, Math.min(3, values.length), leaningScope)
+      : sampleTerms(values, 1, Math.min(3, values.length));
     const names = selected.map((value) => value.charAt(0).toUpperCase() + value.slice(1));
     let label;
     let explain;
@@ -289,11 +301,13 @@
     ];
     const hasBuddyBounds = familyLimits.buddy.min !== "" || familyLimits.buddy.max !== "";
     const hasMegaBounds = familyLimits.mega.min !== "" || familyLimits.mega.max !== "";
-    const sourceRules = rules.filter((rule) => rule.pool !== "reference" && rule.family !== "age" &&
+    const hasCustomTimeBounds = familyLimits.time.newerDate !== "" || familyLimits.time.oldestDate !== DEFAULT_OLDEST_CATCH_DATE;
+    const sourceRules = rules.filter((rule) => rule.pool !== "reference" &&
+      !(hasCustomTimeBounds && rule.family === "age") &&
       !(hasBuddyBounds && rule.family === "buddy") &&
       !(hasMegaBounds && (rule.family === "mega" || rule.family === "mega-level")));
     return sourceRules.map(makeRuleDisplay).concat(
-      makeTimeRule(), makeBoundedBuddyRules(), makeBoundedMegaRules(), generatedExclusions
+      hasCustomTimeBounds ? [makeTimeRule()] : [], makeBoundedBuddyRules(), makeBoundedMegaRules(), generatedExclusions
     );
   }
 
@@ -304,6 +318,67 @@
   function getExtraFilter() {
     return extraFilterInput.value.trim().replace(/^&+|&+$/g, "");
   }
+  function updateLeagueCpControls() {
+    const state = GENERATOR_UTILS.leagueCpUiState(
+      leagueSelect.value,
+      leagueCpPreference,
+      leagueCpLimitInput.checked,
+      leagueCpLimitInput.disabled
+    );
+    leagueCpPreference = state.preference;
+    leagueCpLimitInput.disabled = !state.enabled;
+    leagueCpLimitInput.checked = state.checked;
+    if (!state.enabled) {
+      leagueCpHelp.textContent = "Master League has no standard CP limit.";
+    } else {
+      leagueCpHelp.textContent = "Adds the selected league's standard maximum CP.";
+    }
+  }
+  function renderTypeLeaningControls() {
+    typeLeaningChips.replaceChildren();
+    typeLeaning.types.forEach((type) => {
+      const chip = document.createElement("span");
+      chip.className = "type-leaning-chip";
+      const label = document.createElement("span");
+      label.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "×";
+      remove.setAttribute("aria-label", "Remove " + label.textContent + " type leaning");
+      remove.addEventListener("click", () => {
+        typeLeaning.types = typeLeaning.types.filter((selected) => selected !== type);
+        renderTypeLeaningControls();
+        markConfigPending();
+      });
+      chip.append(label, remove);
+      typeLeaningChips.appendChild(chip);
+    });
+
+    const previousType = typeLeaningAdd.value;
+    typeLeaningAdd.replaceChildren();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = typeLeaning.types.length === types.length ? "All types selected" : "+ Add type";
+    placeholder.disabled = typeLeaning.types.length === types.length;
+    typeLeaningAdd.appendChild(placeholder);
+    types.filter((type) => !typeLeaning.types.includes(type)).forEach((type) => {
+      const option = document.createElement("option");
+      option.value = type;
+      option.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+      typeLeaningAdd.appendChild(option);
+    });
+    typeLeaningAdd.disabled = typeLeaning.types.length === types.length;
+    typeLeaningAdd.value = types.includes(previousType) && !typeLeaning.types.includes(previousType) ? previousType : "";
+
+    document.querySelectorAll('input[name="type-leaning-strength"]').forEach((input) => {
+      input.checked = input.value === typeLeaning.strength;
+    });
+    typeLeaningPokemon.checked = typeLeaning.pokemon;
+    typeLeaningMove.checked = typeLeaning.move;
+  }
+  function effectiveLeague(league) {
+    return GENERATOR_UTILS.leagueWithOptionalCpLimit(league, leagueCpLimitInput.checked);
+  }
   function isFamilyBlockedByCup(settingFamily) {
     if (!getStaticCupPrefix()) return false;
     if (settingFamily === "pokemon-type") return cupLockTypes.checked;
@@ -311,22 +386,10 @@
     return false;
   }
   function isAllowedForLeague(rule, league) {
-    if (!league.maxCp || rule.family !== "cp") return true;
-    if (rule.minCp != null && rule.minCp >= league.maxCp) return false;
-    if (rule.minCp == null && rule.maxCp != null && rule.maxCp >= league.maxCp) return false;
-    return true;
+    return GENERATOR_UTILS.isAllowedForLeague(rule, league);
   }
   function canAdd(rule, selected) {
-    if (selected.some((chosen) =>
-      chosen.id === rule.id ||
-      chosen.family === rule.family ||
-      (rule.exclusiveGroup && chosen.exclusiveGroup === rule.exclusiveGroup)
-    )) return false;
-    const hasTypeRule = selected.some((chosen) => chosen.family === "pokemon-type");
-    const hasEffectivenessRule = selected.some((chosen) => chosen.family === "type-effectiveness");
-    if ((rule.family === "pokemon-type" && hasEffectivenessRule) ||
-        (rule.family === "type-effectiveness" && hasTypeRule)) return false;
-    return true;
+    return GENERATOR_UTILS.canAddRule(rule, selected);
   }
 
   function ruleProfileWeight(rule, profile) {
@@ -340,16 +403,32 @@
     return familyWeight * optedInPoolWeight / (1 + scarcity * 0.22);
   }
 
-  function weightedPick(items, weightFor) {
-    const weighted = items.map((item) => ({ item: item, weight: weightFor(item) })).filter((entry) => entry.weight > 0);
-    const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
-    if (!total) return null;
-    let threshold = Math.random() * total;
-    for (const entry of weighted) {
-      threshold -= entry.weight;
-      if (threshold < 0) return entry.item;
+  function isTypeLeaningEnabled(scope) {
+    return GENERATOR_UTILS.typeLeaningScopeEnabled(scope, typeLeaning.types.length, typeLeaning.pokemon, typeLeaning.move);
+  }
+
+  function typeLeaningWeight(type, scope) {
+    return GENERATOR_UTILS.typeWeight(type, typeLeaning.types, typeLeaning.strength, isTypeLeaningEnabled(scope));
+  }
+
+  function sampleWeightedTypes(values, minCount, maxCount, scope) {
+    const count = randomInteger(minCount, Math.min(maxCount, values.length));
+    return GENERATOR_UTILS.weightedSample(values, count, (value) => typeLeaningWeight(value, scope)).sort();
+  }
+
+  function ruleTypeLeaningWeight(rule) {
+    const meta = rule.meta || {};
+    const ruleId = String(rule.id || "");
+    if (ruleId.indexOf("type-banned-") === 0 || ruleId.indexOf("move-type-banned-") === 0) return 1;
+    if (rule.family === "pokemon-type") {
+      const ruleTypes = Array.isArray(meta.types) ? meta.types : [];
+      return ruleTypes.length ? ruleTypes.reduce((sum, type) => sum + typeLeaningWeight(type, "pokemon"), 0) / ruleTypes.length : 1;
     }
-    return weighted[weighted.length - 1].item;
+    if (rule.family === "move-type" || rule.family === "move-slot") {
+      const ruleTypes = Array.isArray(meta.move_types) ? meta.move_types : [];
+      return ruleTypes.length ? ruleTypes.reduce((sum, type) => sum + typeLeaningWeight(type, "move"), 0) / ruleTypes.length : 1;
+    }
+    return 1;
   }
 
   function makeLimitSelect(labelText, maximum, minimum = 0) {
@@ -467,24 +546,37 @@
   }
 
   function chooseNextRule(pool, selected, profile, league) {
-    const availableGroups = new Map();
+    const available = [];
     pool.forEach((rule) => {
       const setting = familySettings[rule.settingFamily];
       if (!setting || !setting.enabled || setting.weight <= 0) return;
       if (!additionalFamiliesEnabled && additionalFamilyIds.has(rule.settingFamily)) return;
       if (isFamilyBlockedByCup(rule.settingFamily)) return;
       if (!canAdd(rule, selected) || !isAllowedForLeague(rule, league)) return;
-      const groupId = rule.weightGroup || rule.family;
-      if (!availableGroups.has(groupId)) availableGroups.set(groupId, []);
-      availableGroups.get(groupId).push(rule);
+      available.push(rule);
     });
-    const groupChoices = Array.from(availableGroups.entries()).map(([groupId, groupRules]) => ({
-      groupId: groupId,
-      rules: groupRules,
-      weight: groupRules.reduce((sum, rule) => sum + ruleProfileWeight(rule, profile), 0) / groupRules.length
-    }));
-    const selectedGroup = weightedPick(groupChoices, (entry) => entry.weight);
-    return selectedGroup ? weightedPick(selectedGroup.rules, (rule) => ruleProfileWeight(rule, profile)) : null;
+    return GENERATOR_UTILS.chooseChallengeRule(available, {
+      groupIdFor: (rule) => rule.weightGroup || rule.family,
+      groupWeightFor: (rule) => ruleProfileWeight(rule, profile),
+      ruleWeightFor: (rule) => ruleProfileWeight(rule, profile) * ruleTypeLeaningWeight(rule)
+    });
+  }
+
+  function chooseOptionalDisqualifier(pool, selected, profile, league) {
+    const available = pool.filter((rule) => {
+      if (rule.role !== "disqualifier_only") return false;
+      const setting = familySettings[rule.settingFamily];
+      return Boolean(setting && setting.enabled && setting.weight > 0) &&
+        (additionalFamiliesEnabled || !additionalFamilyIds.has(rule.settingFamily)) &&
+        !isFamilyBlockedByCup(rule.settingFamily) && canAdd(rule, selected) && isAllowedForLeague(rule, league);
+    });
+    const scarcityWeight = (rule) => 1 / (1 + Math.max(0, (rule.scarcity || 1) - 1) * 0.22);
+    return GENERATOR_UTILS.chooseOptionalDisqualifier(available, {
+      chance: profile === "chaos" ? 0.3 : 0.18,
+      groupIdFor: (rule) => rule.weightGroup || rule.family,
+      groupWeightFor: scarcityWeight,
+      ruleWeightFor: scarcityWeight
+    });
   }
 
   function createFamilyControls(container, definitions) {
@@ -644,37 +736,8 @@
     return selected;
   }
 
-  function cpSearchForRange(minCp, maxCp) {
-    if (maxCp === Infinity) return minCp > 0 ? "cp" + minCp + "-" : "";
-    if (minCp <= 0) return "cp0-" + maxCp;
-    return "cp" + minCp + "-" + maxCp;
-  }
-
   function normalizeCpConstraint(league, selectedRules) {
-    const generatedRule = selectedRules.find((rule) => rule.family === "cp") || null;
-    if (!generatedRule) {
-      return {
-        generatedRule: null,
-        minCp: league.minCp == null ? 0 : league.minCp,
-        maxCp: league.maxCp == null ? Infinity : league.maxCp,
-        search: league.search
-      };
-    }
-
-    const leagueMin = league.minCp == null ? 0 : league.minCp;
-    const leagueMax = league.maxCp == null ? Infinity : league.maxCp;
-    const generatedMin = generatedRule.minCp == null ? 0 : generatedRule.minCp;
-    const generatedMax = generatedRule.maxCp == null ? Infinity : generatedRule.maxCp;
-    const minCp = Math.max(leagueMin, generatedMin);
-    const maxCp = Math.min(leagueMax, generatedMax);
-    const unchanged = minCp === generatedMin && maxCp === generatedMax;
-
-    return {
-      generatedRule: generatedRule,
-      minCp: minCp,
-      maxCp: maxCp,
-      search: unchanged ? generatedRule.search : cpSearchForRange(minCp, maxCp)
-    };
+    return GENERATOR_UTILS.normalizeCpConstraint(league, selectedRules);
   }
 
   function cpRangeSummary(range) {
@@ -692,28 +755,35 @@
   }
 
   function generate() {
-    const league = leagues[leagueSelect.value] || leagues.great;
+    const league = leagues[leagueSelect.value] || leagues.master;
+    const leagueConstraint = effectiveLeague(league);
     const profile = activeProfile;
     const requestedCount = Math.max(1, Math.min(6, Number(mutatorCount.value) || 2));
     const pool = allRules();
     let selected = [];
+    let disqualifiers = [];
     let search = "";
     let cpConstraint = null;
     const cupPrefix = getStaticCupPrefix();
     const extraFilter = getExtraFilter();
 
     for (let attempt = 0; attempt < 30; attempt += 1) {
-      selected = chooseSelection(profile, league, requestedCount, pool);
-      cpConstraint = normalizeCpConstraint(league, selected);
+      selected = chooseSelection(profile, leagueConstraint, requestedCount, pool);
+      const disqualifier = chooseOptionalDisqualifier(pool, selected, profile, leagueConstraint);
+      disqualifiers = disqualifier ? [disqualifier] : [];
+      cpConstraint = normalizeCpConstraint(leagueConstraint, selected);
       const otherRules = selected.filter((rule) => rule.family !== "cp");
-      const parts = [cpConstraint.search, cupPrefix, extraFilter].concat(otherRules.map((rule) => rule.search)).filter(Boolean);
-      search = parts.join("&");
+      const parts = [cpConstraint.search, cupPrefix, extraFilter]
+        .concat(otherRules.map((rule) => rule.search), disqualifiers.map((rule) => rule.search)).filter(Boolean);
+      search = GENERATOR_UTILS.combineSearch(parts);
       if (search !== previousSearch || attempt === 29) break;
     }
 
     currentState = {
       league: league,
+      leagueCpEnabled: leagueCpLimitInput.checked && Boolean(league.maxCp),
       selected: selected,
+      disqualifiers: disqualifiers,
       cpConstraint: cpConstraint,
       search: search,
       requestedCount: requestedCount,
@@ -771,6 +841,7 @@
       id.indexOf("move-type-banned-") === 0 ||
       id.indexOf("region-banned-") === 0 ||
       id === "not-shadow" || id === "not-purified" ||
+      rule.role === "disqualifier_only" ||
       (Array.isArray(rule.tags) && rule.tags.includes("ban-shadow"));
 
     if (family === "pokemon-type" || family === "move-type" || family === "move-slot") {
@@ -786,7 +857,7 @@
     if (RULE_ICONS_BY_FAMILY[family]) {
       return { kind: "rule", icon: RULE_ICONS_BY_FAMILY[family], banned: family === "region" && banned };
     }
-    return { kind: "fallback", banned: false };
+    return { kind: "fallback", banned: banned };
   }
 
   function createRuleVisual(rule, className) {
@@ -802,6 +873,7 @@
       const marker = document.createElement("span");
       marker.className = "rule-marker";
       visual.appendChild(marker);
+      if (spec.banned) appendIndicator(visual, "!", "visual-indicator--ban");
     }
     return visual;
   }
@@ -883,7 +955,7 @@
     const leagueName = currentState.league.label.replace(" League", "");
     const leagueLabel = cpConstraint.generatedRule
       ? leagueName + " · " + cpRangeSummary(cpConstraint)
-      : currentState.league.maxCp
+      : currentState.leagueCpEnabled
         ? leagueName + " · " + currentState.league.maxCp.toLocaleString() + " CP"
         : currentState.league.label;
     createSummaryChip(leagueLabel, "league", leagueRule);
@@ -892,6 +964,7 @@
       if (rule.family === "cp") return;
       createSummaryChip(getSummaryLabel(rule), "", rule);
     });
+    currentState.disqualifiers.forEach((rule) => createSummaryChip(getSummaryLabel(rule), "", rule));
   }
 
   function backgroundTypesForRules(selectedRules) {
@@ -941,6 +1014,7 @@
       if (rule.family === "cp") return;
       appendRuleRow(rule, rule.explain || rule.label);
     });
+    currentState.disqualifiers.forEach((rule) => appendRuleRow(rule, rule.explain || rule.label));
     applyTypeBackground();
     updateBattleStatus();
     updateGenerationNote();
@@ -1006,6 +1080,7 @@
       cupLockTypes.checked = false;
       cupLockMoves.checked = false;
     }
+    updateLeagueCpControls();
     battleCount = 0;
     updateCupControls();
     markConfigPending();
@@ -1044,7 +1119,9 @@
     familyLimits.buddy = { min: "", max: "" };
     familyLimits.mega = { min: "", max: "" };
     familyLimits.time = { newerDate: "", oldestDate: DEFAULT_OLDEST_CATCH_DATE };
+    typeLeaning = { types: [], strength: "medium", pokemon: true, move: true };
     syncFamilyControls();
+    renderTypeLeaningControls();
     updateProfileChoices();
     extraFilterInput.value = "";
     customBadge.hidden = true;
@@ -1056,6 +1133,8 @@
     createFamilyControls(additionalFamilyControls, advancedFamilies.filter((definition) => !definition.primary));
     loadProfileDefaults("chill");
     updateProfileChoices();
+    renderTypeLeaningControls();
+    updateLeagueCpControls();
     updateCupControls();
 
     additionalFamiliesToggle.addEventListener("change", () => {
@@ -1074,11 +1153,41 @@
         if (input.checked) updateProfileFromInput(input);
       });
     });
+    typeLeaningAdd.addEventListener("change", () => {
+      const selectedType = typeLeaningAdd.value;
+      if (types.includes(selectedType) && !typeLeaning.types.includes(selectedType)) {
+        typeLeaning.types.push(selectedType);
+        renderTypeLeaningControls();
+        markConfigPending();
+      }
+    });
+    document.querySelectorAll('input[name="type-leaning-strength"]').forEach((input) => {
+      input.addEventListener("change", () => {
+        if (!input.checked) return;
+        typeLeaning.strength = input.value;
+        markConfigPending();
+      });
+    });
+    typeLeaningPokemon.addEventListener("change", () => {
+      typeLeaning.pokemon = typeLeaningPokemon.checked;
+      markConfigPending();
+    });
+    typeLeaningMove.addEventListener("change", () => {
+      typeLeaning.move = typeLeaningMove.checked;
+      markConfigPending();
+    });
     cupSelect.addEventListener("change", onCupSelectionChanged);
     cupPrefixInput.addEventListener("input", onCupPrefixChanged);
     cupLockTypes.addEventListener("change", () => { markProfileCustom(); updateCupControls(); markConfigPending(); });
     cupLockMoves.addEventListener("change", () => { markProfileCustom(); updateCupControls(); markConfigPending(); });
-    leagueSelect.addEventListener("change", markConfigPending);
+    leagueSelect.addEventListener("change", () => {
+      updateLeagueCpControls();
+      markConfigPending();
+    });
+    leagueCpLimitInput.addEventListener("change", () => {
+      leagueCpPreference = leagueCpLimitInput.checked;
+      markConfigPending();
+    });
     mutatorCount.addEventListener("change", markConfigPending);
     battleTargetInput.addEventListener("change", () => { battleCount = 0; markConfigPending(); });
     extraFilterInput.addEventListener("input", () => { markProfileCustom(); markConfigPending(); });

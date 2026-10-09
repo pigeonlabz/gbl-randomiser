@@ -1,0 +1,2 @@
+# No dependencies. The demo runs entirely in the browser.
+# Optional app.py preview uses only the Python standard library.
