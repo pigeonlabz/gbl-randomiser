@@ -16,6 +16,15 @@ test("all type-background URLs resolve from local pages and the GitHub Pages sub
   assert.ok(rootMatch, "the app defines one background asset root");
   assert.equal(rootMatch[1], "./static/background/types/");
   assert.match(app, /new URL\(BACKGROUND_ROOT \+ type \+ "\.svg", document\.baseURI\)\.href/);
+  for (const size of [
+    "clamp(190px, 24vw, 330px) clamp(190px, 24vw, 330px)",
+    "clamp(170px, 21vw, 295px) clamp(170px, 21vw, 295px)",
+    "clamp(160px, 20vw, 275px) clamp(160px, 20vw, 275px)"
+  ]) assert.ok(app.includes('"' + size + '"'), "responsive tile size matches reference: " + size);
+  for (const position of ["8% 14%", "76% 24%", "42% 82%"]) {
+    assert.ok(app.includes('"' + position + '"'), "background layer position matches reference: " + position);
+  }
+  assert.match(app, /setProperty\("--theme-bg-size", sizes\.slice\(0, themeTypes\.length\)\.join\(", "\)\)/);
   const backgroundDirectory = path.join(docsRoot, "static/background/types");
   const actualFiles = fs.readdirSync(backgroundDirectory).sort();
   const pageBases = [
@@ -46,7 +55,7 @@ test("all type-background URLs resolve from local pages and the GitHub Pages sub
   for (const background of [bodyBackground[1], panelBackground[1]]) {
     assert.match(background, /background-image:\s*var\(--theme-bg-image\)/);
     assert.match(background, /background-repeat:\s*repeat/);
-    assert.match(background, /background-size:\s*clamp\(132px,\s*23vw,\s*180px\)/);
+    assert.match(background, /background-size:\s*var\(--theme-bg-size\)/);
     assert.match(background, /background-position:\s*var\(--theme-bg-position\)/);
   }
   assert.match(bodyBackground[1], /position:\s*fixed/);
