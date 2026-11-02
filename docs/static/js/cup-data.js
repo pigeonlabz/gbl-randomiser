@@ -191,8 +191,6 @@
       name: "Bug Bite",
       emoji: "🐛",
       official: false,
-      requiredLeague: "great",
-      suggestedLeague: "great",
       search: "bug&@bug&!@normal&!@fire&!@water&!@electric&!@grass&!@ice&!@fighting&!@ground&!@flying&!@psychic&!@ghost&!@dragon&!@dark&!@steel&!@fairy",
       lockTypes: true,
       lockMoves: true,
@@ -204,8 +202,6 @@
       name: "Meta Madness",
       emoji: "🌀",
       official: false,
-      requiredLeague: "great",
-      suggestedLeague: "great",
       search: "@special&!legendary&!mythical&!ultrabeast",
       blockedFamilies: ["rarity"],
       lockTypes: false,
@@ -218,16 +214,14 @@
       name: "Pain Cup",
       emoji: "📉",
       official: false,
-      requiredLeague: "great",
-      suggestedLeague: "great",
-      rankingLimit: 100,
+      rankingLimit: 250,
       dynamicFilter: "pvpoke-bottom-rankings",
       search: "",
-      sourceUrl: "https://pvpoke.com/rankings/all/1500/overall/",
+      sourceUrl: "https://github.com/pvpoke/pvpoke/tree/master/src/data/rankings/all/overall",
       blockedFamilies: ["rarity"],
       lockTypes: true,
       lockMoves: true,
-      manualRules: ["Bottom 100 (or 250) ordered ranking rows, then remove Legendary, Mythical, and Ultra Beast entries. The cutoff is taken before exclusions."]
+      manualRules: ["Use the union of the bottom 250 (or 100) Great, Ultra, and Master overall ranking rows. Deduplicate exact species/forms, then exclude Legendary, Mythical, and Ultra Beast entries. The same pool applies in every selected league; its CP limit is applied to the search."]
     }
   ];
 

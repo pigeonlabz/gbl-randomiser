@@ -147,9 +147,8 @@
   let activeSuggestionIndex = -1;
   let currentCup = null;
   let activePvPokeDataset = PVPOKE ? PVPOKE.makeFallbackDataset(window.GBL_SPECIES_DATA || []) : null;
-  let painCupLimit = 100;
+  let painCupLimit = 250;
   let currentPainCupData = null;
-  let forcedLeagueId = "";
   let lastActiveCupId = "";
   let suppressCustomCupDialog = false;
   const CUSTOM_CUP_SETTINGS_KEY = "gbl-filter-custom-cup-v1";
@@ -1553,7 +1552,7 @@
       return { search: "", error: "Pain Cup has no eligible Pokédex numbers in this ranking window." };
     }
     const constraints = parts.filter((part) => part && part !== currentPainCupData.candidateSearch);
-    const cpSearch = constraints.find((part) => /^!?cp(?:$|[-\d])/i.test(part)) || "cp-1500";
+    const cpSearch = constraints.find((part) => /^!?cp(?:$|[-\d])/i.test(part)) || "";
     const additionalGroups = constraints.filter((part) => part !== cpSearch);
     const result = PVPOKE.buildPainCupSearch(currentPainCupData, cpSearch, additionalGroups);
     return { search: result.search, error: result.error };
@@ -1666,7 +1665,7 @@
     if (!cup) {
       status.textContent = "Custom Cup search filter. This is not a verified official Cup format.";
     } else if (cup.dynamicFilter === "pvpoke-bottom-rankings") {
-      status.textContent = "Great League · PvPoke overall rankings.";
+      status.textContent = "Shared Great, Ultra, and Master ranking pool · use any selected league.";
     } else if (!cup.official) {
       status.textContent = "Custom preset · not a verified official Cup format.";
     } else if (cup.officialLeague === selectedLeagueId()) {
@@ -1683,7 +1682,7 @@
       selectorLabel.appendChild(document.createTextNode("Ranking window"));
       const selector = document.createElement("select");
       selector.setAttribute("aria-label", "Pain Cup ranking window");
-      [{ value: 100, label: "Bottom 100" }, { value: 250, label: "Bottom 250" }].forEach((choice) => {
+      [{ value: 250, label: "Bottom 250" }, { value: 100, label: "Bottom 100" }].forEach((choice) => {
         const option = document.createElement("option");
         option.value = String(choice.value);
         option.textContent = choice.label;
@@ -1702,14 +1701,15 @@
       if (!currentPainCupData || !currentPainCupData.candidateCount) {
         const unavailable = document.createElement("p");
         unavailable.className = "cup-format-error";
-        unavailable.textContent = "No eligible Pokémon are available in this local ranking window.";
+        unavailable.textContent = currentPainCupData && currentPainCupData.error
+          ? currentPainCupData.error
+          : "No eligible Pokémon are available in the bundled ranking pool.";
         cupFormatInfo.appendChild(unavailable);
       } else {
         const summary = document.createElement("p");
-        const rankRange = currentPainCupData.rankingWindowStart && currentPainCupData.rankingWindowEnd
-          ? " (ranks " + currentPainCupData.rankingWindowStart + "–" + currentPainCupData.rankingWindowEnd + ")" : "";
-        summary.textContent = "Bottom " + currentPainCupData.candidates + " entries" + rankRange + " · " +
-          currentPainCupData.eligible + " eligible after rarity exclusions · " + currentPainCupData.candidateCount + " Pokédex candidates.";
+        summary.textContent = "Bottom " + currentPainCupData.requested + " from each league (" +
+          currentPainCupData.rankingWindows.map((window) => window.league).join(", ") + ") · " +
+          currentPainCupData.eligible + " eligible forms · " + currentPainCupData.candidateCount + " unique Pokédex candidates.";
         cupFormatInfo.appendChild(summary);
         const details = document.createElement("details");
         details.className = "pain-cup-eligible-list";
@@ -1724,14 +1724,22 @@
           name.textContent = pokemon.name;
           const meta = document.createElement("small");
           meta.className = "pain-cup-pokemon-meta";
-          meta.textContent = pokemon.form + " · #" + pokemon.dex + " · rank " + pokemon.rank;
+          const rankingPositions = [
+            ["1500", "Great"], ["2500", "Ultra"], ["10000", "Master"]
+          ].filter(([cp]) => pokemon.rankingPositions[cp] != null)
+            .map(([cp, label]) => label + " #" + pokemon.rankingPositions[cp]).join(" · ");
+          meta.textContent = pokemon.form + " · #" + pokemon.dex + " · " + rankingPositions;
           item.append(name, meta);
           list.appendChild(item);
         });
         currentPainCupData.unmapped.forEach((pokemon) => {
           const item = document.createElement("li");
           item.className = "pain-cup-unmapped";
-          item.textContent = pokemon.name + " · form unavailable · rank " + pokemon.rank + " · missing Game Master mapping";
+          const rankingPositions = [
+            ["1500", "Great"], ["2500", "Ultra"], ["10000", "Master"]
+          ].filter(([cp]) => pokemon.rankingPositions[cp] != null)
+            .map(([cp, label]) => label + " #" + pokemon.rankingPositions[cp]).join(" · ");
+          item.textContent = pokemon.name + " · form unavailable · " + rankingPositions + " · missing Game Master mapping";
           list.appendChild(item);
         });
         details.appendChild(list);
@@ -1918,7 +1926,7 @@
     appendRuleRow({ id: "league-limit", family: "cp" }, cpRangeDescription(currentState.cpConstraint), ruleIndex++);
     if (currentState.cupName) {
       const cupDescription = currentState.cupDefinition && currentState.cupDefinition.dynamicFilter === "pvpoke-bottom-rankings"
-        ? "Pain Cup · bottom " + currentState.rankingLimit + " Great League ranking entries · " +
+        ? "Pain Cup · bottom " + currentState.rankingLimit + " per Great, Ultra, and Master league · " +
           (currentState.painCupData ? currentState.painCupData.candidateCount : 0) + " Pokédex candidates"
         : currentState.cupPrefix
         ? currentState.cupName + " filter: " + currentState.cupPrefix
@@ -2002,10 +2010,6 @@
         ? "Paused for this Cup: " + lockNames.join(" and ") + ". Other rule families stay available."
         : "Choose any overlapping rule families to pause while this Cup filter is active.";
     updateMutatorSettingsVisibility();
-    leagueInputs.forEach((input) => {
-      input.disabled = Boolean(forcedLeagueId) && input.value !== forcedLeagueId;
-      input.closest(".league-tile").classList.toggle("is-disabled", input.disabled);
-    });
     updateCupFormatInfo();
     syncFamilyControls();
   }
@@ -2053,11 +2057,6 @@
     suppressCustomCupDialog = false;
     lastActiveCupId = id;
     currentCup = CUP_PRESETS.find((cup) => cup.id === id) || null;
-    forcedLeagueId = currentCup && currentCup.requiredLeague ? currentCup.requiredLeague : "";
-    if (forcedLeagueId) {
-      const requiredInput = leagueInputs.find((input) => input.value === forcedLeagueId);
-      if (requiredInput) requiredInput.checked = true;
-    }
     if (currentCup) {
       cupPrefixInput.value = cupPresetSearch(currentCup);
       cupLockTypes.checked = currentCup.lockTypes;
@@ -2434,7 +2433,7 @@
   }
 
   const dataReady = PVPOKE
-    ? PVPOKE.load("./static/data/pvpoke-v1.json")
+    ? PVPOKE.load("./static/data/pvpoke-v2.json")
     : Promise.resolve({ dataset: null, source: "fallback" });
   dataReady.then((result) => {
     if (result.dataset) activePvPokeDataset = result.dataset;

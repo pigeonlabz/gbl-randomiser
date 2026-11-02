@@ -4,17 +4,17 @@ This is the deployed, self-contained static website in `docs/`. It uses local HT
 
 ## PvPoke snapshot
 
-`docs/static/data/pvpoke-v1.json` is the versioned Great League snapshot bundled with the site. It contains the Game Master and ranking fields used by the page and records its source commit and snapshot date. `docs/static/data/PVPOKE-LICENSE.txt` preserves PvPoke's MIT license. The page reads this local file only; it makes no request to PvPoke.
+`docs/static/data/pvpoke-v2.json` is the versioned snapshot bundled with the site. It includes Game Master data and separate Great, Ultra, and Master overall rankings from one source revision. `docs/static/data/pvpoke-v1.json` is retained as the earlier Great-only snapshot. `docs/static/data/PVPOKE-LICENSE.txt` preserves PvPoke's MIT license. The page reads its bundled snapshot only; it makes no request to PvPoke.
 
-To import a future snapshot manually, choose and review a full PvPoke commit SHA, then run `node tools/update-pvpoke-data.mjs <40-character-commit-sha>`. The script downloads that pinned revision, validates it, and replaces the local JSON and license. It never polls for a newer revision. No scheduled updater or automatic refresh workflow is installed.
+To import a future snapshot manually, choose and review a full PvPoke commit SHA, then run `node tools/update-pvpoke-data.mjs <40-character-commit-sha>`. The script downloads the Game Master and all three pinned league ranking files, validates them as one dataset, and writes `pvpoke-v2.json` with the preserved MIT license. It never polls for a newer revision. No scheduled updater or automatic refresh workflow is installed.
 
 ## Custom cups
 
-- **Bug Bite** forces Great League and includes `bug`, `@bug`, and negative move-type searches for every type outside Bug, Poison, and Rock. Type and move mutators are locked while this cup is active.
-- **Meta Madness** forces Great League and starts with `@special` plus Legendary, Mythical, and Ultra Beast exclusions. `@special` is only a candidate filter: manually check the equipped moves for a qualifying Community Day, event-exclusive, or legacy Elite TM move. Return and Frustration do not qualify.
-- **Pain Cup** forces Great League and selects the last 100 or 250 ordered ranking rows in the bundled snapshot, then removes Legendary, Mythical, and Ultra Beast entries. The copied comma-separated Pokédex search is an approximate candidate filter because it can match other forms sharing a number. The collapsed list shows the exact ranked Pokémon and forms. Shared CP and rarity terms appear once.
+- **Bug Bite** supports any selected league and includes `bug`, `@bug`, and negative move-type searches for every type outside Bug, Poison, and Rock. Type and move mutators are locked while this cup is active.
+- **Meta Madness** supports any selected league and starts with `@special` plus Legendary, Mythical, and Ultra Beast exclusions. `@special` is only a candidate filter: manually check the equipped moves for a qualifying Community Day, event-exclusive, or legacy Elite TM move. Return and Frustration do not qualify.
+- **Pain Cup** uses one shared eligibility pool: the union of the bottom 250 (or 100) Great, Ultra, and Master overall ranking rows, deduplicated by exact species/form before Legendary, Mythical, and Ultra Beast entries are removed. It works in Little, Great, Ultra, and Master League; only the selected league's CP rule is added. The copied comma-separated Pokédex search is an approximate candidate filter because it can match other forms sharing a number. The collapsed list shows the exact eligible forms and their per-league ranks.
 
-The ranking cutoff uses the final N snapshot rows before rarity exclusions. That cutoff, exclusions, candidate search and exact eligible forms are computed deterministically from the bundled snapshot.
+Each ranking cutoff uses the final N rows in that league's snapshot before the league results are combined and rarity exclusions are applied. The union, exclusions, candidate search and exact eligible forms are computed deterministically from the bundled snapshot.
 
 ## Existing behavior and verification
 

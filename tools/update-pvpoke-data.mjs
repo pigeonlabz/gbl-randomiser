@@ -5,6 +5,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA_DIRECTORY = path.join(PROJECT_ROOT, "docs", "static", "data");
 const RAW_ROOT = "https://raw.githubusercontent.com/pvpoke/pvpoke/";
+const RANKING_LEAGUES = Object.freeze([
+  { cp: 1500, label: "Great", file: "rankings-1500.json" },
+  { cp: 2500, label: "Ultra", file: "rankings-2500.json" },
+  { cp: 10000, label: "Master", file: "rankings-10000.json" }
+]);
 const ALLOWED_TYPES = new Set([
   "normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground",
   "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"
@@ -15,11 +20,23 @@ function requireObject(value, label) {
   return value;
 }
 
-function validateUpstream(gamemaster, rankings) {
+function validateUpstream(gamemaster, rankingsByLeague) {
   requireObject(gamemaster, "PvPoke Game Master");
   if (!Array.isArray(gamemaster.pokemon) || gamemaster.pokemon.length < 800) throw new Error("PvPoke Game Master species list is missing or incomplete.");
   if (!Array.isArray(gamemaster.moves) || gamemaster.moves.length < 100) throw new Error("PvPoke Game Master move list is missing or incomplete.");
-  if (!Array.isArray(rankings) || rankings.length < 250) throw new Error("PvPoke Great League overall rankings contain fewer than 250 rows.");
+  requireObject(rankingsByLeague, "PvPoke league rankings");
+  RANKING_LEAGUES.forEach((league) => {
+    const rankings = rankingsByLeague[String(league.cp)];
+    if (!Array.isArray(rankings) || rankings.length < 250) throw new Error("PvPoke " + league.label + " League overall rankings contain fewer than 250 rows.");
+    const rankingIds = new Set();
+    rankings.forEach((ranking) => {
+      if (!ranking || typeof ranking.speciesId !== "string" || !ranking.speciesId || !ranking.speciesName) {
+        throw new Error("PvPoke " + league.label + " rankings contain a row without a species ID or display name.");
+      }
+      if (rankingIds.has(ranking.speciesId)) throw new Error("PvPoke " + league.label + " rankings contain duplicate species ID " + ranking.speciesId + ".");
+      rankingIds.add(ranking.speciesId);
+    });
+  });
 
   const moveIds = new Set();
   gamemaster.moves.forEach((move) => {
@@ -51,19 +68,15 @@ function validateUpstream(gamemaster, rankings) {
     }
   });
 
-  const rankingIds = new Set();
-  rankings.forEach((ranking) => {
-    if (!ranking || typeof ranking.speciesId !== "string" || !ranking.speciesId || !ranking.speciesName) {
-      throw new Error("PvPoke rankings contain a row without a species ID or display name.");
-    }
-    if (rankingIds.has(ranking.speciesId)) throw new Error("PvPoke rankings contain duplicate species ID " + ranking.speciesId + ".");
-    rankingIds.add(ranking.speciesId);
-  });
-  return { speciesCount: gamemaster.pokemon.length, moveCount: gamemaster.moves.length, rankingCount: rankings.length };
+  return {
+    speciesCount: gamemaster.pokemon.length,
+    moveCount: gamemaster.moves.length,
+    rankingsByLeague: Object.fromEntries(RANKING_LEAGUES.map((league) => [String(league.cp), rankingsByLeague[String(league.cp)].length]))
+  };
 }
 
-export function buildSnapshot(gamemaster, rankingRows, sourceRevision, now = new Date()) {
-  const counts = validateUpstream(gamemaster, rankingRows);
+export function buildSnapshot(gamemaster, rankingRowsByLeague, sourceRevision, now = new Date()) {
+  const counts = validateUpstream(gamemaster, rankingRowsByLeague);
   const species = gamemaster.pokemon.map((pokemon) => ({
     id: pokemon.speciesId,
     dex: Number(pokemon.dex),
@@ -89,29 +102,29 @@ export function buildSnapshot(gamemaster, rankingRows, sourceRevision, now = new
     energyGain: Number.isFinite(Number(move.energyGain)) ? Number(move.energyGain) : null,
     power: Number.isFinite(Number(move.power)) ? Number(move.power) : null
   }));
-  const rankings = rankingRows.map((ranking, index) => ({
+  const rankingsByLeague = Object.fromEntries(RANKING_LEAGUES.map((league) => [String(league.cp), rankingRowsByLeague[String(league.cp)].map((ranking, index) => ({
     id: ranking.speciesId,
     name: ranking.speciesName,
     rank: index + 1,
     score: Number.isFinite(Number(ranking.score)) ? Number(ranking.score) : null,
     rating: Number.isFinite(Number(ranking.rating)) ? Number(ranking.rating) : null
-  }));
+  }))]));
   const snapshot = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     meta: {
       source: "PvPoke",
       sourceUrl: "https://github.com/pvpoke/pvpoke",
       sourceRevision,
       generatedAt: now.toISOString(),
       upstreamTimestamp: String(gamemaster.timestamp || ""),
-      ranking: "Great League · Overall · 1500 CP",
+      ranking: "Great, Ultra, and Master League · Overall",
       license: "MIT",
       licenseFile: "PVPOKE-LICENSE.txt",
       counts
     },
     species,
     moves,
-    rankings
+    rankingsByLeague
   };
   const validation = validateSnapshot(snapshot);
   if (!validation.valid) throw new Error("Generated PvPoke snapshot failed validation: " + validation.errors.join(" "));
@@ -120,11 +133,15 @@ export function buildSnapshot(gamemaster, rankingRows, sourceRevision, now = new
 
 export function validateSnapshot(snapshot) {
   const errors = [];
-  if (!snapshot || snapshot.schemaVersion !== 1) errors.push("Unsupported snapshot schema version.");
+  if (!snapshot || snapshot.schemaVersion !== 2) errors.push("Unsupported snapshot schema version.");
   if (!snapshot || !snapshot.meta || !/^[a-f0-9]{40}$/i.test(String(snapshot.meta.sourceRevision || ""))) errors.push("Source revision must be a full Git commit SHA.");
   if (!snapshot || !Array.isArray(snapshot.species) || snapshot.species.length < 800) errors.push("Species data is incomplete.");
   if (!snapshot || !Array.isArray(snapshot.moves) || snapshot.moves.length < 100) errors.push("Move data is incomplete.");
-  if (!snapshot || !Array.isArray(snapshot.rankings) || snapshot.rankings.length < 250) errors.push("Rankings data is incomplete.");
+  if (!snapshot || !snapshot.rankingsByLeague || typeof snapshot.rankingsByLeague !== "object") errors.push("League ranking data is incomplete.");
+  else RANKING_LEAGUES.forEach((league) => {
+    const rows = snapshot.rankingsByLeague[String(league.cp)];
+    if (!Array.isArray(rows) || rows.length < 250) errors.push(league.label + " League rankings data is incomplete.");
+  });
   if (errors.length) return { valid: false, errors };
   const seenSpecies = new Set();
   snapshot.species.forEach((species) => {
@@ -148,10 +165,14 @@ export function validateSnapshot(snapshot) {
       errors.push("Snapshot species reference a move missing from the move index.");
     }
   });
-  const seenRanks = new Set();
-  snapshot.rankings.forEach((ranking, index) => {
-    if (!ranking || !ranking.id || seenRanks.has(ranking.id) || ranking.rank !== index + 1 || !ranking.name) errors.push("Snapshot ranking rows must be ordered and unique.");
-    seenRanks.add(ranking && ranking.id);
+  RANKING_LEAGUES.forEach((league) => {
+    const seenRanks = new Set();
+    (snapshot.rankingsByLeague[String(league.cp)] || []).forEach((ranking, index) => {
+      if (!ranking || !ranking.id || seenRanks.has(ranking.id) || ranking.rank !== index + 1 || !ranking.name) {
+        errors.push("Snapshot " + league.label + " ranking rows must be ordered and unique.");
+      }
+      seenRanks.add(ranking && ranking.id);
+    });
   });
   return { valid: errors.length === 0, errors: Array.from(new Set(errors)) };
 }
@@ -178,16 +199,18 @@ export async function refreshPvpokeData(options = {}) {
   if (typeof fetcher !== "function") throw new Error("This updater requires a Node.js runtime with fetch support.");
   if (!/^[a-f0-9]{40}$/i.test(sourceRevision)) throw new Error("Pass a full PvPoke Git commit SHA; the updater does not choose or poll for a revision.");
   const root = RAW_ROOT + sourceRevision + "/src/data/";
-  const [gamemaster, rankingRows, licenseText] = await Promise.all([
+  const [gamemaster, rankingRowsByLeague, licenseText] = await Promise.all([
     fetcher(root + "gamemaster.min.json").then((response) => readJson(response, "PvPoke Game Master")),
-    fetcher(root + "rankings/all/overall/rankings-1500.json").then((response) => readJson(response, "PvPoke Great League rankings")),
+    Promise.all(RANKING_LEAGUES.map((league) => fetcher(root + "rankings/all/overall/" + league.file)
+      .then((response) => readJson(response, "PvPoke " + league.label + " League rankings"))))
+      .then((rankingLists) => Object.fromEntries(RANKING_LEAGUES.map((league, index) => [String(league.cp), rankingLists[index]]))),
     fetcher(RAW_ROOT + sourceRevision + "/LICENSE").then((response) => readText(response, "PvPoke license"))
   ]);
-  const snapshot = buildSnapshot(gamemaster, rankingRows, sourceRevision, now);
+  const snapshot = buildSnapshot(gamemaster, rankingRowsByLeague, sourceRevision, now);
   const serialized = JSON.stringify(snapshot);
   if (serialized.length > 8 * 1024 * 1024) throw new Error("Validated PvPoke snapshot exceeds the 8 MB static data budget.");
   await mkdir(outputDirectory, { recursive: true });
-  const dataTarget = path.join(outputDirectory, "pvpoke-v1.json");
+  const dataTarget = path.join(outputDirectory, "pvpoke-v2.json");
   const licenseTarget = path.join(outputDirectory, "PVPOKE-LICENSE.txt");
   const suffix = "." + process.pid + ".tmp";
   const dataTemp = dataTarget + suffix;
@@ -209,7 +232,8 @@ export async function refreshPvpokeData(options = {}) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   refreshPvpokeData({ sourceRevision: process.argv[2] }).then((result) => {
-    process.stdout.write("Imported pinned PvPoke snapshot " + result.snapshot.meta.sourceRevision + " (" + result.snapshot.species.length + " species, " + result.snapshot.moves.length + " moves, " + result.snapshot.rankings.length + " rankings, " + result.bytes + " bytes).\n");
+    const rankings = result.snapshot.meta.counts.rankingsByLeague;
+    process.stdout.write("Imported pinned PvPoke snapshot " + result.snapshot.meta.sourceRevision + " (" + result.snapshot.species.length + " species, " + result.snapshot.moves.length + " moves, Great " + rankings["1500"] + ", Ultra " + rankings["2500"] + ", Master " + rankings["10000"] + " rankings, " + result.bytes + " bytes).\n");
   }).catch((error) => {
     process.stderr.write("Manual PvPoke import failed; the previous snapshot was left untouched. " + error.message + "\n");
     process.exitCode = 1;

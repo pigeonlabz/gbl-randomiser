@@ -1,5 +1,10 @@
 (function (root) {
-  const SCHEMA_VERSION = 1;
+  const SCHEMA_VERSION = 2;
+  const RANKING_LEAGUES = Object.freeze([
+    { cp: 1500, label: "Great" },
+    { cp: 2500, label: "Ultra" },
+    { cp: 10000, label: "Master" }
+  ]);
   const TYPES = new Set([
     "normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground",
     "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"
@@ -27,7 +32,14 @@
     }
     if (!Array.isArray(dataset.species) || dataset.species.length < 100) errors.push("Species data is missing or incomplete.");
     if (!Array.isArray(dataset.moves) || dataset.moves.length < 50) errors.push("Move data is missing or incomplete.");
-    if (!Array.isArray(dataset.rankings) || dataset.rankings.length < 250) errors.push("Great League overall rankings are missing or incomplete.");
+    if (!dataset.rankingsByLeague || typeof dataset.rankingsByLeague !== "object" || Array.isArray(dataset.rankingsByLeague)) {
+      errors.push("League ranking data is missing.");
+    } else {
+      RANKING_LEAGUES.forEach((league) => {
+        const rows = dataset.rankingsByLeague[String(league.cp)];
+        if (!Array.isArray(rows) || rows.length < 250) errors.push(league.label + " League overall rankings are missing or incomplete.");
+      });
+    }
     if (errors.length) return { valid: false, errors };
 
     const speciesIds = new Set();
@@ -64,14 +76,15 @@
       }
     }
 
-    const rankingIds = new Set();
-    for (const ranking of dataset.rankings) {
-      if (!ranking || typeof ranking.id !== "string" || !ranking.id || !Number.isInteger(ranking.rank) || ranking.rank < 1 || rankingIds.has(ranking.id)) {
-        errors.push("Ranking identifiers and rank positions must be present and unique.");
-        break;
-      }
-      rankingIds.add(ranking.id);
-    }
+    RANKING_LEAGUES.forEach((league) => {
+      const rankingIds = new Set();
+      asArray(dataset.rankingsByLeague && dataset.rankingsByLeague[String(league.cp)]).forEach((ranking, index) => {
+        if (!ranking || typeof ranking.id !== "string" || !ranking.id || !Number.isInteger(ranking.rank) || ranking.rank !== index + 1 || rankingIds.has(ranking.id)) {
+          errors.push(league.label + " ranking identifiers and positions must be present, ordered, and unique.");
+        }
+        rankingIds.add(ranking && ranking.id);
+      });
+    });
     return { valid: errors.length === 0, errors };
   }
 
@@ -79,7 +92,7 @@
     return {
       speciesById: new Map(asArray(dataset && dataset.species).map((species) => [species.id, species])),
       movesById: new Map(asArray(dataset && dataset.moves).map((move) => [move.id, move])),
-      rankingById: new Map(asArray(dataset && dataset.rankings).map((ranking) => [ranking.id, ranking]))
+      rankingById: new Map(getRankings(dataset, 1500).map((ranking) => [ranking.id, ranking]))
     };
   }
 
@@ -93,8 +106,7 @@
 
   function getRankings(dataset, leagueCp) {
     const requested = Number(leagueCp || 1500);
-    if (requested !== 1500) return [];
-    return asArray(dataset && dataset.rankings).slice();
+    return asArray(dataset && dataset.rankingsByLeague && dataset.rankingsByLeague[String(requested)]).slice();
   }
 
   function getMetaMadnessCandidates(dataset) {
@@ -157,10 +169,8 @@
   }
 
   function getBottomRanked(dataset, limit) {
-    const size = Number(limit) === 250 ? 250 : 100;
-    const rankings = getRankings(dataset, 1500);
+    const size = Number(limit) === 100 ? 100 : 250;
     const indexes = indexDataset(dataset);
-    const windowRows = rankings.slice(Math.max(0, rankings.length - size));
     const byDex = new Map();
     asArray(dataset && dataset.species).forEach((species) => {
       const key = String(species.dex);
@@ -168,19 +178,65 @@
       byDex.get(key).push(species);
     });
 
+    const windowRows = [];
+    const rankingWindows = [];
+    const candidateById = new Map();
+    for (const league of RANKING_LEAGUES) {
+      const rankings = getRankings(dataset, league.cp);
+      if (rankings.length < size) {
+        return {
+          valid: false,
+          error: league.label + " League ranking snapshot is unavailable; Pain Cup requires Great, Ultra, and Master rankings.",
+          requested: size,
+          candidates: 0,
+          uniqueCandidates: 0,
+          eligible: 0,
+          eligiblePokemon: [],
+          banned: [],
+          unmapped: [],
+          dexes: [],
+          candidateCount: 0,
+          candidateSearch: "",
+          rankingWindows: [],
+          approximate: true,
+          snapshot: dataset && dataset.meta ? dataset.meta : null
+        };
+      }
+      const rows = rankings.slice(-size);
+      rankingWindows.push({
+        leagueCp: league.cp,
+        league: league.label,
+        candidates: rows.length,
+        startRank: rows.length ? rows[0].rank : null,
+        endRank: rows.length ? rows[rows.length - 1].rank : null
+      });
+      rows.forEach((ranking) => {
+        windowRows.push({ leagueCp: league.cp, ranking });
+        if (!candidateById.has(ranking.id)) {
+          candidateById.set(ranking.id, { id: ranking.id, name: ranking.name, rankingPositions: {} });
+        }
+        candidateById.get(ranking.id).rankingPositions[String(league.cp)] = ranking.rank;
+      });
+    }
+
     const banned = [];
     const eligiblePokemon = [];
     const unmapped = [];
-    windowRows.forEach((ranking) => {
-      const species = indexes.speciesById.get(ranking.id);
+    const orderedCandidates = Array.from(candidateById.values()).sort((first, second) => {
+      const firstSpecies = indexes.speciesById.get(first.id);
+      const secondSpecies = indexes.speciesById.get(second.id);
+      return Number(firstSpecies && firstSpecies.dex || 0) - Number(secondSpecies && secondSpecies.dex || 0) || first.id.localeCompare(second.id);
+    });
+    orderedCandidates.forEach((candidate) => {
+      const species = indexes.speciesById.get(candidate.id);
       if (!species) {
-        unmapped.push({ id: ranking.id, name: ranking.name, rank: ranking.rank, reason: "No exact speciesId match exists in the cached Game Master." });
+        unmapped.push({ id: candidate.id, name: candidate.name, rankingPositions: candidate.rankingPositions, reason: "No exact speciesId match exists in the cached Game Master." });
         return;
       }
       const categories = asArray(species.tags).map((tag) => String(tag).toLowerCase().replace(/[^a-z]/g, ""));
       const blockedCategory = categories.find((category) => LEGENDARY_TAGS.has(category));
       if (blockedCategory) {
-        banned.push({ id: species.id, name: species.name, dex: species.dex, rank: ranking.rank, category: blockedCategory });
+        banned.push({ id: species.id, name: species.name, dex: species.dex, rankingPositions: candidate.rankingPositions, category: blockedCategory });
         return;
       }
       eligiblePokemon.push({
@@ -188,7 +244,7 @@
         name: species.name,
         form: getFormLabel(species, (byDex.get(String(species.dex)) || []).length),
         dex: species.dex,
-        rank: ranking.rank,
+        rankingPositions: candidate.rankingPositions,
         types: asArray(species.types).slice()
       });
     });
@@ -197,10 +253,10 @@
       .filter((dex) => /^\d+$/.test(dex))
       .sort((first, second) => Number(first) - Number(second));
     return {
+      valid: true,
       requested: size,
-      rankingWindowStart: windowRows.length ? windowRows[0].rank : null,
-      rankingWindowEnd: windowRows.length ? windowRows[windowRows.length - 1].rank : null,
       candidates: windowRows.length,
+      uniqueCandidates: candidateById.size,
       eligible: eligiblePokemon.length,
       eligiblePokemon,
       banned,
@@ -208,6 +264,7 @@
       dexes,
       candidateCount: dexes.length,
       candidateSearch: dexes.join(","),
+      rankingWindows,
       approximate: true,
       snapshot: dataset && dataset.meta ? dataset.meta : null
     };
@@ -217,7 +274,10 @@
     const dexes = Array.from(new Set(asArray(selection && selection.dexes).map((dex) => String(dex).trim()).filter((dex) => /^\d+$/.test(dex))))
       .sort((first, second) => Number(first) - Number(second));
     if (!dexes.length) return { valid: false, search: "", error: "No eligible Pokédex numbers are available for this ranking window." };
-    const groups = [dexes.join(","), String(cpSearch || "cp-1500").trim(), "!legendary", "!mythical", "!ultrabeast"];
+    const groups = [dexes.join(",")];
+    const cpGroup = String(cpSearch || "").trim();
+    if (cpGroup) groups.push(cpGroup);
+    groups.push("!legendary", "!mythical", "!ultrabeast");
     asArray(additionalGroups).forEach((group) => {
       const value = String(group || "").trim();
       if (value) groups.push(value);
@@ -234,7 +294,7 @@
       meta: { source: "Local species-name fallback", sourceRevision: "fallback", updatedAt: "", upstreamTimestamp: "", license: "" },
       species: asArray(speciesRows).map(([dex, name]) => ({ id: "dex-" + dex, dex, name, types: [], baseStats: {}, fastMoves: [], chargedMoves: [], legacyMoves: [], eliteMoves: [], tags: [] })),
       moves: [],
-      rankings: []
+      rankingsByLeague: { "1500": [], "2500": [], "10000": [] }
     };
   }
 
@@ -242,7 +302,7 @@
     const settings = options || {};
     const fetcher = settings.fetch || (root && root.fetch ? root.fetch.bind(root) : null);
     if (!fetcher) return Promise.resolve({ dataset: makeFallbackDataset(root && root.GBL_SPECIES_DATA), source: "fallback", warning: "PvPoke data could not be loaded in this browser." });
-    return fetcher(datasetUrl || "./static/data/pvpoke-v1.json", { cache: "no-store" })
+    return fetcher(datasetUrl || "./static/data/pvpoke-v2.json", { cache: "no-store" })
       .then((response) => {
         if (!response.ok) throw new Error("PvPoke dataset request failed (" + response.status + ").");
         return response.json();
