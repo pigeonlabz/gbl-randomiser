@@ -148,6 +148,38 @@ test("cup eligibility follows the selected league CP ceiling without imposing a 
   assert.equal(utils.normalizeCpConstraint(leagues.master, []).search, "");
 });
 
+test("Distance offers nearby and distant filters, defaults to likelihood 4, and stays compatible", () => {
+  const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
+  const near = ruleData.rules.find((rule) => rule.id === "distance-range");
+  const far = ruleData.rules.find((rule) => rule.id === "distance-far");
+
+  assert.equal(near.search, "distance1000");
+  assert.equal(near.label, "Nearby");
+  assert.equal(far.search, "distance1000-");
+  assert.equal(far.label, "Distant");
+  assert.equal(near.family, "distance");
+  assert.equal(far.family, "distance");
+  assert.equal(near.exclusiveGroup, "distance");
+  assert.equal(far.exclusiveGroup, "distance");
+
+  assert.equal(utils.canAddRule(near, []), true);
+  assert.equal(utils.canAddRule(far, []), true);
+  assert.equal(utils.canAddRule(far, [near]), false);
+  assert.equal(utils.canAddRule(near, [far]), false);
+
+  const profiles = app.slice(app.indexOf("const profileDefaults = {"), app.indexOf("const profilePoolWeights = {"));
+  assert.equal((profiles.match(/distance: 4/g) || []).length, 3, "each randomness profile uses likelihood 4");
+  assert.match(app, /id: "distance", label: "Distance", description: "How far away a Pokémon was caught from your current location\.", ruleFamilies: \["distance"\] \}/);
+  assert.match(app, /collection"[^\n]*ruleFamilies: \[[^\]]*"powered-xl", "background"/);
+
+  const great = { label: "Great League", search: "cp0-1500", minCp: null, maxCp: 1500 };
+  const ultra = { label: "Ultra League", search: "cp0-2500", minCp: null, maxCp: 2500 };
+  assert.equal(utils.combineSearch([great.search, near.search]), "cp0-1500&distance1000");
+  assert.equal(utils.combineSearch([great.search, far.search]), "cp0-1500&distance1000-");
+  assert.equal(utils.combineSearch([ultra.search, near.search]), "cp0-2500&distance1000");
+  assert.equal(utils.normalizeCpConstraint(great, [{ family: "distance", search: near.search }]).search, "cp0-1500");
+});
+
 test("cup CP terms are removed and league ceilings remain the single CP authority", () => {
   const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
   const leagues = {
@@ -345,7 +377,7 @@ test("rule family cards keep every family, concise labels, and tooltip explanati
   const definitions = app.slice(app.indexOf("const advancedFamilies = ["), app.indexOf("const additionalFamilyIds"));
   const mobileStyles = css.slice(css.lastIndexOf("@media (max-width: 640px)"));
 
-  assert.equal((definitions.match(/\{ id:/g) || []).length, 20, "all rule family definitions remain available");
+  assert.equal((definitions.match(/\{ id:/g) || []).length, 21, "all rule family definitions remain available");
   assert.match(definitions, /label: "Random CP Cap", shortLabel: "Random CP Cap", description: "Adds a random CP limit within your selected league\."/);
   assert.match(definitions, /label: "Typing", shortLabel: "Typing", description: ""/);
   assert.match(definitions, /shortLabel: "Regions"/);
@@ -359,9 +391,10 @@ test("rule family cards keep every family, concise labels, and tooltip explanati
   assert.match(definitions, /label: "Mega"[\s\S]*?Mega-capable Pokémon, current Mega eligibility, and Mega level\./);
   assert.match(app, /title\.textContent = definition\.shortLabel \|\| definition\.label/);
   assert.match(app, /helper\.className = "context-tooltip family-description-tooltip"/);
-  assert.match(app, /if \(definition\.description\) \{[\s\S]*?const infoButton = document\.createElement\("button"\)/);
+  assert.match(app, /if \(definition\.description\) \{[\s\S]*?infoButton = document\.createElement\("button"\)/);
   assert.match(app, /elements\.helper\) \{[\s\S]*?elements\.helper\.textContent = blocked/);
   assert.match(app, /infoButton\.setAttribute\("data-context-tooltip-trigger", ""\)/);
+  assert.match(app, /if \(infoButton\) row\.appendChild\(infoButton\)/);
   assert.match(app, /label: "XXL", description: "It's huge!"/);
   assert.match(app, /sizeSearchForSelection\(sizeCategories\.xl, sizeCategories\.xxl\)/);
   assert.match(app, /input\.id = "family-size-" \+ category\.id/);
@@ -384,6 +417,8 @@ test("rule family cards keep every family, concise labels, and tooltip explanati
   assert.match(mobileStyles, /\.family-grid\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/);
   assert.match(mobileStyles, /\.family-setting\s*\{[^}]*grid-template-areas:\s*"heading" "options" "likelihood" "limits"/);
   assert.match(css, /\.family-toggle span\s*\{\s*overflow-wrap:\s*normal;\s*word-break:\s*normal/);
+  assert.match(css, /\.family-setting\.has-family-tooltip \.family-heading\s*\{\s*padding-right:\s*34px/);
+  assert.match(css, /\.family-info-trigger\s*\{\s*position:\s*absolute;\s*top:\s*8px;\s*right:\s*8px;\s*width:\s*24px;\s*height:\s*24px/);
   assert.match(css, /\.family-weight input\[type="range"\]::-webkit-slider-thumb\s*\{[^}]*width:\s*18px/);
 });
 

@@ -501,13 +501,15 @@ window.GBL_RULE_DATA = (() => {
       scarcity: 4,
       explain: "Exclude Pokemon currently undergoing Hyper Training."
     }),
-    rule("distance-far", "Caught at least 1000 km away", "distance1000-", "chaos", "distance", {
+    rule("distance-far", "Distant", "distance1000-", "chaos", "distance", {
       scarcity: 4,
-      explain: "Pokemon caught at least about 1000 km away, based on the game's distance semantics."
+      exclusiveGroup: "distance",
+      explain: "Caught farther than 1,000 km away from your current in-game location."
     }),
-    rule("distance-range", "Caught 100-1000 km away", "distance100-1000", "chaos", "distance", {
+    rule("distance-range", "Nearby", "distance1000", "chaos", "distance", {
       scarcity: 4,
-      explain: "Pokemon in the 100 to 1000 km catch-distance range."
+      exclusiveGroup: "distance",
+      explain: "Caught within a 1,000 km radius of your current in-game location."
     }),
     rule("candy-xl-window", "50-100 family Candy XL", "countcandyxl50-100", "chaos", "candy-xl", {
       scarcity: 4,

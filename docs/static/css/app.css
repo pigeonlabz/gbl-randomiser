@@ -731,6 +731,7 @@ legend { margin-bottom: 8px; font-weight: 700; }
 .family-fieldset-legend { display: flex; align-items: center; gap: 8px; }
 .family-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .family-setting {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(140px, 0.8fr);
   grid-template-areas: "heading likelihood" "options likelihood" "limits likelihood";
@@ -743,6 +744,7 @@ legend { margin-bottom: 8px; font-weight: 700; }
   padding: 11px 12px;
 }
 .family-heading { grid-area: heading; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.family-setting.has-family-tooltip .family-heading { padding-right: 34px; }
 .family-size-options { grid-area: options; display: flex; flex-wrap: wrap; gap: 6px; }
 .family-size-options label { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; border: 1px solid var(--border); border-radius: 7px; background: var(--panel); padding: 5px 9px; color: var(--text-muted); font-size: 0.78rem; font-weight: 650; cursor: pointer; }
 .family-size-options input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); }
@@ -753,7 +755,7 @@ legend { margin-bottom: 8px; font-weight: 700; }
 .family-toggle input { width: 17px; height: 17px; flex: 0 0 auto; accent-color: var(--accent); }
 .family-setting.is-disabled .family-toggle span { color: var(--text-subtle); }
 .family-toggle span { overflow-wrap: normal; word-break: normal; hyphens: none; }
-.family-info-trigger { width: 22px; height: 22px; font-size: 0.76rem; }
+.family-info-trigger { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; font-size: 0.76rem; }
 .family-limit-button { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; }
 .family-limit-button:hover, .family-limit-button[aria-expanded="true"] { border-color: var(--border); background: var(--panel); color: var(--text-strong); }
 .family-limit-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
@@ -1049,7 +1051,6 @@ footer p { margin: 0; }
   .family-setting { grid-template-columns: minmax(0, 1fr); grid-template-areas: "heading" "options" "likelihood" "limits"; gap: 8px; padding: 12px 14px; }
   .family-heading { gap: 8px; }
   .family-toggle { min-height: 34px; gap: 9px; font-size: 0.94rem; }
-  .family-info-trigger { width: 25px; height: 25px; }
   .family-weight { grid-template-columns: minmax(0, 1fr) 2.4em; gap: 4px 10px; }
   .family-weight input[type="range"] { height: 32px; }
   .family-limits { margin: 0; }

@@ -27,7 +27,8 @@
     { id: "type-matchups", label: "Type Matchups", shortLabel: "Type Matchups", description: "Filters Pokémon that are weak to selected types or have moves that are super-effective against them.", ruleFamilies: ["type-effectiveness"], primary: true },
     { id: "acquisition", label: "Origin", shortLabel: "Origin", description: "How you obtained the Pokémon.", ruleFamilies: ["origin", "origin-special", "year"], primary: true },
     { id: "battle-stats", label: "Appraisal / IVs", shortLabel: "Appraisal / IVs", description: "Uses appraisal star ranges or battle-stat filters.", ruleFamilies: ["appraisal", "hp", "iv-attack", "iv-defense", "iv-hp", "iv-combo"] },
-    { id: "collection", label: "Collection traits", shortLabel: "Collection", description: "Uses unusual collection and inventory traits.", ruleFamilies: ["lucky", "costume", "candy", "candy-xl", "powered-xl", "distance", "background", "copy-count", "buddy-candy"] },
+    { id: "collection", label: "Collection traits", shortLabel: "Collection", description: "Uses unusual collection and inventory traits.", ruleFamilies: ["lucky", "costume", "candy", "candy-xl", "powered-xl", "background", "copy-count", "buddy-candy"] },
+    { id: "distance", label: "Distance", description: "How far away a Pokémon was caught from your current location.", ruleFamilies: ["distance"] },
     { id: "special-forms", label: "Special forms", shortLabel: "Special Forms", description: "Uses Dynamax, Gigantamax, or other special forms.", ruleFamilies: ["max", "max-count", "max-move", "special-status"] }
   ];
   const additionalFamilyIds = new Set(advancedFamilies.filter((definition) => !definition.primary).map((definition) => definition.id));
@@ -37,19 +38,19 @@
       shiny: 3, rarity: 2, cp: 2, "pokemon-type": 9, region: 8, "move-typing": 5,
       shadow: 4, time: 6, purified: 1, "xl-size": 4, "xs-size": 4, buddy: 4,
       weather: 3, mega: 2, "meta-moves": 0, "type-matchups": 2,
-      acquisition: 4, "battle-stats": 3, collection: 2, "special-forms": 1
+      acquisition: 4, "battle-stats": 3, collection: 2, distance: 4, "special-forms": 1
     },
     spicy: {
       shiny: 5, rarity: 5, cp: 5, "pokemon-type": 6, region: 4, "move-typing": 7,
       shadow: 5, time: 5, purified: 2, "xl-size": 5, "xs-size": 4, buddy: 5,
       weather: 6, mega: 5, "meta-moves": 4, "type-matchups": 5,
-      acquisition: 5, "battle-stats": 5, collection: 5, "special-forms": 4
+      acquisition: 5, "battle-stats": 5, collection: 5, distance: 4, "special-forms": 4
     },
     chaos: {
       shiny: 5, rarity: 6, cp: 7, "pokemon-type": 4, region: 4, "move-typing": 8,
       shadow: 5, time: 5, purified: 2, "xl-size": 6, "xs-size": 5, buddy: 4,
       weather: 7, mega: 7, "meta-moves": 8, "type-matchups": 7,
-      acquisition: 6, "battle-stats": 7, collection: 7, "special-forms": 8
+      acquisition: 6, "battle-stats": 7, collection: 7, distance: 4, "special-forms": 8
     }
   };
   const profilePoolWeights = {
@@ -66,7 +67,7 @@
   const RULE_ICONS_BY_FAMILY = {
     "visual-status": "shiny", rarity: "rare", cp: "cp", region: "region",
     age: "recent", "size-xl": "xl", "size-xs": "xs", "meta-moves": "meta-ban",
-    mega: "mega", "mega-level": "mega-level", buddy: "buddy", "move-weather": "weather"
+    mega: "mega", "mega-level": "mega-level", buddy: "buddy", "move-weather": "weather", distance: "distance"
   };
   const DEFAULT_BACKGROUND_TYPES = ["steel", "water", "fairy"];
 
@@ -1286,7 +1287,9 @@
       title.textContent = definition.shortLabel || definition.label;
       const tooltipId = "family-" + definition.id + "-tooltip";
       let helper = null;
+      let infoButton = null;
       if (definition.description) {
+        row.classList.add("has-family-tooltip");
         helper = document.createElement("div");
         helper.className = "context-tooltip family-description-tooltip";
         helper.id = tooltipId;
@@ -1306,7 +1309,7 @@
       toggleLabel.append(checkbox, title);
       heading.appendChild(toggleLabel);
       if (helper) {
-        const infoButton = document.createElement("button");
+        infoButton = document.createElement("button");
         infoButton.className = "info-trigger family-info-trigger";
         infoButton.type = "button";
         infoButton.setAttribute("aria-label", definition.label + " information");
@@ -1319,7 +1322,6 @@
         infoIcon.setAttribute("aria-hidden", "true");
         infoIcon.textContent = "ⓘ";
         infoButton.appendChild(infoIcon);
-        heading.appendChild(infoButton);
       }
       let limitControls = null;
       if (definition.limits) {
@@ -1340,6 +1342,7 @@
       output.htmlFor = range.id;
       weightLabel.append(range, output);
       row.appendChild(heading);
+      if (infoButton) row.appendChild(infoButton);
       if (definition.id === "xl-size") {
         const options = document.createElement("div");
         options.className = "family-size-options";
