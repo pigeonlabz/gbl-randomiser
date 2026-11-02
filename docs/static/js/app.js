@@ -1891,7 +1891,7 @@
       "clamp(170px, 21vw, 295px) clamp(170px, 21vw, 295px)",
       "clamp(160px, 20vw, 275px) clamp(160px, 20vw, 275px)"
     ];
-    document.documentElement.style.setProperty("--theme-bg-image", themeTypes.map((type) => 'url("' + BACKGROUND_ROOT + type + '.svg")').join(", "));
+    document.documentElement.style.setProperty("--theme-bg-image", themeTypes.map((type) => 'url("' + new URL(BACKGROUND_ROOT + type + ".svg", document.baseURI).href + '")').join(", "));
     document.documentElement.style.setProperty("--theme-bg-position", positions.slice(0, themeTypes.length).join(", "));
     document.documentElement.style.setProperty("--theme-bg-size", sizes.slice(0, themeTypes.length).join(", "));
     document.documentElement.dataset.themeTypes = themeTypes.join(" ");
