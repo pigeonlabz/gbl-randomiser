@@ -411,16 +411,14 @@
       const saved = JSON.parse(window.localStorage.getItem(CUSTOM_CUP_SETTINGS_KEY) || "null");
       if (!saved || typeof saved !== "object") return defaults;
       const validExpression = (value) => {
-        const parsed = GENERATOR_UTILS.validateSearchExpression(value);
-        return parsed.valid ? GENERATOR_UTILS.stripCpTerms(parsed.normalized) : "";
+        return GENERATOR_UTILS.stripCpTerms(GENERATOR_UTILS.removeSearchTerms(value, ["primalraid"]));
       };
       return {
         prefix: validExpression(saved.prefix),
         extraFilter: validExpression(saved.extraFilter),
         additionalRules: (Array.isArray(saved.additionalRules) ? saved.additionalRules : []).reduce((result, rule) => {
           if (!rule || typeof rule !== "object") return result;
-          const parsed = GENERATOR_UTILS.validateSearchExpression(rule.search);
-          const search = parsed.valid ? GENERATOR_UTILS.stripCpTerms(parsed.normalized) : "";
+          const search = validExpression(rule.search);
           if (!search) return result;
           if (rule.kind === "pokemon" && Number.isInteger(Number(rule.dex))) {
             const dex = Number(rule.dex);

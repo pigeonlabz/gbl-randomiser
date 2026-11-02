@@ -429,10 +429,6 @@ window.GBL_RULE_DATA = (() => {
       scarcity: 4,
       explain: "Pokemon obtained from an EX Raid."
     }),
-    rule("primalraid", "Primal Raid origin", "primalraid", "chaos", "origin-special", {
-      scarcity: 4,
-      explain: "Pokemon obtained from a Primal Raid."
-    }),
     rule("snapshot", "Snapshot encounter", "snapshot", "chaos", "origin-special", {
       scarcity: 4,
       explain: "Pokemon obtained from a snapshot encounter."

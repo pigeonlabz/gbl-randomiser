@@ -86,7 +86,6 @@
 "085","Super Max Mega Level","mega4","Chaos","XL or XXL size","xl,xxl","Core","mega4&xl,xxl","Collection-dependent; battle-format eligibility applies."
 "086","Egg-exclusive species","eggsonly","Chaos","Caught at least 365 days ago","age365-","Core","eggsonly&age365-","Very restrictive in Master League; Egg-exclusive species can be underpowered. Time-dependent; rolling catch-age window."
 "087","EX Raid origin","exraid","Chaos","XL or XXL size","xl,xxl","Core","exraid&xl,xxl","Collection-dependent; historical EX Raid record required."
-"088","Primal Raid origin","primalraid","Chaos","3-star or 4-star appraisal","3*,4*","Core","primalraid&3*,4*","Collection-dependent; narrow encounter pool."
 "089","Snapshot encounter","snapshot","Chaos","Caught at least 365 days ago","age365-","Core","snapshot&age365-","Collection-dependent; narrow encounter pool. Time-dependent; rolling catch-age window."
 "090","Party Play reward","party","Chaos","3-star or 4-star appraisal","3*,4*","Core","party&3*,4*","Collection-dependent; narrow encounter pool."
 "091","Rare background","background","Chaos","Caught 30-365 days ago","age30-365","Core","background&age30-365","Collection-dependent; may return very few Pokémon. Time-dependent; rolling catch-age window."

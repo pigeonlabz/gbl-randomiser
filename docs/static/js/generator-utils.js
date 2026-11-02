@@ -171,6 +171,18 @@
     return alternatives.map((terms) => terms.join("&")).join(",");
   }
 
+  function removeSearchTerms(expression, removedTerms) {
+    const parsed = validateSearchExpression(expression);
+    if (!parsed.valid || !parsed.alternatives.length) return "";
+    const removed = new Set((Array.isArray(removedTerms) ? removedTerms : [removedTerms])
+      .map((term) => String(term || "").replace(/^!+/, "").toLowerCase()).filter(Boolean));
+    return parsed.alternatives
+      .map((terms) => terms.filter((term) => !removed.has(term.replace(/^!+/, "").toLowerCase())))
+      .filter((terms) => terms.length)
+      .map((terms) => terms.join("&"))
+      .join(",");
+  }
+
   function sizeSearchForSelection(includeXL, includeXXL) {
     const terms = [];
     if (includeXL) terms.push("xl");
@@ -271,6 +283,7 @@
     chooseChallengeRule: chooseChallengeRule,
     chooseOptionalDisqualifier: chooseOptionalDisqualifier,
     validateSearchExpression: validateSearchExpression,
+    removeSearchTerms: removeSearchTerms,
     stripCpTerms: stripCpTerms,
     combineSearch: combineSearch,
     sizeSearchForSelection: sizeSearchForSelection,

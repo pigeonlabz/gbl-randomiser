@@ -180,7 +180,6 @@ Current client references also document encounter/origin terms not all present i
 | `remoteraid` | Obtained from a Remote Raid | Verified-current | Spicy |
 | `megaraid` | Obtained from a Mega Raid | Verified-current | Spicy |
 | `exraid` | Obtained from an EX Raid | Verified-current | Chaos |
-| `primalraid` | Obtained from a Primal Raid | Verified-current | Chaos |
 | `research` | Obtained from research | Verified-current | Core/Spicy |
 | `gbl` | Obtained from GO Battle League | Verified-current | Spicy |
 | `rocket` | Obtained through Team GO Rocket | Verified-current | Core/Spicy |

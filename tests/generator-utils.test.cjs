@@ -554,6 +554,23 @@ test("search composition distributes AND across OR groups and validates empty br
   assert.equal(utils.combineSearch(["water", "water"]), "water");
 });
 
+test("obsolete primal raid terms are absent from rules, presets, and rerolled searches", () => {
+  const obsolete = /primalraid/i;
+  assert.ok(ruleData.rules.every((rule) => !obsolete.test(rule.id) && !obsolete.test(rule.search)));
+  assert.ok(cupData.every((cup) => !obsolete.test(cup.search)));
+  assert.ok(makeRepresentativeBatch(193, 500).every((filter) => !obsolete.test(filter.search)));
+  assert.equal(utils.removeSearchTerms("primalraid&shiny,water&!primalraid", ["primalraid"]), "shiny,water");
+  assert.equal(utils.removeSearchTerms("primalraid", ["primalraid"]), "");
+
+  const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
+  const savedCupLoader = app.slice(app.indexOf("function readCustomCupSettings"), app.indexOf("function saveCustomCupSettings"));
+  assert.match(savedCupLoader, /removeSearchTerms\(value, \["primalraid"\]\)/);
+  assert.match(savedCupLoader, /additionalRules:[\s\S]*?validExpression\(rule\.search\)/);
+  assert.ok(ruleData.rules.some((rule) => rule.search === "raid"));
+  assert.ok(ruleData.rules.some((rule) => rule.search === "megaraid"));
+  assert.ok(ruleData.rules.some((rule) => rule.search === "remoteraid"));
+});
+
 test("bundled species and official cup snapshots cover supported presets", () => {
   assert.equal(speciesData.length, 1025);
   assert.deepEqual(Array.from(speciesData[0]), [1, "Bulbasaur"]);
