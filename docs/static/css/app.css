@@ -824,6 +824,13 @@ footer p { margin: 0; }
 .additional-family-controls.is-opted-out { opacity: 0.52; filter: saturate(0.6); }
 .family-setting.is-blocked { border-color: var(--border-strong); }
 .family-setting :disabled { cursor: not-allowed; }
+.mutator-options { display: grid; gap: 4px; }
+.include-mutators-control { display: flex; align-items: center; gap: 9px; min-height: 42px; color: var(--text); font-weight: 700; cursor: pointer; }
+.include-mutators-control input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.include-mutators-control input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+#include-mutators-help { color: var(--text-muted); font-size: 0.82rem; line-height: 1.4; }
+.mutator-settings, .mutator-advanced-settings { display: grid; gap: 18px; }
+.mutator-settings[hidden], .mutator-advanced-settings[hidden] { display: none; }
 .cup-selector { margin-top: 2px; }
 .cup-selector label > span { display: flex; align-items: baseline; gap: 6px; }
 .cup-selector label > span small { color: var(--text-muted); font-size: 0.8rem; font-weight: 500; }

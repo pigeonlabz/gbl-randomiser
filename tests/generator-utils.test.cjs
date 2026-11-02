@@ -126,7 +126,7 @@ test("legacy league CP preference helper persists across league changes", () => 
   assert.deepEqual(state, { enabled: true, checked: true, preference: true });
 });
 
-test("selected league caps remain authoritative and cup caps can only lower them", () => {
+test("cup eligibility follows the selected league CP ceiling without imposing a cup cap", () => {
   const leagues = {
     little: { label: "Little Cup", search: "cp0-500", minCp: null, maxCp: 500 },
     great: { label: "Great League", search: "cp0-1500", minCp: null, maxCp: 1500 },
@@ -139,12 +139,63 @@ test("selected league caps remain authoritative and cup caps can only lower them
   assert.equal(utils.normalizeCpConstraint(leagues.ultra, [aggressiveRule]).search, "cp2000-2500");
   assert.equal(utils.normalizeCpConstraint(leagues.master, [aggressiveRule]).search, "cp2000-");
 
-  const littleCupOnGreat = utils.leagueWithCupCap(leagues.great, 500);
-  assert.equal(littleCupOnGreat.maxCp, 500);
-  assert.equal(utils.normalizeCpConstraint(littleCupOnGreat, [aggressiveRule]).search, "cp0-500");
-  const greatCupOnMaster = utils.leagueWithCupCap(leagues.master, 1500);
-  assert.equal(utils.normalizeCpConstraint(greatCupOnMaster, [aggressiveRule]).search, "cp0-1500");
-  assert.equal(utils.leagueWithCupCap(leagues.little, 1500).maxCp, 500);
+  const halloween = cupData.find((cup) => cup.id === "halloween");
+  const greatSearch = utils.combineSearch([utils.normalizeCpConstraint(leagues.great, []).search, halloween.search]);
+  const ultraSearch = utils.combineSearch([utils.normalizeCpConstraint(leagues.ultra, []).search, halloween.search]);
+  assert.equal(greatSearch, "cp0-1500&poison,cp0-1500&bug,cp0-1500&ghost,cp0-1500&dark,cp0-1500&fairy");
+  assert.equal(ultraSearch, "cp0-2500&poison,cp0-2500&bug,cp0-2500&ghost,cp0-2500&dark,cp0-2500&fairy");
+  assert.ok(ultraSearch.split(",").every((branch) => (branch.match(/\bcp[^&,]*/g) || []).length === 1));
+  assert.equal(utils.normalizeCpConstraint(leagues.master, []).search, "");
+});
+
+test("Cup mutators are opt-in while Open League keeps its randomiser", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../docs/index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
+  const checkbox = html.match(/<input id="include-mutators"[^>]*>/);
+  assert.ok(checkbox, "Include mutators checkbox is present");
+  assert.doesNotMatch(checkbox[0], /\schecked(?:\s|>|\/)/, "new configurations start unchecked");
+
+  assert.equal(utils.shouldGenerateMutators(false, false), true, "Open League retains existing randomiser behavior");
+  assert.equal(utils.shouldGenerateMutators(true, false), false, "Cup mutators are off by default");
+  assert.equal(utils.shouldGenerateMutators(true, true), true, "checking the option restores generation");
+
+  const transitionOff = utils.mutatorModeTransition(true, false);
+  assert.deepEqual(transitionOff, { changed: true, shouldClear: true, shouldRegenerate: false });
+  const transitionOn = utils.mutatorModeTransition(false, true);
+  assert.deepEqual(transitionOn, { changed: true, shouldClear: false, shouldRegenerate: true });
+  const currentState = { selected: [{ search: "shiny" }], disqualifiers: [{ search: "!shadow" }] };
+  if (transitionOff.shouldClear) {
+    currentState.selected = [];
+    currentState.disqualifiers = [];
+  }
+  assert.deepEqual(currentState, { selected: [], disqualifiers: [] }, "disabled mutators leave no random rules for the summary");
+  assert.match(app, /currentState\.selected = \[\];[\s\S]*?currentState\.disqualifiers = \[\];[\s\S]*?markConfigPending\(\);/);
+  assert.match(app, /selected = includeMutators \? chooseSelection\([\s\S]*?: \[\];/);
+  assert.match(app, /disqualifier = includeMutators \? chooseOptionalDisqualifier\([\s\S]*?: null;/);
+  assert.match(app, /includeMutators: includeMutators/);
+  assert.match(app, /mutatorSettings\.hidden = !enabled;[\s\S]*mutatorAdvancedSettings\.hidden = !enabled;/);
+  assert.match(app, /if \(transition\.shouldRegenerate\) \{\s*generate\(\);/);
+  const cupChange = app.slice(app.indexOf("function onCupSelectionChanged"), app.indexOf("function onCupPrefixChanged"));
+  assert.doesNotMatch(cupChange, /includeMutatorsInput\.checked\s*=/, "cup changes preserve the checkbox state");
+  assert.doesNotMatch(app, /includeMutatorsInput\.checked\s*=/, "league changes also preserve the checkbox state");
+  assert.match(app, /includeMutatorsInput\.addEventListener\("change"/);
+});
+
+test("Cup-only filters keep the selected CP limit and omit mutators until enabled", () => {
+  const master = { search: "", minCp: null, maxCp: null };
+  const great = { search: "cp0-1500", minCp: null, maxCp: 1500 };
+  const rockCup = cupData.find((cup) => cup.id === "rock-challenge");
+  const mutator = "shiny";
+  const compose = (league, cupSelected, includeMutators) => utils.combineSearch([
+    league.search,
+    ...(cupSelected ? [rockCup.search] : []),
+    ...(utils.shouldGenerateMutators(cupSelected, includeMutators) ? [mutator] : [])
+  ]);
+
+  assert.equal(compose(master, true, false), "rock&!@rock");
+  assert.equal(compose(great, true, false), "cp0-1500&rock&!@rock");
+  assert.equal(compose(master, true, true), "rock&!@rock&shiny");
+  assert.equal(compose(master, false, false), "shiny", "Open League still applies its generated mutator");
 });
 
 test("type leaning uses qualitative multipliers and honors disabled scopes", () => {
@@ -209,6 +260,8 @@ test("published generator markup keeps result and controls in one form", () => {
   assert.match(html, /value="little"[\s\S]*?500 CP[\s\S]*?value="great"[\s\S]*?1,500 CP[\s\S]*?value="ultra"[\s\S]*?2,500 CP[\s\S]*?value="master" checked[\s\S]*?Unlimited CP/);
   assert.doesNotMatch(html, /id="league-select"|id="league-cp-limit"/);
   assert.match(html, /<option value="" selected>None — Open League<\/option>/);
+  assert.match(html, /Halloween Cup \(Suggested: Great League\)/);
+  assert.match(html, /Fantasy Cup: Ultra League \(Suggested: Ultra League\)/);
   assert.match(html, /id="additional-rule-input"[^>]*role="combobox"/);
   assert.match(html, /id="add-additional-rule"[^>]*aria-label="Add rule"/);
   assert.match(html, /Additional Rules/);
@@ -219,6 +272,8 @@ test("published generator markup keeps result and controls in one form", () => {
   }
   const cupChange = app.slice(app.indexOf("function onCupSelectionChanged"), app.indexOf("function onCupPrefixChanged"));
   assert.doesNotMatch(cupChange, /leagueInputs[^\n]*checked\s*=|leagueSelect\.value\s*=/, "cup changes keep the chosen league");
+  assert.doesNotMatch(app, /cup\.maxCp|leagueWithCupCap/, "cup presets do not participate in CP ceiling selection");
+  assert.match(app, /cup\.suggestedLeague \|\| cup\.officialLeague \|\| cup\.league/, "legacy cup league values remain recommendation metadata");
   const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
   assert.match(css, /\.league-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/);
   assert.doesNotMatch(html, /<script[^>]+src="https?:\/\//, "the static page does not add runtime network scripts");
@@ -256,9 +311,14 @@ test("bundled species and official cup snapshots cover supported presets", () =>
   const getCup = (id) => cupData.find((cup) => cup.id === id);
   for (const cup of cupData) {
     assert.equal(utils.validateSearchExpression(cup.search).valid, true, cup.id + " cup search is valid");
+    assert.equal(Object.hasOwn(cup, "maxCp"), false, cup.id + " has no hardcoded CP cap");
+    assert.doesNotMatch(cup.search, /(?:^|[&,])cp(?:\d|-)/i, cup.id + " search does not carry a CP restriction");
     if (cup.official) assert.ok(cup.sourceUrl, cup.id + " has an official source");
   }
-  assert.equal(getCup("halloween").maxCp, 1500);
+  assert.equal(getCup("halloween").suggestedLeague, "great");
+  assert.equal(getCup("fantasy-ultra").suggestedLeague, "ultra");
+  assert.equal(getCup("element").suggestedLeague, "little");
+  assert.equal(getCup("rock-challenge").suggestedLeague, "master");
   assert.equal(getCup("jungle").search, "normal,grass,electric,poison,ground,flying,bug,dark");
   assert.equal(getCup("fantasy").search, "dragon,steel,fairy");
   assert.equal(getCup("retro").search, "!dark&!steel&!fairy");
@@ -273,6 +333,18 @@ test("bundled species and official cup snapshots cover supported presets", () =>
     utils.combineSearch([willpower.search, banned]),
     "fighting&!282&!570&!571,psychic&!282&!570&!571,dark&!282&!570&!571"
   );
+});
+
+test("legacy custom .cup loading, saved sessions, and rerolls remain available", () => {
+  const legacyEngine = fs.readFileSync(path.join(__dirname, "../archive/legacy-flask/rules_engine.py"), "utf8");
+  const legacyApp = fs.readFileSync(path.join(__dirname, "../archive/legacy-flask/app.py"), "utf8");
+  assert.match(legacyEngine, /def load_custom_cups\(\)/);
+  assert.match(legacyEngine, /fname\.endswith\("\.cup"\)/);
+  assert.match(legacyEngine, /data\.get\("cup_search", ""\)/);
+  assert.match(legacyEngine, /def load_session\(/);
+  assert.match(legacyEngine, /def reroll_current_round\(/);
+  assert.match(legacyApp, /load_custom_cups/);
+  assert.match(legacyApp, /reroll_current_round/);
 });
 
 test("random time rules use broad age bands and keep calendar-year searches out of the pool", () => {

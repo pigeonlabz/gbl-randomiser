@@ -64,22 +64,22 @@
           <select id="cup-select" name="cup">
             <option value="" selected>None — Open League</option>
             <optgroup label="Official GBL formats">
-              <option value="halloween">Halloween Cup — Great League</option>
-              <option value="mega-halloween">Mega Halloween Cup — Great League</option>
-              <option value="jungle">Jungle Cup — Great League</option>
-              <option value="fantasy">Fantasy Cup — Great League</option>
-              <option value="fantasy-ultra">Fantasy Cup — Ultra League</option>
-              <option value="retro">Retro Cup — Great League</option>
-              <option value="willpower">Willpower Cup — Great League</option>
-              <option value="element">Element Cup — Little Edition</option>
-              <option value="fossil">Fossil Cup — Great League</option>
-              <option value="holiday">Holiday Cup — Great League</option>
-              <option value="holiday-ultra">Holiday Cup — Ultra League</option>
-              <option value="love">Love Cup — Great League</option>
-              <option value="scroll">Scroll Cup — Great League</option>
+              <option value="halloween">Halloween Cup (Suggested: Great League)</option>
+              <option value="mega-halloween">Mega Halloween Cup (Suggested: Great League)</option>
+              <option value="jungle">Jungle Cup (Suggested: Great League)</option>
+              <option value="fantasy">Fantasy Cup (Suggested: Great League)</option>
+              <option value="fantasy-ultra">Fantasy Cup: Ultra League (Suggested: Ultra League)</option>
+              <option value="retro">Retro Cup (Suggested: Great League)</option>
+              <option value="willpower">Willpower Cup (Suggested: Great League)</option>
+              <option value="element">Element Cup (Suggested: Little Cup)</option>
+              <option value="fossil">Fossil Cup (Suggested: Great League)</option>
+              <option value="holiday">Holiday Cup (Suggested: Great League)</option>
+              <option value="holiday-ultra">Holiday Cup: Ultra League (Suggested: Ultra League)</option>
+              <option value="love">Love Cup (Suggested: Great League)</option>
+              <option value="scroll">Scroll Cup (Suggested: Great League)</option>
             </optgroup>
             <optgroup label="Custom filter presets">
-              <option value="rock-challenge">Rock challenge (custom filter)</option>
+              <option value="rock-challenge">Rock challenge (custom filter; Suggested: Master League)</option>
               <option value="custom">Custom Cup filter…</option>
             </optgroup>
           </select>
@@ -87,28 +87,38 @@
           <div id="cup-format-info" class="cup-format-info" role="status" aria-live="polite"></div>
         </div>
 
-        <div class="control-grid">
-          <label class="control" for="mutator-count">
-            <span>Mutators</span>
-            <select id="mutator-count" name="count">
-              <option value="1">1</option>
-              <option value="2" selected>2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-            </select>
+        <div class="mutator-options">
+          <label class="include-mutators-control" for="include-mutators">
+            <input id="include-mutators" name="include-mutators" type="checkbox" aria-describedby="include-mutators-help">
+            <span>Include mutators</span>
           </label>
+          <small id="include-mutators-help">With a Cup selected, uncheck this to use only the league limit and Cup restrictions. Open League keeps the existing randomiser active.</small>
         </div>
 
-        <fieldset class="randomness-control">
-          <legend>Randomness</legend>
-          <div class="choice-row" role="radiogroup" aria-label="Randomness profile">
-            <label class="choice"><input id="randomness-chill" type="radio" name="randomness" value="chill" checked><span>Chill</span></label>
-            <label class="choice"><input id="randomness-spicy" type="radio" name="randomness" value="spicy"><span>Spicy</span></label>
-            <label class="choice"><input id="randomness-chaos" type="radio" name="randomness" value="chaos"><span>Chaos</span></label>
+        <div id="mutator-settings" class="mutator-settings">
+          <div class="control-grid">
+            <label class="control" for="mutator-count">
+              <span>Mutators</span>
+              <select id="mutator-count" name="count">
+                <option value="1">1</option>
+                <option value="2" selected>2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+              </select>
+            </label>
           </div>
-        </fieldset>
+
+          <fieldset class="randomness-control">
+            <legend>Randomness</legend>
+            <div class="choice-row" role="radiogroup" aria-label="Randomness profile">
+              <label class="choice"><input id="randomness-chill" type="radio" name="randomness" value="chill" checked><span>Chill</span></label>
+              <label class="choice"><input id="randomness-spicy" type="radio" name="randomness" value="spicy"><span>Spicy</span></label>
+              <label class="choice"><input id="randomness-chaos" type="radio" name="randomness" value="chaos"><span>Chaos</span></label>
+            </div>
+          </fieldset>
+        </div>
 
         <section class="additional-rules" aria-labelledby="additional-rules-title">
           <h2 id="additional-rules-title">Additional Rules</h2>
@@ -139,49 +149,53 @@
             <span id="custom-badge" class="customised" hidden>Customised</span>
           </summary>
           <div class="advanced-content">
-            <fieldset class="type-leaning-fieldset">
-              <legend>Type Leaning</legend>
-              <p id="type-leaning-help" class="type-leaning-help">Bias generated rules toward selected types without requiring them.</p>
-              <div id="type-leaning-types" class="type-leaning-types">
-                <div id="type-leaning-chips" class="type-leaning-chips" aria-live="polite"></div>
-                <label class="visually-hidden" for="type-leaning-add">Add a preferred type</label>
-                <select id="type-leaning-add" aria-describedby="type-leaning-help">
-                  <option value="">+ Add type</option>
-                </select>
-              </div>
-              <fieldset class="type-leaning-strength">
-                <legend>Strength</legend>
-                <div class="choice-row" role="radiogroup" aria-label="Type leaning strength">
-                  <label class="choice"><input type="radio" name="type-leaning-strength" value="light"><span>Light</span></label>
-                  <label class="choice"><input type="radio" name="type-leaning-strength" value="medium" checked><span>Medium</span></label>
-                  <label class="choice"><input type="radio" name="type-leaning-strength" value="strong"><span>Strong</span></label>
+            <div id="mutator-advanced-settings" class="mutator-advanced-settings">
+              <fieldset class="type-leaning-fieldset">
+                <legend>Type Leaning</legend>
+                <p id="type-leaning-help" class="type-leaning-help">Bias generated rules toward selected types without requiring them.</p>
+                <div id="type-leaning-types" class="type-leaning-types">
+                  <div id="type-leaning-chips" class="type-leaning-chips" aria-live="polite"></div>
+                  <label class="visually-hidden" for="type-leaning-add">Add a preferred type</label>
+                  <select id="type-leaning-add" aria-describedby="type-leaning-help">
+                    <option value="">+ Add type</option>
+                  </select>
                 </div>
+                <fieldset class="type-leaning-strength">
+                  <legend>Strength</legend>
+                  <div class="choice-row" role="radiogroup" aria-label="Type leaning strength">
+                    <label class="choice"><input type="radio" name="type-leaning-strength" value="light"><span>Light</span></label>
+                    <label class="choice"><input type="radio" name="type-leaning-strength" value="medium" checked><span>Medium</span></label>
+                    <label class="choice"><input type="radio" name="type-leaning-strength" value="strong"><span>Strong</span></label>
+                  </div>
+                </fieldset>
+                <fieldset class="type-leaning-scope">
+                  <legend>Apply to</legend>
+                  <label><input id="type-leaning-pokemon" type="checkbox" checked><span>Pokémon type rules</span></label>
+                  <label><input id="type-leaning-move" type="checkbox" checked><span>Move type rules</span></label>
+                </fieldset>
               </fieldset>
-              <fieldset class="type-leaning-scope">
-                <legend>Apply to</legend>
-                <label><input id="type-leaning-pokemon" type="checkbox" checked><span>Pokémon type rules</span></label>
-                <label><input id="type-leaning-move" type="checkbox" checked><span>Move type rules</span></label>
+
+              <fieldset class="family-fieldset">
+                <legend>Rule families</legend>
+                <p class="family-guidance">Higher likelihood makes a family more likely to be selected.</p>
+                <div id="primary-family-controls" class="family-grid"></div>
               </fieldset>
-            </fieldset>
 
-            <fieldset class="family-fieldset">
-              <legend>Rule families</legend>
-              <p class="family-guidance">Higher likelihood makes a family more likely to be selected.</p>
-              <div id="primary-family-controls" class="family-grid"></div>
-            </fieldset>
+              <details class="additional-families">
+                <summary>Additional rule families</summary>
+                <div class="additional-family-options">
+                  <label class="additional-family-toggle" for="additional-families-enabled">
+                    <input id="additional-families-enabled" type="checkbox" aria-describedby="additional-family-warning">
+                    <span>Enable additional rule families</span>
+                  </label>
+                  <span id="additional-family-state" class="additional-family-state" aria-live="polite">Not participating</span>
+                </div>
+                <p id="additional-family-warning" class="additional-family-warning" hidden>These rules can create very restrictive or occasionally unusable filter combinations. Test generated filters before relying on them.</p>
+                <div id="additional-family-controls" class="family-grid additional-family-controls is-opted-out"></div>
+              </details>
 
-            <details class="additional-families">
-              <summary>Additional rule families</summary>
-              <div class="additional-family-options">
-                <label class="additional-family-toggle" for="additional-families-enabled">
-                  <input id="additional-families-enabled" type="checkbox" aria-describedby="additional-family-warning">
-                  <span>Enable additional rule families</span>
-                </label>
-                <span id="additional-family-state" class="additional-family-state" aria-live="polite">Not participating</span>
-              </div>
-              <p id="additional-family-warning" class="additional-family-warning" hidden>These rules can create very restrictive or occasionally unusable filter combinations. Test generated filters before relying on them.</p>
-              <div id="additional-family-controls" class="family-grid additional-family-controls is-opted-out"></div>
-            </details>
+              <button id="reset-advanced" class="button button-secondary reset-button" type="button">Reset rule settings</button>
+            </div>
 
             <details class="cup-settings">
               <summary>More Cup settings</summary>
@@ -207,8 +221,6 @@
                 </fieldset>
               </fieldset>
             </details>
-
-            <button id="reset-advanced" class="button button-secondary reset-button" type="button">Reset rule settings</button>
           </div>
         </details>
       </div>

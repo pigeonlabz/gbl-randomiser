@@ -79,6 +79,9 @@
   const cupLockTypes = document.getElementById("cup-lock-types");
   const cupLockMoves = document.getElementById("cup-lock-moves");
   const leagueInputs = Array.from(document.querySelectorAll('input[name="league"]'));
+  const includeMutatorsInput = document.getElementById("include-mutators");
+  const mutatorSettings = document.getElementById("mutator-settings");
+  const mutatorAdvancedSettings = document.getElementById("mutator-advanced-settings");
   const mutatorCount = document.getElementById("mutator-count");
   const battleTargetInput = document.getElementById("battle-target");
   const extraFilterInput = document.getElementById("extra-filter");
@@ -330,13 +333,17 @@
   function cupForSelection() {
     return currentCup && cupSelect.value === currentCup.id ? currentCup : null;
   }
+  function cupSuggestedLeague(cup) {
+    const leagueId = cup.suggestedLeague || cup.officialLeague || cup.league;
+    return leagueId ? leagues[leagueId] || null : null;
+  }
+  function cupDisplayName(cup) {
+    const suggestedLeague = cupSuggestedLeague(cup);
+    return cup.name + (suggestedLeague ? " (Suggested: " + suggestedLeague.label + ")" : "");
+  }
   function cupPresetSearch(cup) {
     const bannedSpecies = (cup.speciesBans || []).map((dex) => "!" + dex).join("&");
     return GENERATOR_UTILS.combineSearch([cup.search, bannedSpecies]);
-  }
-  function effectiveLeague(league) {
-    const cup = cupForSelection();
-    return cup ? GENERATOR_UTILS.leagueWithCupCap(league, cup.maxCp) : league;
   }
   function renderTypeLeaningControls() {
     typeLeaningChips.replaceChildren();
@@ -886,7 +893,7 @@
     configPending = true;
     if (currentState) {
       const selectedLeague = getSelectedLeague();
-      const league = effectiveLeague(selectedLeague);
+      const league = selectedLeague;
       const cpConstraint = normalizeCpConstraint(league, currentState.selected);
       const otherRules = currentState.selected.filter((rule) => rule.family !== "cp");
       const cupPrefix = getStaticCupPrefix();
@@ -938,9 +945,10 @@
 
   function generate() {
     const league = getSelectedLeague();
-    const leagueConstraint = effectiveLeague(league);
+    const leagueConstraint = league;
     const profile = activeProfile;
-    const requestedCount = Math.max(1, Math.min(6, Number(mutatorCount.value) || 2));
+    const includeMutators = shouldGenerateMutators();
+    const requestedCount = includeMutators ? Math.max(1, Math.min(6, Number(mutatorCount.value) || 2)) : 0;
     const pool = allRules();
     let selected = [];
     let disqualifiers = [];
@@ -950,9 +958,9 @@
     const cupPrefix = getStaticCupPrefix();
     const extraFilter = getExtraFilter();
 
-    for (let attempt = 0; attempt < 30; attempt += 1) {
-      selected = chooseSelection(profile, leagueConstraint, requestedCount, pool);
-      const disqualifier = chooseOptionalDisqualifier(pool, selected, profile, leagueConstraint);
+    for (let attempt = 0; attempt < (includeMutators ? 30 : 1); attempt += 1) {
+      selected = includeMutators ? chooseSelection(profile, leagueConstraint, requestedCount, pool) : [];
+      const disqualifier = includeMutators ? chooseOptionalDisqualifier(pool, selected, profile, leagueConstraint) : null;
       disqualifiers = disqualifier ? [disqualifier] : [];
       cpConstraint = normalizeCpConstraint(leagueConstraint, selected);
       const otherRules = selected.filter((rule) => rule.family !== "cp");
@@ -982,6 +990,7 @@
       cpConstraint: cpConstraint,
       search: search,
       requestedCount: requestedCount,
+      includeMutators: includeMutators,
       cupPrefix: cupPrefix,
       cupName: getCurrentCupName(),
       extraFilter: extraFilter,
@@ -998,7 +1007,7 @@
 
   function getCurrentCupName() {
     const cup = cupForSelection();
-    if (cup) return cup.name;
+    if (cup) return cupDisplayName(cup);
     return getStaticCupPrefix() ? "Custom Cup" : "";
   }
 
@@ -1021,27 +1030,33 @@
     }
     const status = document.createElement("p");
     status.className = "cup-format-status";
+    const suggestedLeague = cup ? cupSuggestedLeague(cup) : null;
+    const selectedLeague = getSelectedLeague();
     if (!cup) {
-      status.textContent = "Custom Cup filter for " + getSelectedLeague().label + ". This is a custom league/cup combination.";
+      status.textContent = "Custom Cup filter for " + selectedLeague.label + ". The selected league controls the CP ceiling.";
     } else if (!cup.official) {
-      status.textContent = "Custom preset · " + getSelectedLeague().label + " combination; this is not a verified official cup format.";
+      status.textContent = "Custom preset · not a verified official cup format. " +
+        (suggestedLeague ? "Suggested league: " + suggestedLeague.label + ". " : "") +
+        "Applying restrictions to " + selectedLeague.label + "; its CP ceiling stays selected.";
     } else if (cup.officialLeague === selectedLeagueId()) {
-      status.textContent = "Official format · " + (cup.edition || "verified GBL cup") + ".";
+      status.textContent = "Official format · " + (cup.edition || "verified GBL cup") + ". " +
+        (suggestedLeague ? "Suggested league: " + suggestedLeague.label + ". " : "") +
+        "CP ceiling follows the selected league.";
     } else {
-      status.textContent = "Custom league/cup combination. Official " + cup.name + " rules are listed for " + (leagues[cup.officialLeague] || {}).label + "; the selected league stays " + getSelectedLeague().label + ".";
+      status.textContent = "Custom league/cup combination. Official " + cup.name + " rules are listed for " +
+        ((leagues[cup.officialLeague] || {}).label || "their original league") + ". " +
+        (suggestedLeague ? "Suggested: " + suggestedLeague.label + ". " : "") +
+        "Applying eligibility to " + selectedLeague.label + "; its CP ceiling stays selected.";
     }
     cupFormatInfo.appendChild(status);
 
-    if (cup && Number.isFinite(cup.maxCp)) {
+    if (cup) {
       const cupLimit = document.createElement("p");
-      const selectedLimit = getSelectedLeague().maxCp;
-      const combinedLimit = effectiveLeague(getSelectedLeague()).maxCp;
-      cupLimit.className = "cup-cp-note";
-      cupLimit.textContent = "Cup ceiling: " + cup.maxCp.toLocaleString() + " CP. " +
-        (Number.isFinite(selectedLimit)
-          ? "Selected league ceiling: " + selectedLimit.toLocaleString() + " CP. "
-          : "Selected league has no CP cap. ") +
-        "Combined ceiling: " + (Number.isFinite(combinedLimit) ? combinedLimit.toLocaleString() + " CP." : "unlimited.");
+      const selectedLimit = selectedLeague.maxCp;
+      cupLimit.className = "selected-league-cp-note";
+      cupLimit.textContent = "Selected league CP ceiling: " +
+        (Number.isFinite(selectedLimit) ? selectedLimit.toLocaleString() + " CP." : "unlimited.") +
+        " Cup recommendations never change this ceiling.";
       cupFormatInfo.appendChild(cupLimit);
     }
 
@@ -1314,20 +1329,57 @@
   }
 
   function updateCupControls() {
-    const hasCup = Boolean(cupForSelection() || cupPrefixInput.value.trim());
+    const hasCup = Boolean(cupSelect.value || cupPrefixInput.value.trim());
     cupSettingsFields.disabled = false;
-    cupLocks.disabled = !hasCup;
-    cupLockTypes.disabled = !hasCup;
-    cupLockMoves.disabled = !hasCup;
+    const canGenerateMutators = shouldGenerateMutators();
+    cupLocks.disabled = !hasCup || !canGenerateMutators;
+    cupLockTypes.disabled = !hasCup || !canGenerateMutators;
+    cupLockMoves.disabled = !hasCup || !canGenerateMutators;
     const lockNames = [];
     if (cupLockTypes.checked && hasCup) lockNames.push("Pokémon type rules");
     if (cupLockMoves.checked && hasCup) lockNames.push("move type rules");
-    document.getElementById("cup-lock-note").textContent = lockNames.length
-      ? "Paused for this Cup: " + lockNames.join(" and ") + ". Other rule families stay available."
-      : "Choose any overlapping rule families to pause while this Cup filter is active.";
+    document.getElementById("cup-lock-note").textContent = hasCup && !canGenerateMutators
+      ? "Cup locks are available when Include mutators is on."
+      : lockNames.length
+        ? "Paused for this Cup: " + lockNames.join(" and ") + ". Other rule families stay available."
+        : "Choose any overlapping rule families to pause while this Cup filter is active.";
+    updateMutatorSettingsVisibility();
     updateCupFormatInfo();
     syncFamilyControls();
   }
+
+  function shouldGenerateMutators() {
+    return GENERATOR_UTILS.shouldGenerateMutators(Boolean(cupSelect.value), includeMutatorsInput.checked);
+  }
+
+  function updateMutatorSettingsVisibility() {
+    const enabled = shouldGenerateMutators();
+    mutatorSettings.hidden = !enabled;
+    mutatorAdvancedSettings.hidden = !enabled;
+  }
+
+  function syncMutatorModeForCurrentState(refreshFilter) {
+    updateMutatorSettingsVisibility();
+    if (!currentState) return;
+
+    const enabled = shouldGenerateMutators();
+    const previousEnabled = currentState.includeMutators !== false;
+    const transition = GENERATOR_UTILS.mutatorModeTransition(previousEnabled, enabled);
+    if (transition.shouldClear) {
+      currentState.selected = [];
+      currentState.disqualifiers = [];
+      currentState.requestedCount = 0;
+      currentState.includeMutators = false;
+      markConfigPending();
+      return;
+    }
+    if (transition.shouldRegenerate) {
+      generate();
+      return;
+    }
+    if (refreshFilter) markConfigPending();
+  }
+
   function onCupSelectionChanged() {
     const id = cupSelect.value;
     currentCup = CUP_PRESETS.find((cup) => cup.id === id) || null;
@@ -1346,7 +1398,7 @@
     }
     battleCount = 0;
     updateCupControls();
-    markConfigPending();
+    syncMutatorModeForCurrentState(true);
   }
 
   function onCupPrefixChanged() {
@@ -1361,7 +1413,7 @@
       currentCup = null;
     }
     updateCupControls();
-    markConfigPending();
+    syncMutatorModeForCurrentState(true);
   }
 
   function updateProfileFromInput(input) {
@@ -1437,6 +1489,10 @@
     });
     cupSelect.addEventListener("change", onCupSelectionChanged);
     cupPrefixInput.addEventListener("input", onCupPrefixChanged);
+    includeMutatorsInput.addEventListener("change", () => {
+      updateCupControls();
+      syncMutatorModeForCurrentState(false);
+    });
     cupLockTypes.addEventListener("change", () => { markProfileCustom(); updateCupControls(); markConfigPending(); });
     cupLockMoves.addEventListener("change", () => { markProfileCustom(); updateCupControls(); markConfigPending(); });
     leagueInputs.forEach((input) => input.addEventListener("change", () => {

@@ -36,6 +36,18 @@
     };
   }
 
+  function shouldGenerateMutators(cupSelected, includeMutators) {
+    return !cupSelected || Boolean(includeMutators);
+  }
+
+  function mutatorModeTransition(previousEnabled, nextEnabled) {
+    return {
+      changed: Boolean(previousEnabled) !== Boolean(nextEnabled),
+      shouldClear: Boolean(previousEnabled) && !Boolean(nextEnabled),
+      shouldRegenerate: !Boolean(previousEnabled) && Boolean(nextEnabled)
+    };
+  }
+
   function weightedSample(values, count, weightFor, random = Math.random) {
     const remaining = values.slice();
     const selected = [];
@@ -222,14 +234,6 @@
     return Object.assign({}, league, { minCp: null, maxCp: null, search: "" });
   }
 
-  function leagueWithCupCap(league, cupMaxCp) {
-    if (!Number.isFinite(cupMaxCp)) return league;
-    const minCp = league.minCp == null ? 0 : league.minCp;
-    const leagueMax = league.maxCp == null ? Infinity : league.maxCp;
-    const maxCp = Math.min(leagueMax, cupMaxCp);
-    return Object.assign({}, league, { minCp: minCp, maxCp: maxCp, search: cpSearchForRange(minCp, maxCp) });
-  }
-
   function isAllowedForLeague(rule, league) {
     if (!league.maxCp || rule.family !== "cp") return true;
     if (rule.minCp != null && rule.minCp >= league.maxCp) return false;
@@ -243,6 +247,8 @@
     typeWeight: typeWeight,
     typeLeaningScopeEnabled: typeLeaningScopeEnabled,
     leagueCpUiState: leagueCpUiState,
+    shouldGenerateMutators: shouldGenerateMutators,
+    mutatorModeTransition: mutatorModeTransition,
     weightedSample: weightedSample,
     canAddRule: canAddRule,
     chooseRule: chooseRule,
@@ -253,7 +259,6 @@
     cpSearchForRange: cpSearchForRange,
     normalizeCpConstraint: normalizeCpConstraint,
     leagueWithOptionalCpLimit: leagueWithOptionalCpLimit,
-    leagueWithCupCap: leagueWithCupCap,
     isAllowedForLeague: isAllowedForLeague
   });
 
