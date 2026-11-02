@@ -425,6 +425,28 @@ test("bundled species and official cup snapshots cover supported presets", () =>
   );
 });
 
+test("built-in Cup emojis are unique and carousel keeps selected and recent Cups visible", () => {
+  const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
+  const quickPicker = app.slice(app.indexOf("function renderCupQuickSelections"), app.indexOf("function renderCupPickerOptions"));
+  const cups = cupData;
+  const emojis = cups.map((cup) => cup.emoji);
+
+  assert.ok(emojis.every((emoji) => typeof emoji === "string" && emoji.trim()), "every built-in Cup has an emoji");
+  assert.equal(new Set(emojis).size, cups.length, "built-in Cup emojis are distinct");
+  assert.match(app, /return emoji \|\| \(cup && cup\.official \? "🏆" : "🧩"\)/, "user-created cups have a fallback emoji");
+  assert.match(quickPicker, /ids\.unshift\(selectedId\)/, "the selected Cup is placed before recent Cups");
+  assert.match(quickPicker, /const visibleRecentCount = selectedId && cupPickerItem\(selectedId\) \? 4 : 3/);
+  assert.match(quickPicker, /ids\.slice\(0, visibleRecentCount\)/, "the carousel shows the selection plus up to three recent Cups");
+  assert.match(quickPicker, /icon\.textContent = cupEmoji\(cup\)/);
+  assert.match(app, /emoji\.textContent = cupEmoji\(cup\)/, "Browse All options show the same emoji");
+  assert.match(app, /RECENT_CUPS_KEY = "gbl-filter-recent-cups-v1"/);
+  assert.match(app, /recentCupIds = \[id\]\.concat\(recentCupIds\.filter\(\(recentId\) => recentId !== id\)\)\.slice\(0, 5\)/, "existing recent Cup persistence remains intact");
+  assert.match(css, /\.cup-tile-row\s*\{[^}]*overflow-x:\s*auto;[^}]*scroll-behavior:\s*smooth;[^}]*-webkit-overflow-scrolling:\s*touch/);
+  assert.match(css, /\.cup-quick-tile\s*\{[^}]*scroll-snap-align:\s*start/);
+  assert.match(css, /\.cup-picker-option\s*\{[^}]*min-height:\s*44px/);
+});
+
 test("legacy custom .cup loading, saved sessions, and rerolls remain available", () => {
   const legacyEngine = fs.readFileSync(path.join(__dirname, "../archive/legacy-flask/rules_engine.py"), "utf8");
   const legacyApp = fs.readFileSync(path.join(__dirname, "../archive/legacy-flask/app.py"), "utf8");

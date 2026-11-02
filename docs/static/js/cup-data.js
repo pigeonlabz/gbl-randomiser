@@ -3,6 +3,7 @@
     {
       id: "halloween",
       name: "Halloween Cup",
+      emoji: "🎃",
       official: true,
       officialLeague: "great",
       suggestedLeague: "great",
@@ -15,6 +16,7 @@
     {
       id: "mega-halloween",
       name: "Mega Halloween Cup",
+      emoji: "🧛",
       official: true,
       officialLeague: "great",
       suggestedLeague: "great",
@@ -28,6 +30,7 @@
     {
       id: "jungle",
       name: "Jungle Cup",
+      emoji: "🐒",
       official: true,
       officialLeague: "great",
       suggestedLeague: "great",
@@ -40,6 +43,7 @@
     {
       id: "fantasy",
       name: "Fantasy Cup",
+      emoji: "🐉",
       official: true,
       officialLeague: "great",
       suggestedLeague: "great",
@@ -52,6 +56,7 @@
     {
       id: "fantasy-ultra",
       name: "Fantasy Cup: Ultra League",
+      emoji: "🧚",
       official: true,
       officialLeague: "ultra",
       suggestedLeague: "ultra",
@@ -64,6 +69,7 @@
     {
       id: "retro",
       name: "Retro Cup",
+      emoji: "🕹️",
       official: true,
       officialLeague: "great",
       suggestedLeague: "great",
@@ -76,6 +82,7 @@
     {
       id: "willpower",
       name: "Willpower Cup",
+      emoji: "🥊",
       official: true,
       officialLeague: "great",
       suggestedLeague: "great",
@@ -89,6 +96,7 @@
     {
       id: "element",
       name: "Element Cup",
+      emoji: "🔥",
       official: true,
       officialLeague: "little",
       suggestedLeague: "little",
@@ -102,6 +110,7 @@
     {
       id: "fossil",
       name: "Fossil Cup",
+      emoji: "🦴",
       official: true,
       officialLeague: "great",
       suggestedLeague: "great",
@@ -114,6 +123,7 @@
     {
       id: "holiday",
       name: "Holiday Cup",
+      emoji: "🎄",
       official: true,
       officialLeague: "great",
       suggestedLeague: "great",
@@ -126,6 +136,7 @@
     {
       id: "holiday-ultra",
       name: "Holiday Cup: Ultra League",
+      emoji: "❄️",
       official: true,
       officialLeague: "ultra",
       suggestedLeague: "ultra",
@@ -138,6 +149,7 @@
     {
       id: "love",
       name: "Love Cup",
+      emoji: "💝",
       official: true,
       officialLeague: "great",
       suggestedLeague: "great",
@@ -151,6 +163,7 @@
     {
       id: "scroll",
       name: "Scroll Cup",
+      emoji: "📜",
       official: true,
       officialLeague: "great",
       suggestedLeague: "great",
@@ -164,6 +177,7 @@
     {
       id: "rock-challenge",
       name: "Rock challenge (custom filter)",
+      emoji: "🪨",
       official: false,
       officialLeague: null,
       suggestedLeague: "master",

@@ -350,6 +350,10 @@
     const suggestedLeague = cupSuggestedLeague(cup);
     return cup.name + (suggestedLeague ? " (Suggested: " + suggestedLeague.label + ")" : "");
   }
+  function cupEmoji(cup) {
+    const emoji = cup && typeof cup.emoji === "string" ? cup.emoji.trim() : "";
+    return emoji || (cup && cup.official ? "🏆" : "🧩");
+  }
   function readRecentCupIds() {
     try {
       const saved = JSON.parse(window.localStorage.getItem(RECENT_CUPS_KEY) || "[]");
@@ -373,8 +377,9 @@
     return CUP_PRESETS.find((cup) => cup.id === id) || null;
   }
   function cupQuickLabel(cup) {
-    if (cup.id === "custom") return "Custom filter";
-    return cup.name.replace(/\s+Cup(?::)?/i, "").replace(/:\s*/, " ").trim();
+    if (cup.id === "custom") return "Custom";
+    if (cup.id === "rock-challenge") return "Rock Challenge";
+    return cup.name.replace(/\s+Cup(?::)?/i, "").replace(/:\s*/, " ").replace(/\s+League$/i, "").trim();
   }
   function updateCupPickerSelection() {
     const selectedId = cupSelect.value;
@@ -411,7 +416,8 @@
       if (existingIndex >= 0) ids.splice(existingIndex, 1);
       ids.unshift(selectedId);
     }
-    ids.slice(0, 2).forEach((id) => {
+    const visibleRecentCount = selectedId && cupPickerItem(selectedId) ? 4 : 3;
+    ids.slice(0, visibleRecentCount).forEach((id) => {
       const cup = cupPickerItem(id);
       const button = document.createElement("button");
       button.type = "button";
@@ -423,8 +429,9 @@
       const icon = document.createElement("span");
       icon.className = "cup-quick-icon";
       icon.setAttribute("aria-hidden", "true");
-      icon.textContent = cup.id === "custom" ? "⚙" : "🏆";
+      icon.textContent = cupEmoji(cup);
       const label = document.createElement("span");
+      label.className = "cup-quick-label";
       label.textContent = cupQuickLabel(cup);
       button.append(icon, label);
       cupTileRow.appendChild(button);
@@ -459,9 +466,17 @@
       button.dataset.cupOption = "true";
       button.dataset.cupId = cup.id;
       button.setAttribute("aria-pressed", String(cup.id === cupSelect.value));
+      button.setAttribute("aria-label", cupDisplayName(cup) + (cup.official ? ", official format" : ", custom cup"));
       const name = document.createElement("span");
       name.className = "cup-option-name";
-      name.textContent = cup.name;
+      const emoji = document.createElement("span");
+      emoji.className = "cup-option-emoji";
+      emoji.setAttribute("aria-hidden", "true");
+      emoji.textContent = cupEmoji(cup);
+      const title = document.createElement("span");
+      title.className = "cup-option-title";
+      title.textContent = cup.name;
+      name.append(emoji, title);
       button.appendChild(name);
       const suggestedLeague = cupSuggestedLeague(cup);
       const meta = document.createElement("small");
