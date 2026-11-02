@@ -218,9 +218,10 @@ test("guidance is available in accessible viewport-aware contextual tooltips", (
   assert.ok(html.indexOf('id="cup-format-info"') > html.indexOf('id="cup-info-tooltip"'), "Cup format notes and official references are inside the Cup tooltip");
   assert.match(html, /Use <code>&amp;<\/code> for AND, commas for OR, and <code>!<\/code> to exclude a term/);
   assert.doesNotMatch(html, /id="cup-selector-help"|class="additional-rules-help"|id="include-mutators-help"|Combined live with the generated filter/);
-  assert.match(app, /pointerenter/);
-  assert.match(app, /item\.trigger\.addEventListener\("focus"/);
-  assert.match(app, /item\.trigger\.addEventListener\("click"/);
+  assert.match(app, /document\.addEventListener\("pointerover"/);
+  assert.match(app, /document\.addEventListener\("focusin"/);
+  assert.match(app, /document\.addEventListener\("click"/);
+  assert.match(app, /function itemForTrigger\(trigger\)/, "tooltips also bind to rule icons created during rendering");
   assert.match(app, /event\.key === "Escape"/);
   assert.match(app, /activeItem\.panel\.contains\(event\.target\)/, "outside clicks close an open tooltip");
   assert.match(app, /viewportWidth - panelRect\.width - margin/);
@@ -230,10 +231,36 @@ test("guidance is available in accessible viewport-aware contextual tooltips", (
   assert.match(css, /max-height:\s*min\(28rem, calc\(100dvh - 24px\)\)/);
   assert.match(html, /id="mutator-toggle-group" class="mutator-toggle-group" hidden/);
   assert.match(app, /includeMutatorsToggle\.hidden = !hasCup/);
-  assert.match(css, /\.rule-list\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;/);
+  assert.match(css, /\.rule-icon-list\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;/);
   assert.match(html, /href="https:\/\/ko-fi\.com\/pigeonlabs" target="_blank" rel="noopener noreferrer"/);
   assert.match(html, /href="https:\/\/niantic\.helpshift\.com\/hc\/en\/6-pokemon-go\/faq\/1486-searching-filtering-your-pokemon-inventory\/" target="_blank" rel="noopener noreferrer">Filter help<\/a>/);
   assert.match(css, /\.site-version\s*\{[^}]*font-size:\s*0\.66rem/);
+});
+
+test("compact mobile result keeps filter actions and rule explanations accessible", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../docs/index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
+  assert.doesNotMatch(html, /class="masthead"|PigeonLabz|Filter 1|<h3>Rules<\/h3>/);
+  assert.match(html, /<h1 id="result-title" class="result-title">GBL Randomiser<\/h1>/);
+  assert.match(html, /<p class="attribution">A PigeonLabs project<\/p>/);
+  assert.match(html, /<ul id="rule-list" class="rule-icon-list" aria-label="Active filter restrictions"/);
+  assert.match(html, /<button class="icon-action" id="generate-filter" type="submit" aria-label="Generate new filter"/);
+  assert.match(html, /<button class="icon-action copy-action" id="copy-filter" type="button" aria-label="Copy filter"/);
+  assert.match(html, /<div class="filter-output-row">[\s\S]*?id="search-output"[\s\S]*?id="generate-filter"[\s\S]*?id="copy-filter"/);
+  assert.match(app, /trigger\.setAttribute\("aria-label", details\)/);
+  assert.match(app, /trigger\.appendChild\(createRuleVisual\(rule, "rule-visual"\)\)/);
+  assert.match(app, /if \(currentState\.extraFilter\)[\s\S]*?Advanced search expression:/);
+  assert.match(app, /copyButton\.classList\.toggle\("is-copied", copied\)/);
+  assert.match(app, /battleStatus\.textContent = target \? "Battle " \+ battleCount \+ " of " \+ target : ""/);
+
+  const mobileStyles = css.slice(css.indexOf("@media (max-width: 640px)"), css.indexOf("@media (prefers-reduced-motion"));
+  const mutatorMobileStyles = css.slice(css.lastIndexOf("@media (max-width: 640px)"));
+  assert.match(mobileStyles, /\.league-tile\s*\{[^}]*min-height:\s*98px/);
+  assert.match(mobileStyles, /\.league-ball\s*\{[^}]*width:\s*26px;\s*height:\s*26px/);
+  assert.match(mutatorMobileStyles, /\.mutator-settings\s*\{[^}]*grid-template-columns:\s*68px minmax\(0, 1fr\)/);
+  assert.match(mutatorMobileStyles, /\.mutator-settings \.randomness-control\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\)/);
+  assert.match(mobileStyles, /\.copy-label\s*\{\s*display:\s*none;/);
 });
 
 test("type leaning uses qualitative multipliers and honors disabled scopes", () => {

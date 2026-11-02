@@ -11,16 +11,11 @@
 </head>
 <body>
   <main class="shell">
-    <header class="masthead">
-      <p class="eyebrow">PigeonLabz</p>
-      <h1>Pokémon GO GBL<br>Randomiser</h1>
-    </header>
-
     <form id="filter-form" class="generator-panel">
       <section class="result-panel" aria-labelledby="result-title">
-        <h2 id="result-title" class="visually-hidden">Generated filter</h2>
         <div class="result-heading">
-          <span id="battle-status" class="battle-progress" aria-live="polite"></span>
+          <h1 id="result-title" class="result-title">GBL Randomiser</h1>
+          <span id="battle-status" class="battle-progress" aria-live="polite" hidden></span>
           <button class="info-trigger" type="button" aria-label="Filter information" aria-haspopup="dialog" aria-expanded="false" aria-controls="filter-info-tooltip" aria-describedby="filter-info-tooltip" data-context-tooltip-trigger>
             <span aria-hidden="true">ⓘ</span>
           </button>
@@ -28,17 +23,23 @@
             <h2 id="filter-info-tooltip-title" class="visually-hidden">Using your generated filter</h2>
             <p>Copy this search string and paste it into Pokémon GO to find eligible Pokémon.</p>
           </div>
-          <button class="icon-action" id="generate-filter" type="submit" aria-label="Generate new filter" data-tooltip="Generate new filter">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 7v5h-5M4.8 9a7.5 7.5 0 0 1 12.8-2L20 12M4 17v-5h5m10.2 3a7.5 7.5 0 0 1-12.8 2L4 12"/></svg>
-          </button>
-          <button class="button button-secondary" id="copy-filter" type="button">Copy</button>
         </div>
-        <div id="filter-summary" class="filter-summary" role="list" aria-label="Active filter summary"></div>
+        <ul id="rule-list" class="rule-icon-list" aria-label="Active filter restrictions" aria-live="polite"></ul>
         <label class="visually-hidden" for="search-output">Pokémon GO search string</label>
-        <textarea id="search-output" rows="2" readonly spellcheck="false" wrap="soft" aria-describedby="copy-status"></textarea>
+        <div class="filter-output-row">
+          <textarea id="search-output" rows="2" readonly spellcheck="false" wrap="soft" aria-describedby="copy-status"></textarea>
+          <div class="filter-actions">
+            <button class="icon-action" id="generate-filter" type="submit" aria-label="Generate new filter" data-tooltip="Generate new filter">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 7v5h-5M4.8 9a7.5 7.5 0 0 1 12.8-2L20 12M4 17v-5h5m10.2 3a7.5 7.5 0 0 1-12.8 2L4 12"/></svg>
+            </button>
+            <button class="icon-action copy-action" id="copy-filter" type="button" aria-label="Copy filter" data-tooltip="Copy filter">
+              <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 8V5.5A1.5 1.5 0 0 1 9.5 4h9A1.5 1.5 0 0 1 20 5.5v10a1.5 1.5 0 0 1-1.5 1.5H16M5.5 8h9A1.5 1.5 0 0 1 16 9.5v10a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 19.5v-10A1.5 1.5 0 0 1 5.5 8Z"/></svg>
+              <svg class="copy-check-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+              <span class="copy-label">Copy</span>
+            </button>
+          </div>
+        </div>
         <p id="copy-status" class="status" role="status" aria-live="polite"></p>
-        <h3>Rules</h3>
-        <ul id="rule-list" class="rule-list" aria-live="polite"></ul>
         <p id="generation-note" class="generation-note" role="status" aria-live="polite"></p>
       </section>
 
@@ -126,49 +127,51 @@
           <p id="cup-format-error" class="cup-format-error" role="status" aria-live="polite" hidden></p>
         </div>
 
-        <div class="mutator-options">
-          <div class="label-help-row mutator-heading-row">
-            <h2>Mutators</h2>
-            <div id="mutator-toggle-group" class="mutator-toggle-group" hidden>
-              <label class="include-mutators-control" for="include-mutators">
-                <input id="include-mutators" name="include-mutators" type="checkbox" aria-describedby="include-mutators-tooltip">
-                <span>Include mutators</span>
-              </label>
-              <button class="info-trigger" type="button" aria-label="Mutator options information" aria-haspopup="dialog" aria-expanded="false" aria-controls="include-mutators-tooltip" aria-describedby="include-mutators-tooltip" data-context-tooltip-trigger>
-                <span aria-hidden="true">ⓘ</span>
-              </button>
-              <div id="include-mutators-tooltip" class="context-tooltip" role="dialog" aria-labelledby="include-mutators-tooltip-title" hidden>
-                <h2 id="include-mutators-tooltip-title" class="visually-hidden">Include mutators</h2>
-                <p>With a Cup selected, leave this unchecked to use only the selected League CP limit and the Cup's static restrictions. Random mutators are omitted, and their settings are hidden.</p>
-                <p>Check it to restore random mutator generation. Open League keeps the existing randomiser active even when this box is unchecked. Its state is preserved when you change Cups or Leagues.</p>
+        <div class="mutator-section">
+          <div class="mutator-options">
+            <div class="label-help-row mutator-heading-row">
+              <h2>Mutators</h2>
+              <div id="mutator-toggle-group" class="mutator-toggle-group" hidden>
+                <label class="include-mutators-control" for="include-mutators">
+                  <input id="include-mutators" name="include-mutators" type="checkbox" aria-describedby="include-mutators-tooltip">
+                  <span>Include mutators</span>
+                </label>
+                <button class="info-trigger" type="button" aria-label="Mutator options information" aria-haspopup="dialog" aria-expanded="false" aria-controls="include-mutators-tooltip" aria-describedby="include-mutators-tooltip" data-context-tooltip-trigger>
+                  <span aria-hidden="true">ⓘ</span>
+                </button>
+                <div id="include-mutators-tooltip" class="context-tooltip" role="dialog" aria-labelledby="include-mutators-tooltip-title" hidden>
+                  <h2 id="include-mutators-tooltip-title" class="visually-hidden">Include mutators</h2>
+                  <p>With a Cup selected, leave this unchecked to use only the selected League CP limit and the Cup's static restrictions. Random mutators are omitted, and their settings are hidden.</p>
+                  <p>Check it to restore random mutator generation. Open League keeps the existing randomiser active even when this box is unchecked. Its state is preserved when you change Cups or Leagues.</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div id="mutator-settings" class="mutator-settings">
-          <div class="control-grid">
-            <label class="control" for="mutator-count">
-              <span class="visually-hidden">Mutators</span>
-              <select id="mutator-count" name="count">
-                <option value="1">1</option>
-                <option value="2" selected>2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-              </select>
-            </label>
-          </div>
-
-          <fieldset class="randomness-control">
-            <legend>Randomness</legend>
-            <div class="choice-row" role="radiogroup" aria-label="Randomness profile">
-              <label class="choice randomness-choice" data-tooltip="Chill"><input id="randomness-chill" type="radio" name="randomness" value="chill" aria-label="Chill" checked><span class="randomness-icon" aria-hidden="true">🍃</span></label>
-              <label class="choice randomness-choice" data-tooltip="Spicy"><input id="randomness-spicy" type="radio" name="randomness" value="spicy" aria-label="Spicy"><span class="randomness-icon" aria-hidden="true">🔥</span></label>
-              <label class="choice randomness-choice" data-tooltip="Chaos"><input id="randomness-chaos" type="radio" name="randomness" value="chaos" aria-label="Chaos"><span class="randomness-icon" aria-hidden="true">🎲</span></label>
+          <div id="mutator-settings" class="mutator-settings">
+            <div class="control-grid">
+              <label class="control" for="mutator-count">
+                <span class="visually-hidden">Mutators</span>
+                <select id="mutator-count" name="count">
+                  <option value="1">1</option>
+                  <option value="2" selected>2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                </select>
+              </label>
             </div>
-          </fieldset>
+
+            <fieldset class="randomness-control">
+              <legend>Randomness</legend>
+              <div class="choice-row" role="radiogroup" aria-label="Randomness profile">
+                <label class="choice randomness-choice" data-tooltip="Chill"><input id="randomness-chill" type="radio" name="randomness" value="chill" aria-label="Chill" checked><span class="randomness-icon" aria-hidden="true">🌱</span></label>
+                <label class="choice randomness-choice" data-tooltip="Spicy"><input id="randomness-spicy" type="radio" name="randomness" value="spicy" aria-label="Spicy"><span class="randomness-icon" aria-hidden="true">🔥</span></label>
+                <label class="choice randomness-choice" data-tooltip="Chaos"><input id="randomness-chaos" type="radio" name="randomness" value="chaos" aria-label="Chaos"><span class="randomness-icon" aria-hidden="true">🎲</span></label>
+              </div>
+            </fieldset>
+          </div>
         </div>
 
         <details id="advanced-settings" class="advanced-settings">

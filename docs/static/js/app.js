@@ -110,7 +110,6 @@
   const additionalFamiliesToggle = document.getElementById("additional-families-enabled");
   const additionalFamilyWarning = document.getElementById("additional-family-warning");
   const additionalFamilyState = document.getElementById("additional-family-state");
-  const filterSummary = document.getElementById("filter-summary");
   const searchOutput = document.getElementById("search-output");
   const ruleList = document.getElementById("rule-list");
   const copyButton = document.getElementById("copy-filter");
@@ -138,7 +137,6 @@
   let currentCup = null;
   let currentState = null;
   let configPending = false;
-  let generatedCount = 0;
   let battleCount = 0;
   let previousSearch = "";
   let copyFeedbackTimer = null;
@@ -1187,13 +1185,6 @@
     return GENERATOR_UTILS.normalizeCpConstraint(league, selectedRules);
   }
 
-  function cpRangeSummary(range) {
-    if (range.minCp === 0 && Number.isFinite(range.maxCp)) return range.maxCp.toLocaleString() + " CP";
-    if (range.minCp === range.maxCp) return range.minCp.toLocaleString() + " CP";
-    if (!Number.isFinite(range.maxCp)) return range.minCp.toLocaleString() + "+ CP";
-    return range.minCp.toLocaleString() + "–" + range.maxCp.toLocaleString() + " CP";
-  }
-
   function cpRangeDescription(range) {
     if (range.minCp === 0 && Number.isFinite(range.maxCp)) return "Max " + range.maxCp.toLocaleString() + " CP";
     if (range.minCp === range.maxCp) return "Exactly " + range.minCp.toLocaleString() + " CP";
@@ -1256,7 +1247,6 @@
     };
     previousSearch = search;
     configPending = false;
-    generatedCount += 1;
     const target = Math.max(0, Math.min(99, Number(battleTargetInput.value) || 0));
     if (target > 0 && battleCount >= target) battleCount = 0;
     battleCount += 1;
@@ -1389,94 +1379,37 @@
     return visual;
   }
 
-  function getSummaryLabel(rule) {
-    const spec = resolveRuleVisual(rule);
-    if (spec.kind === "types") {
-      const names = spec.types.map((type) => type.charAt(0).toUpperCase() + type.slice(1)).join(" + ");
-      return (spec.banned ? "No " : "") + names + (spec.move ? " move" : "");
-    }
-    return rule.label || rule.explain || "Rule";
-  }
-
-  function createSummaryChip(label, modifier, visualRule) {
-    const chip = document.createElement("span");
-    chip.className = "filter-chip" + (modifier ? " filter-chip--" + modifier : "");
-    chip.setAttribute("role", "listitem");
-    chip.setAttribute("aria-label", label);
-    chip.title = label;
-    if (visualRule) {
-      const visual = createRuleVisual(visualRule, "rule-visual rule-visual--chip");
-      visual.querySelectorAll(".visual-indicator").forEach((indicator) => { indicator.textContent = ""; });
-      chip.appendChild(visual);
-    } else {
-      const marker = document.createElement("span");
-      marker.className = "rule-visual rule-visual--chip";
-      marker.setAttribute("aria-hidden", "true");
-      const dot = document.createElement("span");
-      dot.className = "rule-marker";
-      marker.appendChild(dot);
-      chip.appendChild(marker);
-    }
-    filterSummary.appendChild(chip);
-  }
-
-  function compactRuleDescription(rule, description) {
-    if (rule.id === "league-limit") return cpRangeDescription(currentState.cpConstraint);
-    if (rule.id === "cup-prefix") return String(description || "").replace(" filter: ", " · ");
-
-    const shortLabels = {
-      "rare-any": "Legendary / Mythical / Ultra Beast",
-      shiny: "Shiny only",
-      shadow: "Shadow only",
-      purified: "Purified only",
-      "not-shadow": "Exclude Shadow",
-      "not-purified": "Exclude Purified"
-    };
-    if (shortLabels[rule.id]) return shortLabels[rule.id];
-
-    let text = rule.label || description || rule.explain || "Rule";
-    if (rule.family === "age") {
-      text = text
-        .replace(/^Caught in last /i, "Last ")
-        .replace(/^Caught within the last /i, "Last ")
-        .replace(/^Caught within /i, "Within ")
-        .replace(/^Caught about /i, "")
-        .replace(/^Caught (?=\d+.*days ago$)/i, "");
-    }
-    if (String(rule.id).indexOf("type-banned-") === 0) text = text.replace(/^No (.+?) type Pokémon$/i, "No $1 typing");
-    if (String(rule.id).indexOf("move-type-banned-") === 0) text = text.replace(/^No (.+?) type moves$/i, "No $1 moves");
-    if (String(rule.id).indexOf("region-banned-") === 0) text = text.replace(/^No Pokémon from /i, "Not from ");
-    return String(text).replaceAll("Pokemon", "Pokémon").replace(/[.]+$/, "");
-  }
-
-  function appendRuleRow(rule, description) {
+  function appendRuleRow(rule, description, index) {
     const row = document.createElement("li");
-    row.appendChild(createRuleVisual(rule, "rule-visual"));
-    const text = document.createElement("span");
-    text.className = "rule-description";
-    text.textContent = compactRuleDescription(rule, description);
-    row.appendChild(text);
-    ruleList.appendChild(row);
-  }
+    const details = String(description || rule.explain || rule.label || "Active restriction");
+    const tooltipId = "active-rule-tooltip-" + index;
+    const trigger = document.createElement("button");
+    trigger.className = "rule-tooltip-trigger";
+    trigger.type = "button";
+    trigger.setAttribute("aria-label", details);
+    trigger.setAttribute("aria-haspopup", "dialog");
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.setAttribute("aria-controls", tooltipId);
+    trigger.setAttribute("aria-describedby", tooltipId);
+    trigger.setAttribute("data-context-tooltip-trigger", "");
+    trigger.appendChild(createRuleVisual(rule, "rule-visual"));
 
-  function renderSummary() {
-    filterSummary.replaceChildren();
-    const leagueRule = { id: "league-limit", family: "cp" };
-    const cpConstraint = currentState.cpConstraint;
-    const leagueName = currentState.league.label.replace(" League", "");
-    const leagueLabel = cpConstraint.generatedRule
-      ? leagueName + " · " + cpRangeSummary(cpConstraint)
-      : Number.isFinite(cpConstraint.maxCp)
-        ? leagueName + " · " + cpConstraint.maxCp.toLocaleString() + " CP"
-        : currentState.league.label;
-    createSummaryChip(leagueLabel, "league", leagueRule);
-    if (currentState.cupName) createSummaryChip(currentState.cupName, "cup", null);
-    currentState.additionalRules.forEach((rule) => createSummaryChip(rule.label, "additional", null));
-    currentState.selected.forEach((rule) => {
-      if (rule.family === "cp") return;
-      createSummaryChip(getSummaryLabel(rule), "", rule);
-    });
-    currentState.disqualifiers.forEach((rule) => createSummaryChip(getSummaryLabel(rule), "", rule));
+    const tooltip = document.createElement("div");
+    tooltip.id = tooltipId;
+    tooltip.className = "context-tooltip rule-context-tooltip";
+    tooltip.setAttribute("role", "dialog");
+    tooltip.setAttribute("aria-labelledby", tooltipId + "-title");
+    tooltip.hidden = true;
+    const title = document.createElement("h2");
+    title.id = tooltipId + "-title";
+    title.className = "visually-hidden";
+    title.textContent = "Active restriction";
+    const text = document.createElement("p");
+    text.textContent = details;
+    tooltip.append(title, text);
+
+    row.append(trigger, tooltip);
+    ruleList.appendChild(row);
   }
 
   function backgroundTypesForRules(selectedRules) {
@@ -1509,34 +1442,41 @@
 
   function updateBattleStatus() {
     const target = Math.max(0, Math.min(99, Number(battleTargetInput.value) || 0));
-    battleStatus.textContent = target ? "Battle " + battleCount + " of " + target : "Filter " + generatedCount;
+    battleStatus.hidden = !target;
+    battleStatus.textContent = target ? "Battle " + battleCount + " of " + target : "";
   }
 
   function render() {
     searchOutput.value = currentState.search;
     additionalFilterPreview.textContent = currentState.search || "Add a rule or generate a filter to preview it here.";
-    renderSummary();
     ruleList.replaceChildren();
-    appendRuleRow({ id: "league-limit", family: "cp" }, cpRangeDescription(currentState.cpConstraint));
+    let ruleIndex = 0;
+    appendRuleRow({ id: "league-limit", family: "cp" }, cpRangeDescription(currentState.cpConstraint), ruleIndex++);
     if (currentState.cupName) {
       appendRuleRow({ id: "cup-prefix", family: "" }, currentState.cupPrefix
         ? currentState.cupName + " filter: " + currentState.cupPrefix
-        : currentState.cupName + " · check the manual eligibility note above");
+        : currentState.cupName + " · check the manual eligibility note above", ruleIndex++);
     }
     currentState.additionalRules.forEach((rule, index) => {
       appendRuleRow({ id: "additional-rule-" + index, family: "" }, rule.kind === "pokemon"
         ? "Exclude " + rule.label + " (Pokédex #" + rule.dex + ")"
-        : "Additional search rule: " + rule.label);
+        : "Additional search rule: " + rule.label, ruleIndex++);
     });
+    if (currentState.extraFilter) {
+      appendRuleRow({ id: "advanced-expression", family: "" }, "Advanced search expression: " + currentState.extraFilter, ruleIndex++);
+    }
     currentState.selected.forEach((rule) => {
       if (rule.family === "cp") return;
-      appendRuleRow(rule, rule.explain || rule.label);
+      appendRuleRow(rule, rule.explain || rule.label, ruleIndex++);
     });
-    currentState.disqualifiers.forEach((rule) => appendRuleRow(rule, rule.explain || rule.label));
+    currentState.disqualifiers.forEach((rule) => appendRuleRow(rule, rule.explain || rule.label, ruleIndex++));
     applyTypeBackground();
     updateBattleStatus();
     updateGenerationNote();
     copyStatus.textContent = "";
+    copyButton.classList.remove("is-copied");
+    copyButton.setAttribute("aria-label", "Copy filter");
+    copyButton.dataset.tooltip = "Copy filter";
   }
 
   async function copyFilter() {
@@ -1561,8 +1501,16 @@
       }
     }
     copyStatus.textContent = copied ? "Copied — ready to paste into Pokémon GO." : "Filter selected. Use your device’s Copy command.";
+    copyButton.classList.toggle("is-copied", copied);
+    copyButton.setAttribute("aria-label", copied ? "Filter copied" : "Copy filter");
+    copyButton.dataset.tooltip = copied ? "Copied" : "Copy filter";
     window.clearTimeout(copyFeedbackTimer);
-    copyFeedbackTimer = window.setTimeout(() => { copyStatus.textContent = ""; }, 3500);
+    copyFeedbackTimer = window.setTimeout(() => {
+      copyStatus.textContent = "";
+      copyButton.classList.remove("is-copied");
+      copyButton.setAttribute("aria-label", "Copy filter");
+      copyButton.dataset.tooltip = "Copy filter";
+    }, 2500);
   }
 
   function updateCupControls() {
@@ -1683,16 +1631,26 @@
   }
 
   function setupContextTooltips() {
-    const items = Array.from(document.querySelectorAll("[data-context-tooltip-trigger]"))
-      .map((trigger) => ({
-        trigger: trigger,
-        panel: document.getElementById(trigger.getAttribute("aria-controls")),
-        hoveringTrigger: false,
-        hoveringPanel: false
-      }))
-      .filter((item) => item.panel);
+    const items = new WeakMap();
     let activeItem = null;
     let closeTimer = null;
+
+    function itemForTrigger(trigger) {
+      if (!trigger) return null;
+      if (!items.has(trigger)) {
+        const panel = document.getElementById(trigger.getAttribute("aria-controls"));
+        if (!panel) return null;
+        items.set(trigger, { trigger: trigger, panel: panel, hoveringTrigger: false, hoveringPanel: false });
+      }
+      return items.get(trigger);
+    }
+
+    function itemForPanel(panel) {
+      if (!panel) return null;
+      const trigger = Array.from(document.querySelectorAll("[data-context-tooltip-trigger]"))
+        .find((candidate) => candidate.getAttribute("aria-controls") === panel.id);
+      return itemForTrigger(trigger);
+    }
 
     function clearCloseTimer() {
       if (closeTimer !== null) window.clearTimeout(closeTimer);
@@ -1750,40 +1708,63 @@
       }, 220);
     }
 
-    items.forEach((item) => {
-      item.trigger.addEventListener("pointerenter", (event) => {
-        if (event.pointerType !== "mouse") return;
-        item.hoveringTrigger = true;
-        open(item);
-      });
-      item.trigger.addEventListener("pointerleave", (event) => {
-        if (event.pointerType !== "mouse") return;
-        item.hoveringTrigger = false;
-        scheduleClose(item);
-      });
-      item.panel.addEventListener("pointerenter", (event) => {
-        if (event.pointerType !== "mouse") return;
-        item.hoveringPanel = true;
-        clearCloseTimer();
-      });
-      item.panel.addEventListener("pointerleave", (event) => {
-        if (event.pointerType !== "mouse") return;
-        item.hoveringPanel = false;
-        scheduleClose(item);
-      });
-      item.trigger.addEventListener("focus", () => open(item));
-      item.panel.addEventListener("focusin", () => open(item));
-      item.trigger.addEventListener("focusout", () => window.setTimeout(() => {
-        if (activeItem === item && !isFocused(item) && !item.hoveringTrigger && !item.hoveringPanel) close(item, false);
-      }, 0));
-      item.panel.addEventListener("focusout", () => window.setTimeout(() => {
-        if (activeItem === item && !isFocused(item) && !item.hoveringTrigger && !item.hoveringPanel) close(item, false);
-      }, 0));
-      item.trigger.addEventListener("click", () => open(item));
-    });
-
     document.addEventListener("pointerdown", (event) => {
       if (activeItem && !activeItem.trigger.contains(event.target) && !activeItem.panel.contains(event.target)) close(activeItem, false);
+    });
+    document.addEventListener("pointerover", (event) => {
+      if (event.pointerType !== "mouse") return;
+      const trigger = event.target.closest && event.target.closest("[data-context-tooltip-trigger]");
+      if (trigger) {
+        const item = itemForTrigger(trigger);
+        if (item) {
+          item.hoveringTrigger = true;
+          open(item);
+        }
+        return;
+      }
+      const item = itemForPanel(event.target.closest && event.target.closest(".context-tooltip"));
+      if (item) {
+        item.hoveringPanel = true;
+        clearCloseTimer();
+      }
+    });
+    document.addEventListener("pointerout", (event) => {
+      if (event.pointerType !== "mouse") return;
+      const trigger = event.target.closest && event.target.closest("[data-context-tooltip-trigger]");
+      if (trigger && (!event.relatedTarget || !trigger.contains(event.relatedTarget))) {
+        const item = itemForTrigger(trigger);
+        if (item) {
+          item.hoveringTrigger = false;
+          scheduleClose(item);
+        }
+        return;
+      }
+      const panel = event.target.closest && event.target.closest(".context-tooltip");
+      if (panel && (!event.relatedTarget || !panel.contains(event.relatedTarget))) {
+        const item = itemForPanel(panel);
+        if (item) {
+          item.hoveringPanel = false;
+          scheduleClose(item);
+        }
+      }
+    });
+    document.addEventListener("focusin", (event) => {
+      const trigger = event.target.closest && event.target.closest("[data-context-tooltip-trigger]");
+      const item = trigger ? itemForTrigger(trigger) : itemForPanel(event.target.closest && event.target.closest(".context-tooltip"));
+      if (item) open(item);
+    });
+    document.addEventListener("focusout", (event) => {
+      const trigger = event.target.closest && event.target.closest("[data-context-tooltip-trigger]");
+      const item = trigger ? itemForTrigger(trigger) : itemForPanel(event.target.closest && event.target.closest(".context-tooltip"));
+      if (!item) return;
+      window.setTimeout(() => {
+        if (activeItem === item && !isFocused(item) && !item.hoveringTrigger && !item.hoveringPanel) close(item, false);
+      }, 0);
+    });
+    document.addEventListener("click", (event) => {
+      const trigger = event.target.closest && event.target.closest("[data-context-tooltip-trigger]");
+      const item = itemForTrigger(trigger);
+      if (item) open(item);
     });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && activeItem) {
