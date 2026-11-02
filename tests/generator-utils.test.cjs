@@ -148,6 +148,38 @@ test("cup eligibility follows the selected league CP ceiling without imposing a 
   assert.equal(utils.normalizeCpConstraint(leagues.master, []).search, "");
 });
 
+test("cup CP terms are removed and league ceilings remain the single CP authority", () => {
+  const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
+  const leagues = {
+    great: { search: "cp0-1500", minCp: null, maxCp: 1500 },
+    ultra: { search: "cp0-2500", minCp: null, maxCp: 2500 },
+    master: { search: "", minCp: null, maxCp: null }
+  };
+  const legacyHalloween = "cp0-1500&poison,cp0-1500&bug,cp0-1500&ghost";
+  const eligibility = utils.stripCpTerms(legacyHalloween);
+  assert.equal(eligibility, "poison,bug,ghost");
+  assert.equal(utils.combineSearch([leagues.great.search, eligibility]), "cp0-1500&poison,cp0-1500&bug,cp0-1500&ghost");
+  assert.equal(utils.combineSearch([leagues.ultra.search, eligibility]), "cp0-2500&poison,cp0-2500&bug,cp0-2500&ghost");
+  assert.equal(utils.combineSearch([leagues.master.search, eligibility]), eligibility);
+  assert.equal(utils.stripCpTerms("cp0-1500,ghost"), "", "an unrestricted OR branch removes the whole Cup-only restriction");
+  assert.equal(utils.stripCpTerms("cp0-1500&!@rock"), "!@rock");
+
+  const randomCp = { family: "cp", search: "cp0-4000", minCp: 0, maxCp: 4000 };
+  assert.equal(utils.normalizeCpConstraint(leagues.great, [randomCp]).search, "cp0-1500");
+  assert.equal(utils.normalizeCpConstraint(leagues.ultra, [randomCp]).search, "cp0-2500");
+  assert.equal(utils.normalizeCpConstraint(leagues.master, []).search, "");
+  assert.match(app, /function cupPresetSearch\(cup\)[\s\S]*?return GENERATOR_UTILS\.stripCpTerms\(GENERATOR_UTILS\.combineSearch\(\[cup\.search, bannedSpecies\]\)\)/);
+  assert.match(app, /function getStaticCupPrefix\(\)[\s\S]*?GENERATOR_UTILS\.stripCpTerms\(parsed\.normalized\)/);
+  assert.match(app, /const parts = \[cpConstraint\.search, cupPrefix\]\s*\.concat\(additionalRuleExpressions\(\)\)/);
+});
+
+test("XXL family exposes independent XL and XXL search expressions", () => {
+  assert.equal(utils.sizeSearchForSelection(false, false), "");
+  assert.equal(utils.sizeSearchForSelection(true, false), "xl");
+  assert.equal(utils.sizeSearchForSelection(false, true), "xxl");
+  assert.equal(utils.sizeSearchForSelection(true, true), "xl,xxl");
+});
+
 test("Cup mutators are opt-in while Open League keeps its randomiser", () => {
   const html = fs.readFileSync(path.join(__dirname, "../docs/index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
@@ -202,8 +234,8 @@ test("cup selection replaces the active cup and Open League clears cup restricti
   const html = fs.readFileSync(path.join(__dirname, "../docs/index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
-  const setupCupPicker = app.slice(app.indexOf("function setupCupPicker"), app.indexOf("function cupPresetSearch"));
-  const selectionHandler = app.slice(app.indexOf("function onCupSelectionChanged"), app.indexOf("function onCupPrefixChanged"));
+  const setupCupPicker = app.slice(app.indexOf("function setupCupPicker"), app.indexOf("function requestCupSelection"));
+  const selectionHandler = app.slice(app.indexOf("function onCupSelectionChanged"), app.indexOf("function updateProfileFromInput"));
   const getCup = (id) => cupData.find((cup) => cup.id === id);
 
   assert.match(html, /<select id="cup-select" name="cup" hidden aria-hidden="true"/);
@@ -212,8 +244,9 @@ test("cup selection replaces the active cup and Open League clears cup restricti
   assert.doesNotMatch(html, /class="cup-carousel"/);
   assert.doesNotMatch(html, /class="cup-more-tile"|data-cup-more/);
   assert.doesNotMatch(app, /data-cup-more/);
-  assert.match(setupCupPicker, /cupTileRow\.addEventListener\("click"[\s\S]*?cupSelect\.value = id;[\s\S]*?cupSelect\.dispatchEvent/);
-  assert.match(setupCupPicker, /cupPickerPopup\.addEventListener\("click"[\s\S]*?cupSelect\.value = button\.dataset\.cupId;[\s\S]*?cupSelect\.dispatchEvent/);
+  assert.match(setupCupPicker, /cupTileRow\.addEventListener\("click"[\s\S]*?requestCupSelection\(cupButton\.dataset\.cupId\)/);
+  assert.match(setupCupPicker, /cupPickerPopup\.addEventListener\("click"[\s\S]*?requestCupSelection\(button\.dataset\.cupId\)/);
+  assert.match(app, /function requestCupSelection\(id\) \{\s*if \(id === "custom"\) \{\s*openCustomCupEditor\(\)/);
   assert.match(setupCupPicker, /cupLibraryButton\.addEventListener\("click"[\s\S]*?openCupPicker\(\)[\s\S]*?closeCupPicker\(false\)/);
   assert.match(setupCupPicker, /cupPickerClose\.addEventListener\("click", \(\) => closeCupPicker\(true\)\)/);
   assert.match(setupCupPicker, /event\.key === "Escape"[\s\S]*?closeCupPicker\(true\)/);
@@ -222,7 +255,7 @@ test("cup selection replaces the active cup and Open League clears cup restricti
   assert.match(css, /\.cup-library-button\s*\{[^}]*margin-left:\s*auto/);
   assert.match(selectionHandler, /currentCup = CUP_PRESETS\.find\(\(cup\) => cup\.id === id\) \|\| null/);
   assert.match(selectionHandler, /if \(currentCup\) \{\s*cupPrefixInput\.value = cupPresetSearch\(currentCup\)/);
-  assert.match(selectionHandler, /else if \(id === "custom"\) \{\s*cupPrefixInput\.value = ""/);
+  assert.match(selectionHandler, /else if \(id === "custom"\) \{\s*cupPrefixInput\.value = customCupSettings\.prefix/);
   assert.match(selectionHandler, /else \{\s*cupPrefixInput\.value = ""/);
   assert.doesNotMatch(selectionHandler, /cupPrefixInput\.value\s*\+=|cupPrefixInput\.value\s*=\s*cupPrefixInput\.value/);
 
@@ -256,7 +289,8 @@ test("guidance is available in accessible viewport-aware contextual tooltips", (
   }
   assert.doesNotMatch(html, /league-info-tooltip|league-cup-recommendation|Your battle filter/);
   assert.match(html, /Copy this search string and paste it into Pokémon GO to find eligible Pokémon\./);
-  assert.ok(html.indexOf('id="cup-format-info"') > html.indexOf('id="cup-info-tooltip"'), "Cup format notes and official references are inside the Cup tooltip");
+  assert.match(html, /id="cup-info-tooltip"[\s\S]*?Cup rules use your selected league\. Some restrictions may need a manual check\./);
+  assert.ok(html.indexOf('id="cup-format-info"') > html.indexOf('id="cup-tiles"') && html.indexOf('id="cup-format-info"') < html.indexOf('id="cup-select"'), "format notes and official references remain adjacent to cup selection, outside the concise tooltip");
   assert.match(html, /Use <code>&amp;<\/code> for AND, commas for OR, and <code>!<\/code> to exclude a term/);
   assert.doesNotMatch(html, /id="cup-selector-help"|class="additional-rules-help"|id="include-mutators-help"|Combined live with the generated filter/);
   assert.match(app, /document\.addEventListener\("pointerover"/);
@@ -312,24 +346,76 @@ test("rule family cards keep every family, concise labels, and tooltip explanati
   const mobileStyles = css.slice(css.lastIndexOf("@media (max-width: 640px)"));
 
   assert.equal((definitions.match(/\{ id:/g) || []).length, 20, "all rule family definitions remain available");
-  assert.match(definitions, /shortLabel: "Extra CP"/);
-  assert.match(definitions, /shortLabel: "Types"/);
+  assert.match(definitions, /label: "Random CP Cap", shortLabel: "Random CP Cap", description: "Adds a random CP limit within your selected league\."/);
+  assert.match(definitions, /label: "Typing", shortLabel: "Typing", description: ""/);
   assert.match(definitions, /shortLabel: "Regions"/);
-  assert.match(definitions, /shortLabel: "Move Types"/);
+  assert.match(definitions, /shortLabel: "Move Typing"/);
+  assert.match(definitions, /description: "Legendary, Mythical, or Ultra Beast Pokémon\."/);
+  assert.match(definitions, /description: "The region a Pokémon species originates from\."/);
+  assert.match(definitions, /description: "Has a move boosted by the current weather\."/);
+  assert.match(definitions, /description: "How you obtained the Pokémon\."/);
+  assert.match(definitions, /label: "Age"[\s\S]*?How long ago the Pokémon was obtained\./);
+  assert.match(definitions, /label: "Buddy"[\s\S]*?Buddy level or no Buddy history\./);
+  assert.match(definitions, /label: "Mega"[\s\S]*?Mega-capable Pokémon, current Mega eligibility, and Mega level\./);
   assert.match(app, /title\.textContent = definition\.shortLabel \|\| definition\.label/);
   assert.match(app, /helper\.className = "context-tooltip family-description-tooltip"/);
+  assert.match(app, /if \(definition\.description\) \{[\s\S]*?const infoButton = document\.createElement\("button"\)/);
+  assert.match(app, /elements\.helper\) \{[\s\S]*?elements\.helper\.textContent = blocked/);
   assert.match(app, /infoButton\.setAttribute\("data-context-tooltip-trigger", ""\)/);
-  assert.match(app, /elements\.helper\.textContent = blocked[\s\S]*?definition\.description/);
+  assert.match(app, /label: "XXL", description: "It's huge!"/);
+  assert.match(app, /sizeSearchForSelection\(sizeCategories\.xl, sizeCategories\.xxl\)/);
+  assert.match(app, /input\.id = "family-size-" \+ category\.id/);
+  assert.match(app, /family !== "size-xl"/);
+  assert.match(app, /id: "time", label: "Age"[^}]*limits: "time"/);
+  assert.match(app, /id: "buddy"[^}]*limits: "buddy" \}/);
+  assert.match(app, /id: "mega"[^}]*limits: "mega" \}/);
+  assert.match(definitions, /id: "type-matchups", label: "Type Matchups"[^}]*Filters Pokémon that are weak to selected types or have moves that are super-effective against them/);
+  assert.match(html, /id="custom-cup-editor" class="custom-cup-editor"/);
+  assert.match(html, /<label for="extra-filter">Custom Search Expression<\/label>/);
+  assert.match(html, /id="extra-filter"[^>]*placeholder="e\.g\. !shadow&@water"/);
+  assert.match(html, /id="custom-cup-apply"[^>]*>Apply Custom Cup/);
+  assert.match(app, /function openCustomCupEditor\(\)[\s\S]*?customCupSettings\.additionalRules/);
+  assert.match(app, /function applyCustomCupEditor\(\)[\s\S]*?customCupSettings = \{/);
+  assert.match(app, /function additionalRuleExpressions\(\) \{\s*if \(cupSelect\.value !== "custom"\) return \[\]/);
+  assert.match(app, /localStorage\.setItem\(CUSTOM_CUP_SETTINGS_KEY/);
+  assert.match(app, /customCupEditor\.addEventListener\("close"[\s\S]*?restoreCupPrefixInput\(\)/);
   assert.match(html, /Higher likelihood makes a family more likely to be selected\./);
   assert.doesNotMatch(html, /class="family-guidance"/);
   assert.match(mobileStyles, /\.family-grid\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/);
-  assert.match(mobileStyles, /\.family-setting\s*\{[^}]*grid-template-areas:\s*"heading" "likelihood" "limits"/);
+  assert.match(mobileStyles, /\.family-setting\s*\{[^}]*grid-template-areas:\s*"heading" "options" "likelihood" "limits"/);
   assert.match(css, /\.family-toggle span\s*\{\s*overflow-wrap:\s*normal;\s*word-break:\s*normal/);
   assert.match(css, /\.family-weight input\[type="range"\]::-webkit-slider-thumb\s*\{[^}]*width:\s*18px/);
 });
 
-test("type leaning uses qualitative multipliers and honors disabled scopes", () => {
+test("updated family names, tooltip removals, cup editor and output sizing are reflected in the UI", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../docs/index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
+  assert.match(app, /id: "shiny", label: "Shiny", description: ""/);
+  assert.match(app, /id: "pokemon-type", label: "Typing"[^}]*description: ""/);
+  assert.match(app, /id: "shadow", label: "Shadow", description: ""/);
+  assert.match(app, /additionalFamilyIds = new Set\(advancedFamilies\.filter\(\(definition\) => !definition\.primary\)/);
+  for (const id of ["time", "buddy", "mega"]) {
+    assert.match(app, new RegExp('id: "' + id + '"[^}]*limits:'));
+    const definition = app.slice(app.indexOf('id: "' + id + '"'), app.indexOf("},", app.indexOf('id: "' + id + '"')));
+    assert.doesNotMatch(definition, /primary:\s*true/);
+  }
+  assert.match(app, /openLabel\.textContent = "None"/);
+  assert.match(app, /cupNoSelectionInfo\.hidden = Boolean\(cupSelect\.value \|\| rawPrefix\)/);
+  assert.match(html, /id="cup-no-selection-info" hidden>No cup restrictions selected\./);
+  assert.match(html, /<legend class="visually-hidden">Randomness<\/legend>/);
+  assert.match(html, /randomness-icon" aria-hidden="true">I<\/span>/);
+  assert.match(html, /randomness-icon" aria-hidden="true">II<\/span>/);
+  assert.match(html, /randomness-icon" aria-hidden="true">III<\/span>/);
+  assert.match(html, /id="search-output" rows="4"/);
+  assert.match(css, /#search-output\s*\{[^}]*min-height:\s*116px/);
+  assert.match(css, /\.custom-cup-editor::backdrop/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*?\.custom-cup-editor \{[^}]*width: calc\(100vw - 12px\)/);
+});
+
+test("type leaning uses a restrained fixed default while retaining legacy weight helpers", () => {
   const preferred = ["water"];
+  assert.equal(utils.typeWeight("water", preferred, "balanced", true), 2);
   assert.equal(utils.typeWeight("water", preferred, "light", true), 2);
   assert.equal(utils.typeWeight("water", preferred, "medium", true), 4);
   assert.equal(utils.typeWeight("water", preferred, "strong", true), 8);
@@ -377,7 +463,8 @@ test("published generator markup keeps result and controls in one form", () => {
   const controlsStart = html.indexOf('<div class="controls">', resultStart);
   const formEnd = html.indexOf("</form>", controlsStart);
   assert.ok(formStart >= 0 && resultStart > formStart && controlsStart > resultStart && formEnd > controlsStart);
-  assert.ok(html.indexOf('id="extra-filter"', controlsStart) < formEnd);
+  assert.ok(html.indexOf('id="extra-filter"') > formEnd, "Custom Cup-only expressions live outside the main generator form");
+  assert.ok(html.indexOf('<dialog id="custom-cup-editor"') > formEnd);
   assert.ok(html.indexOf('class="league-selector"') < html.indexOf('id="cup-select"'));
   assert.ok(html.indexOf('id="cup-select"') < html.indexOf('id="mutator-count"'));
   const utilitiesScript = html.indexOf('<script src="./static/js/generator-utils.js">');
@@ -400,16 +487,16 @@ test("published generator markup keeps result and controls in one form", () => {
   for (const [, id] of app.matchAll(/getElementById\("([^"]+)"\)/g)) {
     assert.ok(ids.includes(id), "app element exists in markup: " + id);
   }
-  const cupChange = app.slice(app.indexOf("function onCupSelectionChanged"), app.indexOf("function onCupPrefixChanged"));
+  const cupChange = app.slice(app.indexOf("function onCupSelectionChanged"), app.indexOf("function updateProfileFromInput"));
   assert.doesNotMatch(cupChange, /leagueInputs[^\n]*checked\s*=|leagueSelect\.value\s*=/, "cup changes keep the chosen league");
   assert.doesNotMatch(app, /cup\.maxCp|leagueWithCupCap/, "cup presets do not participate in CP ceiling selection");
   assert.match(app, /cup\.suggestedLeague \|\| cup\.officialLeague \|\| cup\.league/, "legacy cup league values remain recommendation metadata");
   const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
   assert.match(css, /\.league-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/);
   assert.doesNotMatch(html, /<script[^>]+src="https?:\/\//, "the static page does not add runtime network scripts");
-  assert.match(html, /name="type-leaning-strength" value="medium" checked/);
-  assert.match(html, /id="type-leaning-pokemon" type="checkbox" checked/);
-  assert.match(html, /id="type-leaning-move" type="checkbox" checked/);
+  assert.doesNotMatch(html, /type-leaning-strength|type-leaning-pokemon|type-leaning-move|Apply to/);
+  assert.match(html, /Type Leaning information/);
+  assert.match(html, /Favour selected types without making them mandatory\./);
   assert.match(html, /<p class="site-version">v1\.0\.0<\/p>/);
 });
 

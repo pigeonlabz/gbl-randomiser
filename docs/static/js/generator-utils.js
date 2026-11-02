@@ -1,5 +1,5 @@
 (function (root) {
-  const TYPE_LEANING_MULTIPLIERS = Object.freeze({ light: 2, medium: 4, strong: 8 });
+  const TYPE_LEANING_MULTIPLIERS = Object.freeze({ balanced: 2, light: 2, medium: 4, strong: 8 });
 
   function weightedPick(items, weightFor, random = Math.random) {
     const weighted = items.map((item) => ({ item: item, weight: weightFor(item) })).filter((entry) => entry.weight > 0);
@@ -162,6 +162,22 @@
     return { valid: true, normalized: normalized, alternatives: alternatives, error: "" };
   }
 
+  function stripCpTerms(expression) {
+    const parsed = validateSearchExpression(expression);
+    if (!parsed.valid || !parsed.alternatives.length) return "";
+    const alternatives = parsed.alternatives.map((terms) => terms.filter((term) => !/^!?cp(?:$|[-\d])/i.test(term)));
+    // A cup OR branch without any non-CP term is unrestricted, so it contributes no cup filter.
+    if (alternatives.some((terms) => !terms.length)) return "";
+    return alternatives.map((terms) => terms.join("&")).join(",");
+  }
+
+  function sizeSearchForSelection(includeXL, includeXXL) {
+    const terms = [];
+    if (includeXL) terms.push("xl");
+    if (includeXXL) terms.push("xxl");
+    return terms.join(",");
+  }
+
   function combineSearch(parts) {
     const expressions = parts.map((part) => String(part == null ? "" : part).trim()).filter(Boolean);
     if (!expressions.length) return "";
@@ -255,7 +271,9 @@
     chooseChallengeRule: chooseChallengeRule,
     chooseOptionalDisqualifier: chooseOptionalDisqualifier,
     validateSearchExpression: validateSearchExpression,
+    stripCpTerms: stripCpTerms,
     combineSearch: combineSearch,
+    sizeSearchForSelection: sizeSearchForSelection,
     cpSearchForRange: cpSearchForRange,
     normalizeCpConstraint: normalizeCpConstraint,
     leagueWithOptionalCpLimit: leagueWithOptionalCpLimit,

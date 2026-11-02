@@ -9,23 +9,23 @@
   const CUP_PRESETS = window.GBL_CUP_DATA || [];
 
   const advancedFamilies = [
-    { id: "shiny", label: "Shiny", description: "Restricts the battle to shiny Pokémon.", ruleFamilies: ["visual-status"], primary: true },
-    { id: "rarity", label: "Legendary / Mythical", shortLabel: "Legendary / Mythical", description: "Uses Legendary, Mythical, or Ultra Beast Pokémon.", ruleFamilies: ["rarity"], primary: true },
-    { id: "cp", label: "Extra CP limit", shortLabel: "Extra CP", description: "Adds an additional random CP cap.", ruleFamilies: ["cp"], primary: true },
-    { id: "pokemon-type", label: "Pokémon types", shortLabel: "Types", description: "Allows or bans selected Pokémon types.", ruleFamilies: ["pokemon-type"], primary: true },
-    { id: "region", label: "Region", shortLabel: "Regions", description: "Uses regions such as Kanto, Johto, Hoenn, or Paldea.", ruleFamilies: ["region"], primary: true },
-    { id: "move-typing", label: "Move types", shortLabel: "Move Types", description: "Requires or bans moves of selected types.", ruleFamilies: ["move-type", "move-slot"], primary: true },
-    { id: "shadow", label: "Shadow", description: "Uses Shadow Pokémon or excludes them.", ruleFamilies: ["shadow"], primary: true },
-    { id: "time", label: "Time", description: "Restricts catches by age or date range.", ruleFamilies: ["age"], primary: true, limits: "time" },
-    { id: "xl-size", label: "XL / XXL", description: "Uses oversized Pokémon.", ruleFamilies: ["size-xl"], primary: true },
+    { id: "shiny", label: "Shiny", description: "", ruleFamilies: ["visual-status"], primary: true },
+    { id: "rarity", label: "Legendary", shortLabel: "Legendary", description: "Legendary, Mythical, or Ultra Beast Pokémon.", ruleFamilies: ["rarity"], primary: true },
+    { id: "cp", label: "Random CP Cap", shortLabel: "Random CP Cap", description: "Adds a random CP limit within your selected league.", ruleFamilies: ["cp"], primary: true },
+    { id: "pokemon-type", label: "Typing", shortLabel: "Typing", description: "", ruleFamilies: ["pokemon-type"], primary: true },
+    { id: "region", label: "Regions", shortLabel: "Regions", description: "The region a Pokémon species originates from.", ruleFamilies: ["region"], primary: true },
+    { id: "move-typing", label: "Move Typing", shortLabel: "Move Typing", description: "Requires or bans moves of selected types.", ruleFamilies: ["move-type", "move-slot"], primary: true },
+    { id: "shadow", label: "Shadow", description: "", ruleFamilies: ["shadow"], primary: true },
+    { id: "time", label: "Age", description: "How long ago the Pokémon was obtained.", ruleFamilies: ["age"], limits: "time" },
+    { id: "xl-size", label: "XXL", description: "It's huge!", ruleFamilies: ["size-xl"], primary: true },
     { id: "xs-size", label: "XS / XXS", description: "Uses unusually small Pokémon.", ruleFamilies: ["size-xs"] },
-    { id: "buddy", label: "Buddy", description: "Uses Pokémon matching buddy-progress requirements.", ruleFamilies: ["buddy"], primary: true, limits: "buddy" },
-    { id: "weather", label: "Weather", description: "Uses weather-related move filters.", ruleFamilies: ["move-weather"], primary: true },
-    { id: "mega", label: "Mega", description: "Uses Mega-related eligibility or progress.", ruleFamilies: ["mega", "mega-level"], primary: true, limits: "mega" },
+    { id: "buddy", label: "Buddy", description: "Buddy level or no Buddy history.", ruleFamilies: ["buddy"], limits: "buddy" },
+    { id: "weather", label: "Weather", description: "Has a move boosted by the current weather.", ruleFamilies: ["move-weather"], primary: true },
+    { id: "mega", label: "Mega", description: "Mega-capable Pokémon, current Mega eligibility, and Mega level.", ruleFamilies: ["mega", "mega-level"], limits: "mega" },
     { id: "meta-moves", label: "Meta moves", description: "Excludes selected powerful or commonly used moves.", ruleFamilies: ["meta-moves"] },
     { id: "purified", label: "Purified", description: "Uses Purified Pokémon or excludes them.", ruleFamilies: ["purified"] },
-    { id: "type-matchups", label: "Type matchups", shortLabel: "Matchups", description: "Uses battle matchup and type-effectiveness restrictions.", ruleFamilies: ["type-effectiveness"], primary: true },
-    { id: "acquisition", label: "How it was obtained", shortLabel: "Origin", description: "Uses traits such as Lucky, Traded, Hatched, or Costume.", ruleFamilies: ["origin", "origin-special", "year"], primary: true },
+    { id: "type-matchups", label: "Type Matchups", shortLabel: "Type Matchups", description: "Filters Pokémon that are weak to selected types or have moves that are super-effective against them.", ruleFamilies: ["type-effectiveness"], primary: true },
+    { id: "acquisition", label: "Origin", shortLabel: "Origin", description: "How you obtained the Pokémon.", ruleFamilies: ["origin", "origin-special", "year"], primary: true },
     { id: "battle-stats", label: "Appraisal / IVs", shortLabel: "Appraisal / IVs", description: "Uses appraisal star ranges or battle-stat filters.", ruleFamilies: ["appraisal", "hp", "iv-attack", "iv-defense", "iv-hp", "iv-combo"] },
     { id: "collection", label: "Collection traits", shortLabel: "Collection", description: "Uses unusual collection and inventory traits.", ruleFamilies: ["lucky", "costume", "candy", "candy-xl", "powered-xl", "distance", "background", "copy-count", "buddy-candy"] },
     { id: "special-forms", label: "Special forms", shortLabel: "Special Forms", description: "Uses Dynamax, Gigantamax, or other special forms.", ruleFamilies: ["max", "max-count", "max-move", "special-status"] }
@@ -82,6 +82,7 @@
   const cupPickerEmpty = document.getElementById("cup-picker-empty");
   const cupPickerClose = document.getElementById("cup-picker-close");
   const cupFormatInfo = document.getElementById("cup-format-info");
+  const cupNoSelectionInfo = document.getElementById("cup-no-selection-info");
   const cupFormatError = document.getElementById("cup-format-error");
   const cupPrefixInput = document.getElementById("cup-prefix");
   const cupLocks = document.getElementById("cup-locks");
@@ -104,8 +105,6 @@
   const advancedExpressionStatus = document.getElementById("advanced-expression-status");
   const typeLeaningChips = document.getElementById("type-leaning-chips");
   const typeLeaningAdd = document.getElementById("type-leaning-add");
-  const typeLeaningPokemon = document.getElementById("type-leaning-pokemon");
-  const typeLeaningMove = document.getElementById("type-leaning-move");
   const primaryFamilyControls = document.getElementById("primary-family-controls");
   const additionalFamilyControls = document.getElementById("additional-family-controls");
   const additionalFamiliesToggle = document.getElementById("additional-families-enabled");
@@ -119,9 +118,14 @@
   const battleStatus = document.getElementById("battle-status");
   const customBadge = document.getElementById("custom-badge");
   const resetAdvancedButton = document.getElementById("reset-advanced");
+  const customCupEditor = document.getElementById("custom-cup-editor");
+  const customCupEditorClose = document.getElementById("custom-cup-editor-close");
+  const customCupApply = document.getElementById("custom-cup-apply");
+  const customCupEditorError = document.getElementById("custom-cup-editor-error");
 
   const familyControlElements = new Map();
   const familyLimitElements = new Map();
+  const sizeCategoryElements = new Map();
   const DEFAULT_OLDEST_CATCH_DATE = "2016-07-06";
   const familyLimits = {
     buddy: { min: "", max: "" },
@@ -131,11 +135,16 @@
   let familySettings = {};
   let additionalFamiliesEnabled = false;
   let activeProfile = "chill";
-  let typeLeaning = { types: [], strength: "medium", pokemon: true, move: true };
+  let typeLeaning = { types: [] };
+  let sizeCategories = { xl: false, xxl: true };
   let additionalRules = [];
   let suggestionItems = [];
   let activeSuggestionIndex = -1;
   let currentCup = null;
+  let lastActiveCupId = "";
+  let suppressCustomCupDialog = false;
+  const CUSTOM_CUP_SETTINGS_KEY = "gbl-filter-custom-cup-v1";
+  let customCupSettings = readCustomCupSettings();
   let currentState = null;
   let configPending = false;
   let battleCount = 0;
@@ -312,26 +321,36 @@
     const hasBuddyBounds = familyLimits.buddy.min !== "" || familyLimits.buddy.max !== "";
     const hasMegaBounds = familyLimits.mega.min !== "" || familyLimits.mega.max !== "";
     const hasCustomTimeBounds = familyLimits.time.newerDate !== "" || familyLimits.time.oldestDate !== DEFAULT_OLDEST_CATCH_DATE;
-    const sourceRules = rules.filter((rule) => rule.pool !== "reference" &&
+    const sizeSearch = GENERATOR_UTILS.sizeSearchForSelection(sizeCategories.xl, sizeCategories.xxl);
+    const sizeBaseRule = rules.find((rule) => rule.id === "size-xl-group");
+    const sizeRule = sizeSearch && sizeBaseRule ? makeRuleDisplay(Object.assign({}, sizeBaseRule, {
+      id: "size-xl-selection",
+      label: sizeCategories.xl && sizeCategories.xxl ? "XL or XXL size" : sizeCategories.xxl ? "XXL size" : "XL size",
+      search: sizeSearch,
+      explain: sizeCategories.xl && sizeCategories.xxl
+        ? "Pokemon with XL or XXL size."
+        : sizeCategories.xxl ? "Pokemon with XXL size." : "Pokemon with XL size."
+    })) : null;
+    const sourceRules = rules.filter((rule) => rule.pool !== "reference" && rule.family !== "size-xl" &&
       !(hasCustomTimeBounds && rule.family === "age") &&
       !(hasBuddyBounds && rule.family === "buddy") &&
       !(hasMegaBounds && (rule.family === "mega" || rule.family === "mega-level")));
     return sourceRules.map(makeRuleDisplay).concat(
-      hasCustomTimeBounds ? [makeTimeRule()] : [], makeBoundedBuddyRules(), makeBoundedMegaRules(), generatedExclusions
+      sizeRule ? [sizeRule] : [], hasCustomTimeBounds ? [makeTimeRule()] : [], makeBoundedBuddyRules(), makeBoundedMegaRules(), generatedExclusions
     );
   }
 
   function getStaticCupPrefix() {
-    const value = cupPrefixInput.value.trim();
+    const value = cupSelect.value === "custom" ? customCupSettings.prefix : cupSelect.value ? cupPrefixInput.value : "";
     if (!value) return "";
     const parsed = GENERATOR_UTILS.validateSearchExpression(value);
-    return parsed.valid ? parsed.normalized : "";
+    return parsed.valid ? GENERATOR_UTILS.stripCpTerms(parsed.normalized) : "";
   }
   function getExtraFilter() {
-    const value = extraFilterInput.value.trim();
+    const value = cupSelect.value === "custom" ? customCupSettings.extraFilter : "";
     if (!value) return "";
     const parsed = GENERATOR_UTILS.validateSearchExpression(value);
-    return parsed.valid ? parsed.normalized : "";
+    return parsed.valid ? GENERATOR_UTILS.stripCpTerms(parsed.normalized) : "";
   }
   function selectedLeagueId() {
     const selected = leagueInputs.find((input) => input.checked);
@@ -371,6 +390,44 @@
       window.localStorage.setItem(RECENT_CUPS_KEY, JSON.stringify(recentCupIds));
     } catch (error) {
       // Storage may be disabled; Cup selection still works for this page view.
+    }
+  }
+  function readCustomCupSettings() {
+    const defaults = { prefix: "", additionalRules: [], extraFilter: "" };
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(CUSTOM_CUP_SETTINGS_KEY) || "null");
+      if (!saved || typeof saved !== "object") return defaults;
+      const validExpression = (value) => {
+        const parsed = GENERATOR_UTILS.validateSearchExpression(value);
+        return parsed.valid ? GENERATOR_UTILS.stripCpTerms(parsed.normalized) : "";
+      };
+      return {
+        prefix: validExpression(saved.prefix),
+        extraFilter: validExpression(saved.extraFilter),
+        additionalRules: (Array.isArray(saved.additionalRules) ? saved.additionalRules : []).reduce((result, rule) => {
+          if (!rule || typeof rule !== "object") return result;
+          const parsed = GENERATOR_UTILS.validateSearchExpression(rule.search);
+          const search = parsed.valid ? GENERATOR_UTILS.stripCpTerms(parsed.normalized) : "";
+          if (!search) return result;
+          if (rule.kind === "pokemon" && Number.isInteger(Number(rule.dex))) {
+            const dex = Number(rule.dex);
+            if (result.some((item) => item.kind === "pokemon" && item.dex === dex)) return result;
+            result.push({ kind: "pokemon", dex: dex, label: String(rule.label || "Pokémon"), search: search });
+          } else if (rule.kind === "custom" && !result.some((item) => item.kind === "custom" && item.search.toLowerCase() === search.toLowerCase())) {
+            result.push({ kind: "custom", label: search, search: search });
+          }
+          return result;
+        }, [])
+      };
+    } catch (error) {
+      return defaults;
+    }
+  }
+  function saveCustomCupSettings() {
+    try {
+      window.localStorage.setItem(CUSTOM_CUP_SETTINGS_KEY, JSON.stringify(customCupSettings));
+    } catch (error) {
+      // Custom Cup remains usable for this page view when local storage is unavailable.
     }
   }
   function cupPickerItem(id) {
@@ -528,7 +585,7 @@
     openIcon.setAttribute("aria-hidden", "true");
     openIcon.textContent = "○";
     const openLabel = document.createElement("span");
-    openLabel.textContent = "Open";
+    openLabel.textContent = "None";
     openButton.append(openIcon, openLabel);
     cupTileRow.appendChild(openButton);
 
@@ -679,11 +736,7 @@
     cupTileRow.addEventListener("click", (event) => {
       const cupButton = event.target.closest("[data-cup-id]");
       if (!cupButton) return;
-      const id = cupButton.dataset.cupId;
-      if (cupSelect.value !== id) {
-        cupSelect.value = id;
-        cupSelect.dispatchEvent(new Event("change", { bubbles: true }));
-      }
+      requestCupSelection(cupButton.dataset.cupId);
     });
     cupLibraryButton.addEventListener("click", () => {
       if (cupPickerPopup.hidden) openCupPicker();
@@ -692,11 +745,8 @@
     cupPickerPopup.addEventListener("click", (event) => {
       const button = event.target.closest("[data-cup-option]");
       if (!button) return;
-      if (cupSelect.value !== button.dataset.cupId) {
-        cupSelect.value = button.dataset.cupId;
-        cupSelect.dispatchEvent(new Event("change", { bubbles: true }));
-      }
       closeCupPicker(true);
+      requestCupSelection(button.dataset.cupId);
     });
     cupPickerSearch.addEventListener("input", updateCupPickerSearch);
     cupPickerSearch.addEventListener("keydown", (event) => {
@@ -721,16 +771,24 @@
     });
     window.addEventListener("resize", positionCupPicker);
     window.addEventListener("scroll", positionCupPicker, true);
-    cupSelect.addEventListener("change", rememberCupSelection);
     cupTileRow.addEventListener("wheel", (event) => {
       if (event.ctrlKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX) || cupTileRow.scrollWidth <= cupTileRow.clientWidth) return;
       event.preventDefault();
       cupTileRow.scrollLeft += event.deltaY;
     }, { passive: false });
   }
+  function requestCupSelection(id) {
+    if (id === "custom") {
+      openCustomCupEditor();
+      return;
+    }
+    if (cupSelect.value === id) return;
+    cupSelect.value = id;
+    cupSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  }
   function cupPresetSearch(cup) {
     const bannedSpecies = (cup.speciesBans || []).map((dex) => "!" + dex).join("&");
-    return GENERATOR_UTILS.combineSearch([cup.search, bannedSpecies]);
+    return GENERATOR_UTILS.stripCpTerms(GENERATOR_UTILS.combineSearch([cup.search, bannedSpecies]));
   }
   function renderTypeLeaningControls() {
     typeLeaningChips.replaceChildren();
@@ -768,11 +826,6 @@
     typeLeaningAdd.disabled = typeLeaning.types.length === types.length;
     typeLeaningAdd.value = types.includes(previousType) && !typeLeaning.types.includes(previousType) ? previousType : "";
 
-    document.querySelectorAll('input[name="type-leaning-strength"]').forEach((input) => {
-      input.checked = input.value === typeLeaning.strength;
-    });
-    typeLeaningPokemon.checked = typeLeaning.pokemon;
-    typeLeaningMove.checked = typeLeaning.move;
   }
   function isFamilyBlockedByCup(settingFamily) {
     if (!cupForSelection() && !getStaticCupPrefix()) return false;
@@ -944,7 +997,91 @@
   }
 
   function additionalRuleExpressions() {
-    return additionalRules.map((rule) => rule.search).concat(getExtraFilter()).filter(Boolean);
+    if (cupSelect.value !== "custom") return [];
+    return customCupSettings.additionalRules.map((rule) => GENERATOR_UTILS.stripCpTerms(rule.search))
+      .concat(getExtraFilter()).filter(Boolean);
+  }
+
+  function updateCustomCupDraftPreview() {
+    const prefixValue = cupPrefixInput.value.trim();
+    const expressionValue = extraFilterInput.value.trim();
+    const prefix = prefixValue ? GENERATOR_UTILS.validateSearchExpression(prefixValue) : { valid: true, normalized: "" };
+    const expression = expressionValue ? GENERATOR_UTILS.validateSearchExpression(expressionValue) : { valid: true, normalized: "" };
+    const error = !prefix.valid ? "Cup search prefix: " + prefix.error :
+      !expression.valid ? "Custom Search Expression: " + expression.error : "";
+    customCupEditorError.textContent = error;
+    advancedExpressionStatus.textContent = expression.valid ? "" : expression.error;
+    cupFormatError.hidden = true;
+    cupFormatError.textContent = "";
+    if (error) return;
+    try {
+      additionalFilterPreview.textContent = GENERATOR_UTILS.combineSearch([
+        GENERATOR_UTILS.stripCpTerms(prefix.normalized),
+        ...additionalRules.map((rule) => GENERATOR_UTILS.stripCpTerms(rule.search)),
+        GENERATOR_UTILS.stripCpTerms(expression.normalized)
+      ]) || "Add Cup eligibility rules to preview the search.";
+    } catch (previewError) {
+      customCupEditorError.textContent = previewError.message;
+    }
+  }
+
+  function openCustomCupEditor() {
+    cupPrefixInput.value = customCupSettings.prefix;
+    additionalRules = customCupSettings.additionalRules.map((rule) => Object.assign({}, rule));
+    extraFilterInput.value = customCupSettings.extraFilter;
+    additionalRuleInput.value = "";
+    additionalRuleStatus.textContent = "";
+    advancedExpressionStatus.textContent = "";
+    customCupEditorError.textContent = "";
+    hideAdditionalSuggestions();
+    renderAdditionalRuleChips();
+    updateCustomCupDraftPreview();
+    if (!customCupEditor.open) customCupEditor.showModal();
+    additionalRuleInput.focus({ preventScroll: true });
+  }
+
+  function applyCustomCupEditor() {
+    const prefixValue = cupPrefixInput.value.trim();
+    const expressionValue = extraFilterInput.value.trim();
+    const prefix = prefixValue ? GENERATOR_UTILS.validateSearchExpression(prefixValue) : { valid: true, normalized: "" };
+    const expression = expressionValue ? GENERATOR_UTILS.validateSearchExpression(expressionValue) : { valid: true, normalized: "" };
+    if (!prefix.valid || !expression.valid) {
+      updateCustomCupDraftPreview();
+      (prefix.valid ? extraFilterInput : cupPrefixInput).focus();
+      return;
+    }
+    const nextRules = additionalRules.map((rule) => {
+      const parsed = GENERATOR_UTILS.validateSearchExpression(rule.search);
+      return parsed.valid ? Object.assign({}, rule, {
+        search: GENERATOR_UTILS.stripCpTerms(parsed.normalized),
+        label: rule.kind === "pokemon" ? rule.label : GENERATOR_UTILS.stripCpTerms(parsed.normalized)
+      }) : null;
+    }).filter((rule) => rule && rule.search);
+    customCupSettings = {
+      prefix: GENERATOR_UTILS.stripCpTerms(prefix.normalized),
+      additionalRules: nextRules,
+      extraFilter: GENERATOR_UTILS.stripCpTerms(expression.normalized)
+    };
+    saveCustomCupSettings();
+    additionalRules = customCupSettings.additionalRules.map((rule) => Object.assign({}, rule));
+    customCupEditor.close("apply");
+    if (cupSelect.value !== "custom") {
+      suppressCustomCupDialog = true;
+      cupSelect.value = "custom";
+      cupSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    } else {
+      currentCup = null;
+      cupPrefixInput.value = customCupSettings.prefix;
+      updateCupPickerSelection();
+      updateCupControls();
+      syncMutatorModeForCurrentState(true);
+    }
+  }
+
+  function restoreCupPrefixInput() {
+    cupPrefixInput.value = cupSelect.value === "custom"
+      ? customCupSettings.prefix
+      : currentCup ? cupPresetSearch(currentCup) : "";
   }
 
   function ruleProfileWeight(rule, profile) {
@@ -958,17 +1095,17 @@
     return familyWeight * optedInPoolWeight / (1 + scarcity * 0.22);
   }
 
-  function isTypeLeaningEnabled(scope) {
-    return GENERATOR_UTILS.typeLeaningScopeEnabled(scope, typeLeaning.types.length, typeLeaning.pokemon, typeLeaning.move);
+  function isTypeLeaningEnabled() {
+    return typeLeaning.types.length > 0;
   }
 
-  function typeLeaningWeight(type, scope) {
-    return GENERATOR_UTILS.typeWeight(type, typeLeaning.types, typeLeaning.strength, isTypeLeaningEnabled(scope));
+  function typeLeaningWeight(type) {
+    return GENERATOR_UTILS.typeWeight(type, typeLeaning.types, "balanced", isTypeLeaningEnabled());
   }
 
   function sampleWeightedTypes(values, minCount, maxCount, scope) {
     const count = randomInteger(minCount, Math.min(maxCount, values.length));
-    return GENERATOR_UTILS.weightedSample(values, count, (value) => typeLeaningWeight(value, scope)).sort();
+    return GENERATOR_UTILS.weightedSample(values, count, (value) => typeLeaningWeight(value)).sort();
   }
 
   function ruleTypeLeaningWeight(rule) {
@@ -977,11 +1114,11 @@
     if (ruleId.indexOf("type-banned-") === 0 || ruleId.indexOf("move-type-banned-") === 0) return 1;
     if (rule.family === "pokemon-type") {
       const ruleTypes = Array.isArray(meta.types) ? meta.types : [];
-      return ruleTypes.length ? ruleTypes.reduce((sum, type) => sum + typeLeaningWeight(type, "pokemon"), 0) / ruleTypes.length : 1;
+      return ruleTypes.length ? ruleTypes.reduce((sum, type) => sum + typeLeaningWeight(type), 0) / ruleTypes.length : 1;
     }
     if (rule.family === "move-type" || rule.family === "move-slot") {
       const ruleTypes = Array.isArray(meta.move_types) ? meta.move_types : [];
-      return ruleTypes.length ? ruleTypes.reduce((sum, type) => sum + typeLeaningWeight(type, "move"), 0) / ruleTypes.length : 1;
+      return ruleTypes.length ? ruleTypes.reduce((sum, type) => sum + typeLeaningWeight(type), 0) / ruleTypes.length : 1;
     }
     return 1;
   }
@@ -1148,37 +1285,42 @@
       const title = document.createElement("span");
       title.textContent = definition.shortLabel || definition.label;
       const tooltipId = "family-" + definition.id + "-tooltip";
-      const helper = document.createElement("div");
-      helper.className = "context-tooltip family-description-tooltip";
-      helper.id = tooltipId;
-      helper.setAttribute("role", "dialog");
-      helper.setAttribute("aria-labelledby", tooltipId + "-title");
-      helper.hidden = true;
-      const tooltipTitle = document.createElement("h2");
-      tooltipTitle.id = tooltipId + "-title";
-      tooltipTitle.className = "visually-hidden";
-      tooltipTitle.textContent = definition.label + " details";
-      const tooltipDescription = document.createElement("p");
-      tooltipDescription.className = "family-description";
-      tooltipDescription.textContent = definition.description;
-      helper.append(tooltipTitle, tooltipDescription);
-      checkbox.setAttribute("aria-describedby", helper.id);
+      let helper = null;
+      if (definition.description) {
+        helper = document.createElement("div");
+        helper.className = "context-tooltip family-description-tooltip";
+        helper.id = tooltipId;
+        helper.setAttribute("role", "dialog");
+        helper.setAttribute("aria-labelledby", tooltipId + "-title");
+        helper.hidden = true;
+        const tooltipTitle = document.createElement("h2");
+        tooltipTitle.id = tooltipId + "-title";
+        tooltipTitle.className = "visually-hidden";
+        tooltipTitle.textContent = definition.label + " details";
+        const tooltipDescription = document.createElement("p");
+        tooltipDescription.className = "family-description";
+        tooltipDescription.textContent = definition.description;
+        helper.append(tooltipTitle, tooltipDescription);
+        checkbox.setAttribute("aria-describedby", helper.id);
+      }
       toggleLabel.append(checkbox, title);
       heading.appendChild(toggleLabel);
-      const infoButton = document.createElement("button");
-      infoButton.className = "info-trigger family-info-trigger";
-      infoButton.type = "button";
-      infoButton.setAttribute("aria-label", definition.label + " information");
-      infoButton.setAttribute("aria-haspopup", "dialog");
-      infoButton.setAttribute("aria-expanded", "false");
-      infoButton.setAttribute("aria-controls", helper.id);
-      infoButton.setAttribute("aria-describedby", helper.id);
-      infoButton.setAttribute("data-context-tooltip-trigger", "");
-      const infoIcon = document.createElement("span");
-      infoIcon.setAttribute("aria-hidden", "true");
-      infoIcon.textContent = "ⓘ";
-      infoButton.appendChild(infoIcon);
-      heading.appendChild(infoButton);
+      if (helper) {
+        const infoButton = document.createElement("button");
+        infoButton.className = "info-trigger family-info-trigger";
+        infoButton.type = "button";
+        infoButton.setAttribute("aria-label", definition.label + " information");
+        infoButton.setAttribute("aria-haspopup", "dialog");
+        infoButton.setAttribute("aria-expanded", "false");
+        infoButton.setAttribute("aria-controls", helper.id);
+        infoButton.setAttribute("aria-describedby", helper.id);
+        infoButton.setAttribute("data-context-tooltip-trigger", "");
+        const infoIcon = document.createElement("span");
+        infoIcon.setAttribute("aria-hidden", "true");
+        infoIcon.textContent = "ⓘ";
+        infoButton.appendChild(infoIcon);
+        heading.appendChild(infoButton);
+      }
       let limitControls = null;
       if (definition.limits) {
         limitControls = createFamilyLimitControls(definition);
@@ -1197,10 +1339,36 @@
       const output = document.createElement("output");
       output.htmlFor = range.id;
       weightLabel.append(range, output);
-      row.append(heading, weightLabel, helper);
+      row.appendChild(heading);
+      if (definition.id === "xl-size") {
+        const options = document.createElement("div");
+        options.className = "family-size-options";
+        [{ id: "xl", label: "XL" }, { id: "xxl", label: "XXL" }].forEach((category) => {
+          const label = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.id = "family-size-" + category.id;
+          input.checked = Boolean(sizeCategories[category.id]);
+          input.setAttribute("aria-label", category.label + " size Pokémon");
+          const text = document.createElement("span");
+          text.textContent = category.label;
+          label.append(input, text);
+          options.appendChild(label);
+          sizeCategoryElements.set(category.id, input);
+          input.addEventListener("change", () => {
+            sizeCategories[category.id] = input.checked;
+            markProfileCustom();
+            syncFamilyControls();
+            markConfigPending();
+          });
+        });
+        row.appendChild(options);
+      }
+      row.appendChild(weightLabel);
+      if (helper) row.appendChild(helper);
       if (limitControls) row.appendChild(limitControls.panel);
       container.appendChild(row);
-      familyControlElements.set(definition.id, { checkbox: checkbox, range: range, output: output, row: row, helper: tooltipDescription });
+      familyControlElements.set(definition.id, { checkbox: checkbox, range: range, output: output, row: row, helper: helper && helper.querySelector(".family-description") });
       if (limitControls) familyLimitElements.set(definition.id, limitControls);
 
       checkbox.addEventListener("change", () => {
@@ -1260,9 +1428,11 @@
       elements.range.value = String(setting.weight);
       elements.range.disabled = blocked;
       elements.output.textContent = String(setting.weight);
-      elements.helper.textContent = blocked
-        ? definition.description + " Paused while this Cup prefix handles it."
-        : definition.description;
+      if (elements.helper) {
+        elements.helper.textContent = blocked
+          ? definition.description + " Paused while this Cup prefix handles it."
+          : definition.description;
+      }
       updateRangeProgress(elements.range);
       const limits = familyLimitElements.get(definition.id);
       if (limits && limits.sync) limits.sync();
@@ -1271,6 +1441,10 @@
         limits.inputs[0].value = bounds.min;
         limits.inputs[1].value = bounds.max;
       }
+    });
+    sizeCategoryElements.forEach((input, category) => {
+      input.checked = Boolean(sizeCategories[category]);
+      input.disabled = !familySettings["xl-size"].enabled;
     });
     additionalFamiliesToggle.checked = additionalFamiliesEnabled;
     additionalFamilyControls.classList.toggle("is-opted-out", !additionalFamiliesEnabled);
@@ -1302,6 +1476,10 @@
   }
 
   function markConfigPending() {
+    if (customCupEditor.open) {
+      updateCustomCupDraftPreview();
+      return;
+    }
     configPending = true;
     if (currentState) {
       const selectedLeague = getSelectedLeague();
@@ -1314,7 +1492,7 @@
       currentState.cupPrefix = cupPrefix;
       currentState.cupName = getCurrentCupName();
       currentState.extraFilter = getExtraFilter();
-      currentState.additionalRules = additionalRules.slice();
+      currentState.additionalRules = cupSelect.value === "custom" ? customCupSettings.additionalRules.slice() : [];
       try {
         currentState.search = GENERATOR_UTILS.combineSearch([cpConstraint.search, cupPrefix]
           .concat(additionalRuleExpressions(), otherRules.map((rule) => rule.search), currentState.disqualifiers.map((rule) => rule.search)));
@@ -1349,6 +1527,7 @@
   }
 
   function generate() {
+    if (customCupEditor.open) return;
     const league = getSelectedLeague();
     const leagueConstraint = league;
     const profile = activeProfile;
@@ -1399,7 +1578,7 @@
       cupPrefix: cupPrefix,
       cupName: getCurrentCupName(),
       extraFilter: extraFilter,
-      additionalRules: additionalRules.slice()
+      additionalRules: cupSelect.value === "custom" ? customCupSettings.additionalRules.slice() : []
     };
     previousSearch = search;
     configPending = false;
@@ -1412,20 +1591,18 @@
   function getCurrentCupName() {
     const cup = cupForSelection();
     if (cup) return cupDisplayName(cup);
-    return getStaticCupPrefix() ? "Custom Cup" : "";
+    return cupSelect.value === "custom" ? "Custom Cup" : "";
   }
 
   function updateCupFormatInfo() {
     cupFormatInfo.replaceChildren();
     const cup = cupForSelection();
-    const rawPrefix = cupPrefixInput.value.trim();
+    const rawPrefix = cupSelect.value === "custom" ? customCupSettings.prefix : cup ? cupPrefixInput.value.trim() : "";
     const prefixState = rawPrefix ? GENERATOR_UTILS.validateSearchExpression(rawPrefix) : { valid: true, error: "" };
     cupFormatError.hidden = !rawPrefix || prefixState.valid;
     cupFormatError.textContent = cupFormatError.hidden ? "" : "Cup search needs attention: " + prefixState.error;
-    if (!cup && !rawPrefix) {
-      cupFormatInfo.textContent = cupSelect.value === "custom"
-        ? "Custom Cup filter selected. Enter a search prefix in More Cup settings."
-        : "Open League — no Cup eligibility restrictions are active.";
+    cupNoSelectionInfo.hidden = Boolean(cupSelect.value || rawPrefix);
+    if (!cup && !rawPrefix && cupSelect.value !== "custom") {
       return;
     }
     const status = document.createElement("p");
@@ -1602,16 +1779,26 @@
     battleStatus.textContent = target ? "Battle " + battleCount + " of " + target : "";
   }
 
+  function resizeSearchOutput() {
+    searchOutput.style.height = "auto";
+    const cap = Math.max(116, Math.floor(window.innerHeight * 0.55));
+    searchOutput.style.height = Math.min(Math.max(searchOutput.scrollHeight, 116), cap) + "px";
+  }
+
   function render() {
     searchOutput.value = currentState.search;
+    resizeSearchOutput();
     additionalFilterPreview.textContent = currentState.search || "Add a rule or generate a filter to preview it here.";
     ruleList.replaceChildren();
     let ruleIndex = 0;
     appendRuleRow({ id: "league-limit", family: "cp" }, cpRangeDescription(currentState.cpConstraint), ruleIndex++);
     if (currentState.cupName) {
-      appendRuleRow({ id: "cup-prefix", family: "" }, currentState.cupPrefix
+      const cupDescription = currentState.cupPrefix
         ? currentState.cupName + " filter: " + currentState.cupPrefix
-        : currentState.cupName + " · check the manual eligibility note above", ruleIndex++);
+        : currentState.cupName === "Custom Cup"
+          ? "Custom Cup · user-defined eligibility rules"
+          : currentState.cupName + " · check the manual eligibility note above";
+      appendRuleRow({ id: "cup-prefix", family: "" }, cupDescription, ruleIndex++);
     }
     currentState.additionalRules.forEach((rule, index) => {
       appendRuleRow({ id: "additional-rule-" + index, family: "" }, rule.kind === "pokemon"
@@ -1670,7 +1857,7 @@
   }
 
   function updateCupControls() {
-    const hasCup = Boolean(cupSelect.value || cupPrefixInput.value.trim());
+    const hasCup = Boolean(cupSelect.value);
     cupSettingsFields.disabled = false;
     const canGenerateMutators = shouldGenerateMutators();
     cupLocks.disabled = !hasCup || !canGenerateMutators;
@@ -1724,15 +1911,24 @@
 
   function onCupSelectionChanged() {
     const id = cupSelect.value;
+    if (id === "custom" && !suppressCustomCupDialog) {
+      cupSelect.value = lastActiveCupId;
+      updateCupPickerSelection();
+      openCustomCupEditor();
+      return;
+    }
+    suppressCustomCupDialog = false;
+    lastActiveCupId = id;
     currentCup = CUP_PRESETS.find((cup) => cup.id === id) || null;
     if (currentCup) {
       cupPrefixInput.value = cupPresetSearch(currentCup);
       cupLockTypes.checked = currentCup.lockTypes;
       cupLockMoves.checked = currentCup.lockMoves;
     } else if (id === "custom") {
-      cupPrefixInput.value = "";
+      cupPrefixInput.value = customCupSettings.prefix;
       cupLockTypes.checked = false;
       cupLockMoves.checked = false;
+      additionalRules = customCupSettings.additionalRules.map((rule) => Object.assign({}, rule));
     } else {
       cupPrefixInput.value = "";
       cupLockTypes.checked = false;
@@ -1740,24 +1936,6 @@
     }
     battleCount = 0;
     updateCupPickerSelection();
-    updateCupControls();
-    syncMutatorModeForCurrentState(true);
-  }
-
-  function onCupPrefixChanged() {
-    const previousSelection = cupSelect.value;
-    if (cupSelect.value && cupSelect.value !== "custom" && cupPrefixInput.value.trim() !== currentCup.search) {
-      cupSelect.value = "custom";
-      currentCup = null;
-    } else if (cupPrefixInput.value.trim() && !cupSelect.value) {
-      cupSelect.value = "custom";
-      currentCup = null;
-    } else if (!cupPrefixInput.value.trim() && cupSelect.value === "custom") {
-      cupSelect.value = "";
-      currentCup = null;
-    }
-    if (cupSelect.value !== previousSelection && cupSelect.value) rememberCupSelection();
-    else updateCupPickerSelection();
     updateCupControls();
     syncMutatorModeForCurrentState(true);
   }
@@ -1780,12 +1958,11 @@
     familyLimits.buddy = { min: "", max: "" };
     familyLimits.mega = { min: "", max: "" };
     familyLimits.time = { newerDate: "", oldestDate: DEFAULT_OLDEST_CATCH_DATE };
-    typeLeaning = { types: [], strength: "medium", pokemon: true, move: true };
+    typeLeaning = { types: [] };
+    sizeCategories = { xl: false, xxl: true };
     syncFamilyControls();
     renderTypeLeaningControls();
     updateProfileChoices();
-    extraFilterInput.value = "";
-    advancedExpressionStatus.textContent = "";
     customBadge.hidden = true;
     markConfigPending();
   }
@@ -1966,26 +2143,28 @@
         markConfigPending();
       }
     });
-    document.querySelectorAll('input[name="type-leaning-strength"]').forEach((input) => {
-      input.addEventListener("change", () => {
-        if (!input.checked) return;
-        typeLeaning.strength = input.value;
-        markConfigPending();
-      });
-    });
-    typeLeaningPokemon.addEventListener("change", () => {
-      typeLeaning.pokemon = typeLeaningPokemon.checked;
-      markConfigPending();
-    });
-    typeLeaningMove.addEventListener("change", () => {
-      typeLeaning.move = typeLeaningMove.checked;
-      markConfigPending();
-    });
     cupSelect.addEventListener("change", onCupSelectionChanged);
-    cupPrefixInput.addEventListener("input", onCupPrefixChanged);
-    cupPrefixInput.addEventListener("input", () => {
-      renderCupQuickSelections();
-      updateCupPickerSelection();
+    cupSelect.addEventListener("change", rememberCupSelection);
+    cupPrefixInput.addEventListener("input", updateCustomCupDraftPreview);
+    [cupPrefixInput, extraFilterInput].forEach((input) => input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") event.preventDefault();
+    }));
+    customCupEditor.addEventListener("close", () => {
+      if (customCupEditor.returnValue === "apply") return;
+      restoreCupPrefixInput();
+      additionalRules = customCupSettings.additionalRules.map((rule) => Object.assign({}, rule));
+      extraFilterInput.value = customCupSettings.extraFilter;
+      renderAdditionalRuleChips();
+      updateCupFormatInfo();
+    });
+    customCupEditor.addEventListener("click", (event) => {
+      if (event.target === customCupEditor) customCupEditor.close("cancel");
+    });
+    customCupApply.addEventListener("click", applyCustomCupEditor);
+    customCupEditor.querySelector("form").addEventListener("submit", (event) => {
+      if (event.submitter !== customCupEditorClose && event.submitter !== document.getElementById("custom-cup-cancel")) {
+        event.preventDefault();
+      }
     });
     includeMutatorsInput.addEventListener("change", () => {
       updateCupControls();
@@ -2000,11 +2179,10 @@
     mutatorCount.addEventListener("change", markConfigPending);
     battleTargetInput.addEventListener("change", () => { battleCount = 0; markConfigPending(); });
     extraFilterInput.addEventListener("input", () => {
-      const value = extraFilterInput.value.trim();
-      const parsed = value ? GENERATOR_UTILS.validateSearchExpression(value) : { valid: true, error: "" };
-      advancedExpressionStatus.textContent = parsed.valid ? "" : parsed.error;
-      markProfileCustom();
-      markConfigPending();
+      if (customCupEditor.open) {
+        updateCustomCupDraftPreview();
+        return;
+      }
     });
     additionalRuleInput.addEventListener("input", () => {
       additionalRuleStatus.textContent = "";
@@ -2033,6 +2211,7 @@
     });
     copyButton.addEventListener("click", copyFilter);
     resetAdvancedButton.addEventListener("click", resetAdvancedSettings);
+    window.addEventListener("resize", resizeSearchOutput);
     generate();
   }
 

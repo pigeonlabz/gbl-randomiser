@@ -27,7 +27,7 @@
         <ul id="rule-list" class="rule-icon-list" aria-label="Active filter restrictions" aria-live="polite"></ul>
         <label class="visually-hidden" for="search-output">Pokémon GO search string</label>
         <div class="filter-output-row">
-          <textarea id="search-output" rows="2" readonly spellcheck="false" wrap="soft" aria-describedby="copy-status"></textarea>
+          <textarea id="search-output" rows="4" readonly spellcheck="false" wrap="soft" aria-describedby="copy-status"></textarea>
           <div class="filter-actions">
             <button class="icon-action" id="generate-filter" type="submit" aria-label="Generate new filter" data-tooltip="Generate new filter">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 7v5h-5M4.8 9a7.5 7.5 0 0 1 12.8-2L20 12M4 17v-5h5m10.2 3a7.5 7.5 0 0 1-12.8 2L4 12"/></svg>
@@ -81,11 +81,12 @@
             </button>
             <div id="cup-info-tooltip" class="context-tooltip" role="dialog" aria-labelledby="cup-info-tooltip-title" hidden>
               <h2 id="cup-info-tooltip-title" class="visually-hidden">Cup format and eligibility</h2>
-              <p>Cup restrictions apply to your selected League and do not change its CP ceiling. Some eligibility rules cannot be represented in Pokémon GO search and need a manual check.</p>
-              <div id="cup-format-info" class="cup-format-info" role="status" aria-live="polite"></div>
+              <p>Cup rules use your selected league. Some restrictions may need a manual check.</p>
+              <p id="cup-no-selection-info" hidden>No cup restrictions selected.</p>
             </div>
           </div>
           <div id="cup-tiles" class="cup-tile-row" role="group" aria-label="Cup carousel"></div>
+          <div id="cup-format-info" class="cup-format-info" role="status" aria-live="polite"></div>
           <select id="cup-select" name="cup" hidden aria-hidden="true" tabindex="-1">
             <option value="" selected>None — Open League</option>
             <optgroup label="Official GBL formats">
@@ -167,11 +168,11 @@
             </div>
 
             <fieldset class="randomness-control">
-              <legend>Randomness</legend>
+              <legend class="visually-hidden">Randomness</legend>
               <div class="choice-row" role="radiogroup" aria-label="Randomness profile">
-                <label class="choice randomness-choice" data-tooltip="Chill"><input id="randomness-chill" type="radio" name="randomness" value="chill" aria-label="Chill" checked><span class="randomness-icon" aria-hidden="true">🌱</span></label>
-                <label class="choice randomness-choice" data-tooltip="Spicy"><input id="randomness-spicy" type="radio" name="randomness" value="spicy" aria-label="Spicy"><span class="randomness-icon" aria-hidden="true">🔥</span></label>
-                <label class="choice randomness-choice" data-tooltip="Chaos"><input id="randomness-chaos" type="radio" name="randomness" value="chaos" aria-label="Chaos"><span class="randomness-icon" aria-hidden="true">🎲</span></label>
+                <label class="choice randomness-choice" data-tooltip="Chill"><input id="randomness-chill" type="radio" name="randomness" value="chill" aria-label="Chill" checked><span class="randomness-icon" aria-hidden="true">I</span></label>
+                <label class="choice randomness-choice" data-tooltip="Spicy"><input id="randomness-spicy" type="radio" name="randomness" value="spicy" aria-label="Spicy"><span class="randomness-icon" aria-hidden="true">II</span></label>
+                <label class="choice randomness-choice" data-tooltip="Chaos"><input id="randomness-chaos" type="radio" name="randomness" value="chaos" aria-label="Chaos"><span class="randomness-icon" aria-hidden="true">III</span></label>
               </div>
             </fieldset>
           </div>
@@ -183,69 +184,22 @@
             <span id="custom-badge" class="customised" hidden>Customised</span>
           </summary>
           <div class="advanced-content">
-            <section class="additional-rules" aria-labelledby="additional-rules-title">
-              <div class="label-help-row additional-rules-heading">
-                <h2 id="additional-rules-title">Additional Rules</h2>
-                <button class="info-trigger" type="button" aria-label="Additional Rules information" aria-haspopup="dialog" aria-expanded="false" aria-controls="additional-rules-tooltip" aria-describedby="additional-rules-tooltip" data-context-tooltip-trigger>
-                  <span aria-hidden="true">ⓘ</span>
-                </button>
-                <div id="additional-rules-tooltip" class="context-tooltip" role="dialog" aria-labelledby="additional-rules-tooltip-title" hidden>
-                  <h2 id="additional-rules-tooltip-title" class="visually-hidden">Additional Rules help</h2>
-                  <p>Exclude Pokémon by name or Pokédex number, or add a Pokémon GO search term as a removable rule chip. Press Enter to add a selected Pokémon or valid search term.</p>
-                </div>
-              </div>
-              <label class="visually-hidden" for="additional-rule-input">Search Pokémon or enter a rule</label>
-              <div class="rule-composer">
-                <input id="additional-rule-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="additional-rule-suggestions" autocomplete="off" spellcheck="false" placeholder="Pokémon name, Pokédex number, or search rule">
-                <button id="add-additional-rule" class="button button-secondary add-rule-button" type="button" aria-label="Add rule">+</button>
-              </div>
-              <div id="additional-rule-suggestions" class="rule-suggestions" role="listbox" aria-label="Pokémon suggestions" hidden></div>
-              <p id="additional-rule-status" class="status" role="status" aria-live="polite"></p>
-              <div id="additional-rule-chips" class="additional-rule-chips" role="list" aria-label="Additional rule chips"></div>
-              <div class="control advanced-expression-control">
-                <div class="label-help-row">
-                  <label for="extra-filter">Advanced raw expression</label>
-                  <button class="info-trigger" type="button" aria-label="Search syntax and precedence information" aria-haspopup="dialog" aria-expanded="false" aria-controls="raw-expression-tooltip" aria-describedby="raw-expression-tooltip" data-context-tooltip-trigger>
-                    <span aria-hidden="true">ⓘ</span>
-                  </button>
-                  <div id="raw-expression-tooltip" class="context-tooltip" role="dialog" aria-labelledby="raw-expression-tooltip-title" hidden>
-                    <h2 id="raw-expression-tooltip-title" class="visually-hidden">Pokémon GO search syntax</h2>
-                    <p>Enter a Pokémon GO search expression. Use <code>&amp;</code> for AND, commas for OR, and <code>!</code> to exclude a term.</p>
-                    <p>Example: <code>!shadow&amp;@water</code> excludes Shadow Pokémon and requires a Water-type move. <code>fire,water</code> matches either type.</p>
-                    <p>The expression is combined with the generated filter using Pokémon GO AND/OR precedence.</p>
-                  </div>
-                </div>
-                <input id="extra-filter" name="extra-filter" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. !shadow&@water or #practice">
-              </div>
-              <p id="advanced-expression-status" class="status" role="status" aria-live="polite"></p>
-              <p class="additional-preview-label">Combined search preview</p>
-              <output id="additional-filter-preview" class="additional-filter-preview" aria-live="polite"></output>
-            </section>
-
             <div id="mutator-advanced-settings" class="mutator-advanced-settings">
               <fieldset class="type-leaning-fieldset">
-                <legend>Type Leaning</legend>
-                <p id="type-leaning-help" class="type-leaning-help">Bias generated rules toward selected types without requiring them.</p>
+                <legend class="type-leaning-legend">Type Leaning
+                  <button class="info-trigger" type="button" aria-label="Type Leaning information" aria-haspopup="dialog" aria-expanded="false" aria-controls="type-leaning-tooltip" aria-describedby="type-leaning-tooltip" data-context-tooltip-trigger><span aria-hidden="true">ⓘ</span></button>
+                </legend>
+                <div id="type-leaning-tooltip" class="context-tooltip" role="dialog" aria-labelledby="type-leaning-tooltip-title" hidden>
+                  <h2 id="type-leaning-tooltip-title" class="visually-hidden">Type Leaning</h2>
+                  <p>Favour selected types without making them mandatory.</p>
+                </div>
                 <div id="type-leaning-types" class="type-leaning-types">
                   <div id="type-leaning-chips" class="type-leaning-chips" aria-live="polite"></div>
                   <label class="visually-hidden" for="type-leaning-add">Add a preferred type</label>
-                  <select id="type-leaning-add" aria-describedby="type-leaning-help">
+                  <select id="type-leaning-add" aria-describedby="type-leaning-tooltip">
                     <option value="">+ Add type</option>
                   </select>
                 </div>
-                <fieldset class="type-leaning-strength">
-                  <legend>Strength</legend>
-                  <div class="choice-row" role="radiogroup" aria-label="Type leaning strength">
-                    <label class="choice"><input type="radio" name="type-leaning-strength" value="light"><span>Light</span></label>
-                    <label class="choice"><input type="radio" name="type-leaning-strength" value="medium" checked><span>Medium</span></label>
-                    <label class="choice"><input type="radio" name="type-leaning-strength" value="strong"><span>Strong</span></label>
-                  </div>
-                </fieldset>
-                <fieldset class="type-leaning-scope">
-                  <legend>Apply to</legend>
-                  <label><input id="type-leaning-pokemon" type="checkbox" checked><span>Pokémon type rules</span></label>
-                  <label><input id="type-leaning-move" type="checkbox" checked><span>Move type rules</span></label>
-                </fieldset>
               </fieldset>
 
               <fieldset class="family-fieldset">
@@ -262,7 +216,7 @@
               </fieldset>
 
               <details class="additional-families">
-                <summary>Additional rule families</summary>
+                <summary>Additional Rule Families</summary>
                 <div class="additional-family-options">
                   <label class="additional-family-toggle" for="additional-families-enabled">
                     <input id="additional-families-enabled" type="checkbox" aria-describedby="additional-family-warning">
@@ -286,11 +240,6 @@
                     <input id="battle-target" name="battle-target" type="number" min="1" max="99" inputmode="numeric" placeholder="No limit">
                   </label>
 
-                  <label class="control cup-prefix-control" for="cup-prefix">
-                    <span>Cup search prefix</span>
-                    <input id="cup-prefix" name="cup-prefix" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. rock&!@rock">
-                    <small id="cup-prefix-help">Cup filters are bundled with this static page. New server-loaded Cups and shared battle sessions need a server.</small>
-                  </label>
                 </div>
 
                 <fieldset id="cup-locks" class="cup-locks" disabled>
@@ -305,6 +254,61 @@
         </details>
       </div>
     </form>
+
+    <dialog id="custom-cup-editor" class="custom-cup-editor" aria-labelledby="custom-cup-editor-title">
+      <form method="dialog" class="custom-cup-editor-form">
+        <div class="custom-cup-editor-heading">
+          <div>
+            <h2 id="custom-cup-editor-title">Custom Cup editor</h2>
+            <p>Build and preview your own eligibility filter.</p>
+          </div>
+          <button id="custom-cup-editor-close" class="cup-picker-close" type="submit" value="cancel" aria-label="Close Custom Cup editor">×</button>
+        </div>
+        <label class="control cup-prefix-control" for="cup-prefix">
+          <span>Cup search prefix</span>
+          <input id="cup-prefix" name="cup-prefix" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. rock&!@rock">
+          <small id="cup-prefix-help">Your League sets the CP limit. Some eligibility rules may need a manual check.</small>
+        </label>
+        <section class="additional-rules" aria-labelledby="additional-rules-title">
+          <div class="label-help-row additional-rules-heading">
+            <h3 id="additional-rules-title">Additional Rules</h3>
+            <button class="info-trigger" type="button" aria-label="Additional Rules information" aria-haspopup="dialog" aria-expanded="false" aria-controls="additional-rules-tooltip" aria-describedby="additional-rules-tooltip" data-context-tooltip-trigger><span aria-hidden="true">ⓘ</span></button>
+            <div id="additional-rules-tooltip" class="context-tooltip" role="dialog" aria-labelledby="additional-rules-tooltip-title" hidden>
+              <h2 id="additional-rules-tooltip-title" class="visually-hidden">Additional Rules help</h2>
+              <p>Exclude Pokémon by name or Pokédex number, or add a Pokémon GO search term as a removable rule chip.</p>
+            </div>
+          </div>
+          <label class="visually-hidden" for="additional-rule-input">Search Pokémon or enter a rule</label>
+          <div class="rule-composer">
+            <input id="additional-rule-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="additional-rule-suggestions" autocomplete="off" spellcheck="false" placeholder="Pokémon name, Pokédex number, or search rule">
+            <button id="add-additional-rule" class="button button-secondary add-rule-button" type="button" aria-label="Add rule">+</button>
+          </div>
+          <div id="additional-rule-suggestions" class="rule-suggestions" role="listbox" aria-label="Pokémon suggestions" hidden></div>
+          <p id="additional-rule-status" class="status" role="status" aria-live="polite"></p>
+          <div id="additional-rule-chips" class="additional-rule-chips" role="list" aria-label="Additional rule chips"></div>
+          <div class="control advanced-expression-control">
+            <div class="label-help-row">
+              <label for="extra-filter">Custom Search Expression</label>
+              <button class="info-trigger" type="button" aria-label="Search syntax and precedence information" aria-haspopup="dialog" aria-expanded="false" aria-controls="raw-expression-tooltip" aria-describedby="raw-expression-tooltip" data-context-tooltip-trigger><span aria-hidden="true">ⓘ</span></button>
+              <div id="raw-expression-tooltip" class="context-tooltip" role="dialog" aria-labelledby="raw-expression-tooltip-title" hidden>
+                <h2 id="raw-expression-tooltip-title" class="visually-hidden">Pokémon GO search syntax</h2>
+                <p>Use <code>&amp;</code> for AND, commas for OR, and <code>!</code> to exclude a term.</p>
+                <p>Example: <code>!shadow&amp;@water</code> or <code>fire,water</code>. AND/OR grouping is preserved when combined.</p>
+              </div>
+            </div>
+            <input id="extra-filter" name="extra-filter" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. !shadow&@water">
+          </div>
+          <p id="advanced-expression-status" class="status" role="status" aria-live="polite"></p>
+          <p class="additional-preview-label">Custom Cup preview</p>
+          <output id="additional-filter-preview" class="additional-filter-preview" aria-live="polite"></output>
+        </section>
+        <p id="custom-cup-editor-error" class="status" role="alert" aria-live="assertive"></p>
+        <div class="custom-cup-editor-actions">
+          <button id="custom-cup-cancel" class="button button-secondary" type="submit" value="cancel">Cancel</button>
+          <button id="custom-cup-apply" class="button button-primary" type="button">Apply Custom Cup</button>
+        </div>
+      </form>
+    </dialog>
 
     <footer>
       <p>Unofficial community tool. Not affiliated with Niantic, Pokémon, Nintendo, or The Pokémon Company.</p>
