@@ -799,6 +799,35 @@ footer p { margin: 0; }
 .footer-links a:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
 .site-version { margin-top: 4px; color: var(--text-subtle); font-size: 0.66rem; }
 .attribution { margin-top: 4px; color: var(--text); font-weight: 650; }
+.pvpoke-attribution { margin-top: 5px; }
+.pvpoke-attribution a { color: var(--text-muted); text-underline-offset: 2px; }
+.pvpoke-attribution a:hover { color: var(--accent); }
+.search-segments { display: grid; gap: 10px; margin-top: 10px; }
+.search-segments[hidden] { display: none; }
+.search-segments-heading { margin: 0; color: var(--text-muted); font-size: 0.82rem; font-weight: 650; }
+.search-segment-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: end; }
+.search-segment-row label { grid-column: 1 / -1; color: var(--text-muted); font-size: 0.76rem; }
+.search-segment-row textarea { width: 100%; min-width: 0; min-height: 52px; resize: vertical; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-alt); color: var(--text); padding: 8px; font: 0.8rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.search-segment-copy { min-height: 42px; }
+.pvpoke-browser { margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12); }
+.pvpoke-browser > summary { min-height: 48px; padding: 14px 16px; color: var(--text-strong); font-weight: 700; cursor: pointer; }
+.pvpoke-browser-content { display: grid; gap: 12px; padding: 0 16px 16px; }
+.pvpoke-data-meta { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 12px; align-items: center; }
+.pvpoke-data-meta p { margin: 0; color: var(--text-muted); font-size: 0.82rem; line-height: 1.4; overflow-wrap: anywhere; }
+#pvpoke-data-version { grid-column: 1 / -1; color: var(--text-subtle); font-size: 0.74rem; }
+.pvpoke-data-meta .button { min-height: 40px; }
+.pvpoke-search-control { display: grid; gap: 6px; color: var(--text-muted); font-size: 0.84rem; }
+.pvpoke-search-control input { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-alt); color: var(--text); padding: 8px 11px; }
+.pvpoke-search-control input:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.pvpoke-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.pvpoke-result, .pvpoke-empty-result { min-width: 0; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-alt); padding: 10px 12px; }
+.pvpoke-result h3 { margin: 0 0 4px; color: var(--text-strong); font-size: 0.92rem; }
+.pvpoke-result p { margin: 3px 0 0; color: var(--text-muted); font-size: 0.75rem; line-height: 1.45; overflow-wrap: anywhere; }
+.pvpoke-result .pvpoke-result-ranking { color: var(--accent); font-weight: 650; }
+.pvpoke-empty-result { grid-column: 1 / -1; color: var(--text-muted); font-size: 0.84rem; }
+.pain-cup-limit-control { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--text); font-weight: 650; }
+.pain-cup-limit-control select { min-height: 38px; border: 1px solid var(--border); border-radius: 7px; background: var(--panel-alt); color: var(--text); padding: 5px 9px; }
+.league-tile.is-disabled { opacity: 0.55; }
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -836,6 +865,14 @@ footer p { margin: 0; }
   .league-name { font-size: 0.86rem; }
   .league-limit { font-size: 0.68rem; }
   .type-leaning-types { grid-template-columns: minmax(0, 1fr); }
+  .search-segment-row { grid-template-columns: minmax(0, 1fr); }
+  .search-segment-row label { grid-column: auto; }
+  .search-segment-copy { justify-self: start; }
+  .pvpoke-data-meta { grid-template-columns: minmax(0, 1fr); }
+  #pvpoke-data-version { grid-column: auto; }
+  .pvpoke-data-meta .button { justify-self: start; }
+  .pvpoke-browser > summary { padding: 12px; }
+  .pvpoke-browser-content { padding: 0 12px 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

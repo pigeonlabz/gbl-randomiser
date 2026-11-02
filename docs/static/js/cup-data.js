@@ -185,6 +185,50 @@
       lockTypes: true,
       lockMoves: true,
       notes: ["Custom preset; it does not represent a verified official cup format."]
+    },
+    {
+      id: "bug-bite",
+      name: "Bug Bite",
+      emoji: "🐛",
+      official: false,
+      requiredLeague: "great",
+      suggestedLeague: "great",
+      search: "bug&@bug&!@normal&!@fire&!@water&!@electric&!@grass&!@ice&!@fighting&!@ground&!@flying&!@psychic&!@ghost&!@dragon&!@dark&!@steel&!@fairy",
+      lockTypes: true,
+      lockMoves: true,
+      manualRules: ["Pokémon must be Bug-type and know at least one Bug-type attack. Bug-, Poison-, and Rock-type attacks are allowed; the negative @type searches exclude every other move type from the currently equipped attacks."],
+      notes: ["This filter encodes the Pokémon typing and all move-type restrictions. Check the Pokémon GO search results in-game before a tournament if the client changes how negated move-type searches work."]
+    },
+    {
+      id: "meta-madness",
+      name: "Meta Madness",
+      emoji: "🌀",
+      official: false,
+      requiredLeague: "great",
+      suggestedLeague: "great",
+      search: "@special&!legendary&!mythical&!ultrabeast",
+      blockedFamilies: ["rarity"],
+      lockTypes: false,
+      lockMoves: false,
+      manualRules: ["At least one equipped attack must be a qualifying Community Day, event-exclusive, or legacy Elite TM move. Return and Frustration do not qualify. Manually verify the equipped attacks."],
+      notes: ["@special is a candidate filter, not an exact eligibility check: it can include Return, Frustration, and other special moves that do not qualify for this cup."]
+    },
+    {
+      id: "pain-cup",
+      name: "Pain Cup",
+      emoji: "📉",
+      official: false,
+      requiredLeague: "great",
+      suggestedLeague: "great",
+      rankingLimit: 100,
+      dynamicFilter: "pvpoke-bottom-rankings",
+      search: "",
+      sourceUrl: "https://pvpoke.com/rankings/all/1500/overall/",
+      blockedFamilies: ["rarity"],
+      lockTypes: true,
+      lockMoves: true,
+      manualRules: ["Uses the bottom 100 (or 250) entries in the cached PvPoke Great League overall ranking snapshot, then removes Legendary, Mythical, and Ultra Beast Pokémon. The ranking revision shown below is the tournament snapshot; keep this page open and record that revision for the full event."],
+      notes: ["Search terms preserve recognized regional and Shadow form distinctions. Forms without a verified Pokémon GO search mapping are listed for manual checking and omitted from the generated search batches."]
     }
   ];
 

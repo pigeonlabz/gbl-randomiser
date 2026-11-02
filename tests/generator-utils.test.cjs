@@ -624,7 +624,7 @@ test("Cup library search indexes names, league, type and custom eligibility meta
 
   assert.deepEqual(matchingIds("hallowee"), ["halloween", "mega-halloween"], "partial cup-name matches exclude unrelated presets");
   assert.deepEqual(matchingIds("HALLOWEE"), ["halloween", "mega-halloween"], "cup names match case-insensitively");
-  assert.deepEqual(matchingIds("ghost"), ["halloween", "mega-halloween", "holiday", "holiday-ultra"]);
+  assert.deepEqual(matchingIds("ghost"), ["halloween", "mega-halloween", "holiday", "holiday-ultra", "bug-bite"]);
   assert.deepEqual(matchingIds("great"), Array.from(cupData.filter((cup) => cup.suggestedLeague === "great"), (cup) => cup.id));
   assert.deepEqual(matchingIds("rock"), ["fossil", "rock-challenge"]);
   assert.deepEqual(matchingIds("@rock"), ["rock-challenge"], "move expressions match the cup restriction and no name-only result");

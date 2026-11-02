@@ -40,6 +40,7 @@
           </div>
         </div>
         <p id="copy-status" class="status" role="status" aria-live="polite"></p>
+        <div id="search-segments" class="search-segments" hidden aria-label="Additional Pokémon GO search batches"></div>
         <p id="generation-note" class="generation-note" role="status" aria-live="polite"></p>
       </section>
 
@@ -310,8 +311,25 @@
       </form>
     </dialog>
 
+    <details id="pvpoke-browser" class="pvpoke-browser">
+      <summary>PvPoke rankings and species lookup</summary>
+      <div class="pvpoke-browser-content">
+        <div class="pvpoke-data-meta">
+          <p id="pvpoke-data-status" role="status" aria-live="polite">Loading the locally cached PvPoke snapshot…</p>
+          <p id="pvpoke-data-version"></p>
+          <button id="pvpoke-refresh" class="button button-secondary" type="button">Load latest snapshot</button>
+        </div>
+        <label class="control pvpoke-search-control" for="pvpoke-search">
+          <span>Find a Pokémon, move, type, or Great League rank</span>
+          <input id="pvpoke-search" type="search" autocomplete="off" placeholder="e.g. #100, Altaria, Dragon Breath">
+        </label>
+        <ul id="pvpoke-results" class="pvpoke-results" aria-live="polite"></ul>
+      </div>
+    </details>
+
     <footer>
       <p>Unofficial community tool. Not affiliated with Niantic, Pokémon, Nintendo, or The Pokémon Company.</p>
+      <p class="pvpoke-attribution">PvPoke data is provided under the MIT License. <a href="https://github.com/pvpoke/pvpoke" target="_blank" rel="noopener noreferrer">Source and attribution</a>.</p>
       <p class="attribution">A PigeonLabs project</p>
       <nav class="footer-links" aria-label="Support and help">
         <a href="https://ko-fi.com/pigeonlabs" target="_blank" rel="noopener noreferrer">Support the creator</a>
@@ -325,6 +343,7 @@
   <script src="./static/js/species-data.js"></script>
   <script src="./static/js/cup-data.js"></script>
   <script src="./static/js/generator-utils.js"></script>
+  <script src="./static/js/pvpoke-data.js"></script>
   <script src="./static/js/app.js"></script>
 </body>
 </html>
