@@ -1,6 +1,5 @@
 (function (root) {
   const SCHEMA_VERSION = 1;
-  const SEARCH_BATCH_LIMIT = 200;
   const TYPES = new Set([
     "normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground",
     "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"
@@ -12,7 +11,6 @@
     hisuian: "hisui", hisui: "hisui",
     paldean: "paldea", paldea: "paldea"
   });
-  const SNAPSHOT_KEY = "gblr.pvpoke.snapshot.v1";
 
   function asArray(value) {
     return Array.isArray(value) ? value : [];
@@ -142,150 +140,92 @@
     return matches.slice(0, take);
   }
 
+  function getFormLabel(species, sameDexCount) {
+    const name = String(species && species.name || "");
+    const inName = name.match(/\(([^)]+)\)/g);
+    if (inName) return inName.map((part) => part.slice(1, -1)).join(", ");
+    const regionalName = /^(Alolan|Galarian|Hisuian|Paldean)\s+/i.exec(name);
+    if (regionalName) return regionalName[1];
+    const tags = asArray(species && species.tags).map((tag) => String(tag).toLowerCase());
+    const speciesId = String(species && species.id || "").toLowerCase();
+    const idParts = speciesId.split("_");
+    const knownForm = idParts.find((part) => REGION_FORMS[part] || ["shadow", "purified"].includes(part));
+    if (knownForm) return knownForm;
+    if (tags.includes("shadow") || tags.includes("purified")) return tags.find((tag) => tag === "shadow" || tag === "purified");
+    if (speciesId === normalize(name).replace(/ /g, "_")) return "Standard form";
+    return sameDexCount > 1 ? "Form listed separately by PvPoke" : "Standard form";
+  }
+
   function getBottomRanked(dataset, limit) {
-    const size = Math.max(1, Math.min(250, Number(limit) || 100));
+    const size = Number(limit) === 250 ? 250 : 100;
     const rankings = getRankings(dataset, 1500);
     const indexes = indexDataset(dataset);
     const windowRows = rankings.slice(Math.max(0, rankings.length - size));
+    const byDex = new Map();
+    asArray(dataset && dataset.species).forEach((species) => {
+      const key = String(species.dex);
+      if (!byDex.has(key)) byDex.set(key, []);
+      byDex.get(key).push(species);
+    });
+
     const banned = [];
-    const selected = [];
+    const eligiblePokemon = [];
     const unmapped = [];
     windowRows.forEach((ranking) => {
       const species = indexes.speciesById.get(ranking.id);
       if (!species) {
-        unmapped.push({ ranking, reason: "No exact speciesId match exists in the cached Game Master." });
+        unmapped.push({ id: ranking.id, name: ranking.name, rank: ranking.rank, reason: "No exact speciesId match exists in the cached Game Master." });
         return;
       }
-      const categories = asArray(species.tags).map((tag) => String(tag).toLowerCase());
+      const categories = asArray(species.tags).map((tag) => String(tag).toLowerCase().replace(/[^a-z]/g, ""));
       const blockedCategory = categories.find((category) => LEGENDARY_TAGS.has(category));
       if (blockedCategory) {
-        banned.push({ ranking, species, category: blockedCategory });
+        banned.push({ id: species.id, name: species.name, dex: species.dex, rank: ranking.rank, category: blockedCategory });
         return;
       }
-      selected.push({ ranking, species });
+      eligiblePokemon.push({
+        id: species.id,
+        name: species.name,
+        form: getFormLabel(species, (byDex.get(String(species.dex)) || []).length),
+        dex: species.dex,
+        rank: ranking.rank,
+        types: asArray(species.types).slice()
+      });
     });
 
-    const allByDex = new Map();
-    asArray(dataset && dataset.species).forEach((species) => {
-      const key = String(species.dex);
-      if (!allByDex.has(key)) allByDex.set(key, []);
-      allByDex.get(key).push(species);
-    });
-    const terms = [];
-    const ambiguous = [];
-    selected.forEach(({ ranking, species }) => {
-      const mapping = toGoSearchTerm(species, allByDex.get(String(species.dex)) || []);
-      if (mapping.term) {
-        terms.push({ id: species.id, name: species.name, dex: species.dex, rank: ranking.rank, term: mapping.term });
-      } else {
-        ambiguous.push({ id: species.id, name: species.name, dex: species.dex, rank: ranking.rank, reason: mapping.reason });
-      }
-    });
-    const dedupedTerms = [];
-    const seen = new Set();
-    terms.forEach((item) => {
-      if (seen.has(item.term)) return;
-      seen.add(item.term);
-      dedupedTerms.push(item);
-    });
-    const branches = dedupedTerms.map((item) => "!legendary&!mythical&!ultrabeast&" + item.term);
-    const batches = packSearchBranches(branches, SEARCH_BATCH_LIMIT);
+    const dexes = Array.from(new Set(eligiblePokemon.map((species) => String(species.dex))))
+      .filter((dex) => /^\d+$/.test(dex))
+      .sort((first, second) => Number(first) - Number(second));
     return {
       requested: size,
       rankingWindowStart: windowRows.length ? windowRows[0].rank : null,
       rankingWindowEnd: windowRows.length ? windowRows[windowRows.length - 1].rank : null,
       candidates: windowRows.length,
-      eligible: selected.length,
-      mapped: dedupedTerms.length,
+      eligible: eligiblePokemon.length,
+      eligiblePokemon,
       banned,
       unmapped,
-      ambiguous,
-      terms: dedupedTerms,
-      branches,
-      batches,
-      search: branches.join(","),
+      dexes,
+      candidateCount: dexes.length,
+      candidateSearch: dexes.join(","),
+      approximate: true,
       snapshot: dataset && dataset.meta ? dataset.meta : null
     };
   }
 
-  function toGoSearchTerm(species, sameDexSpecies) {
-    const dex = String(species.dex);
-    const ids = String(species.id || "").toLowerCase().split("_");
-    const tags = asArray(species.tags).map((tag) => String(tag).toLowerCase());
-    const name = String(species.name || "");
-    const regionTerms = [];
-    const formTokens = [];
-    ids.forEach((token) => {
-      if (REGION_FORMS[token]) regionTerms.push(REGION_FORMS[token]);
-      else if (["shadow", "purified"].includes(token)) formTokens.push(token);
+  function buildPainCupSearch(selection, cpSearch, additionalGroups) {
+    const dexes = Array.from(new Set(asArray(selection && selection.dexes).map((dex) => String(dex).trim()).filter((dex) => /^\d+$/.test(dex))))
+      .sort((first, second) => Number(first) - Number(second));
+    if (!dexes.length) return { valid: false, search: "", error: "No eligible Pokédex numbers are available for this ranking window." };
+    const groups = [dexes.join(","), String(cpSearch || "cp-1500").trim(), "!legendary", "!mythical", "!ultrabeast"];
+    asArray(additionalGroups).forEach((group) => {
+      const value = String(group || "").trim();
+      if (value) groups.push(value);
     });
-    const paren = /\(([^)]+)\)/g;
-    let match;
-    while ((match = paren.exec(name))) {
-      const labels = normalize(match[1]).split(/\s+/).filter(Boolean);
-      for (const label of labels) {
-        if (REGION_FORMS[label]) regionTerms.push(REGION_FORMS[label]);
-        else if (["shadow", "purified"].includes(label)) formTokens.push(label);
-        else return { term: "", reason: "The form label “" + match[1] + "” has no verified Pokémon GO search mapping." };
-      }
+    if (groups.some((group) => !group || group.split(/[&,]/).some((term) => !term.trim() || term.trim() === "!"))) {
+      return { valid: false, search: "", error: "A Pokémon GO search group is empty or incomplete." };
     }
-    if (tags.includes("shadow") && !formTokens.includes("shadow")) formTokens.push("shadow");
-    if (tags.includes("purified") && !formTokens.includes("purified")) formTokens.push("purified");
-    const qualifiers = Array.from(new Set(regionTerms.concat(formTokens)));
-    const knownVariantIds = new Set(["shadow", "purified", "alolan", "alola", "galarian", "galar", "hisuian", "hisui", "paldean", "paldea"]);
-    const baseSlug = normalize(name).replace(/ /g, "_");
-    const hasUnrecognizedVariant = sameDexSpecies.length > 1 && !qualifiers.length &&
-      String(species.id || "").toLowerCase() !== baseSlug;
-    if (hasUnrecognizedVariant) return { term: "", reason: "The PvPoke identifier contains an unverified form distinction." };
-
-    const sameDexUnmapped = sameDexSpecies.filter((candidate) => {
-      if (candidate.id === species.id) return false;
-      const candidateIds = String(candidate.id || "").toLowerCase().split("_");
-      const candidateTags = asArray(candidate.tags).map((tag) => String(tag).toLowerCase());
-      const candidateNameMatches = /\(([^)]+)\)/.exec(String(candidate.name || ""));
-      const candidateQualifiers = candidateIds.filter((token) => knownVariantIds.has(token));
-      if (candidateTags.some((tag) => ["shadow", "purified"].includes(tag)) && !candidateQualifiers.length) candidateQualifiers.push(candidateTags.find((tag) => ["shadow", "purified"].includes(tag)));
-      if (candidateNameMatches && !candidateQualifiers.length) {
-        const label = normalize(candidateNameMatches[1]).replace(/ /g, "");
-        if (!REGION_FORMS[label] && !["shadow", "purified"].includes(label)) return true;
-      }
-      const candidateBaseSlug = normalize(candidate.name).replace(/ /g, "_");
-      return candidateQualifiers.length === 0 && String(candidate.id || "").toLowerCase() !== candidateBaseSlug;
-    });
-    if (sameDexUnmapped.length) return { term: "", reason: "Another form shares this Pokédex number and cannot be separated with a verified search term." };
-
-    const excluded = [];
-    const presentQualifiers = new Set();
-    sameDexSpecies.forEach((candidate) => {
-      const candidateIds = String(candidate.id || "").toLowerCase().split("_");
-      const candidateTags = asArray(candidate.tags).map((tag) => String(tag).toLowerCase());
-      candidateIds.forEach((token) => {
-        if (REGION_FORMS[token]) presentQualifiers.add(REGION_FORMS[token]);
-        if (["shadow", "purified"].includes(token)) presentQualifiers.add(token);
-      });
-      candidateTags.filter((tag) => ["shadow", "purified"].includes(tag)).forEach((tag) => presentQualifiers.add(tag));
-    });
-    Array.from(presentQualifiers).sort().forEach((qualifier) => { if (!qualifiers.includes(qualifier)) excluded.push("!" + qualifier); });
-    const queryTerms = [dex].concat(qualifiers, excluded);
-    return { term: queryTerms.join("&"), reason: "" };
-  }
-
-  function packSearchBranches(branches, maxLength) {
-    const limit = Math.max(1, Number(maxLength) || SEARCH_BATCH_LIMIT);
-    const batches = [];
-    let current = "";
-    for (const branch of branches) {
-      if (branch.length > limit) return { valid: false, batches: [], error: "A single Pokémon GO search clause exceeds the " + limit + " character batch limit." };
-      const candidate = current ? current + "," + branch : branch;
-      if (candidate.length > limit) {
-        batches.push(current);
-        current = branch;
-      } else {
-        current = candidate;
-      }
-    }
-    if (current) batches.push(current);
-    return { valid: true, batches, error: "" };
+    return { valid: true, search: groups.join("&"), groups, error: "" };
   }
 
   function makeFallbackDataset(speciesRows) {
@@ -300,19 +240,8 @@
 
   function load(datasetUrl, options) {
     const settings = options || {};
-    const storage = settings.storage || (root && root.sessionStorage);
     const fetcher = settings.fetch || (root && root.fetch ? root.fetch.bind(root) : null);
     if (!fetcher) return Promise.resolve({ dataset: makeFallbackDataset(root && root.GBL_SPECIES_DATA), source: "fallback", warning: "PvPoke data could not be loaded in this browser." });
-    try {
-      const cached = storage && storage.getItem(SNAPSHOT_KEY);
-      if (cached) {
-        const dataset = JSON.parse(cached);
-        const validation = validateDataset(dataset);
-        if (validation.valid) return Promise.resolve({ dataset, source: "tab snapshot", warning: "" });
-      }
-    } catch (error) {
-      // Browser storage can be disabled or full; the local JSON fetch remains available.
-    }
     return fetcher(datasetUrl || "./static/data/pvpoke-v1.json", { cache: "no-store" })
       .then((response) => {
         if (!response.ok) throw new Error("PvPoke dataset request failed (" + response.status + ").");
@@ -321,7 +250,6 @@
       .then((dataset) => {
         const validation = validateDataset(dataset);
         if (!validation.valid) throw new Error(validation.errors.join(" "));
-        try { if (storage) storage.setItem(SNAPSHOT_KEY, JSON.stringify(dataset)); } catch (error) { /* Keep the validated data in memory for this page. */ }
         return { dataset, source: "local snapshot", warning: "" };
       })
       .catch((error) => ({
@@ -331,26 +259,8 @@
       }));
   }
 
-  function clearPinnedSnapshot(storage) {
-    try { (storage || (root && root.sessionStorage)).removeItem(SNAPSHOT_KEY); } catch (error) { /* The next page load will still use the tab's in-memory data. */ }
-  }
-
-  function pinDataset(dataset, storage) {
-    const validation = validateDataset(dataset);
-    if (!validation.valid) return false;
-    try {
-      const target = storage || (root && root.sessionStorage);
-      if (!target) return false;
-      target.setItem(SNAPSHOT_KEY, JSON.stringify(dataset));
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
-
   const api = Object.freeze({
     SCHEMA_VERSION,
-    SEARCH_BATCH_LIMIT,
     validateDataset,
     indexDataset,
     getSpecies,
@@ -359,12 +269,9 @@
     getMetaMadnessCandidates,
     searchSpecies,
     getBottomRanked,
-    toGoSearchTerm,
-    packSearchBranches,
+    buildPainCupSearch,
     makeFallbackDataset,
-    load,
-    clearPinnedSnapshot,
-    pinDataset
+    load
   });
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.GBL_PVPOKE_DATA = api;

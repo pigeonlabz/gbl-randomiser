@@ -210,8 +210,8 @@
       blockedFamilies: ["rarity"],
       lockTypes: false,
       lockMoves: false,
-      manualRules: ["At least one equipped attack must be a qualifying Community Day, event-exclusive, or legacy Elite TM move. Return and Frustration do not qualify. Manually verify the equipped attacks."],
-      notes: ["@special is a candidate filter, not an exact eligibility check: it can include Return, Frustration, and other special moves that do not qualify for this cup."]
+      manualRules: ["At least one equipped attack must be a qualifying Community Day, event-exclusive, or legacy Elite TM move. Return and Frustration alone do not qualify, but either may be equipped alongside a qualifying move."],
+      notes: ["@special is a candidate filter, not an exact eligibility check: it includes Return and Frustration and does not identify every qualifying event move."]
     },
     {
       id: "pain-cup",
@@ -227,8 +227,7 @@
       blockedFamilies: ["rarity"],
       lockTypes: true,
       lockMoves: true,
-      manualRules: ["Uses the bottom 100 (or 250) entries in the cached PvPoke Great League overall ranking snapshot, then removes Legendary, Mythical, and Ultra Beast Pokémon. The ranking revision shown below is the tournament snapshot; keep this page open and record that revision for the full event."],
-      notes: ["Search terms preserve recognized regional and Shadow form distinctions. Forms without a verified Pokémon GO search mapping are listed for manual checking and omitted from the generated search batches."]
+      manualRules: ["Bottom 100 (or 250) ordered ranking rows, then remove Legendary, Mythical, and Ultra Beast entries. The cutoff is taken before exclusions."]
     }
   ];
 

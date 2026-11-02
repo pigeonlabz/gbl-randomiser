@@ -2,7 +2,8 @@
   color-scheme: dark;
   --theme-bg-image: none;
   --theme-bg-position: 8% 14%, 76% 24%, 42% 82%;
-  --theme-bg-opacity: 0.08;
+  --theme-bg-size: clamp(190px, 24vw, 330px) clamp(190px, 24vw, 330px), clamp(170px, 21vw, 295px) clamp(170px, 21vw, 295px), clamp(160px, 20vw, 275px) clamp(160px, 20vw, 275px);
+  --theme-bg-opacity: 0.07;
   --bg: #17111e;
   --bg-secondary: #1d1425;
   --panel: #24192e;
@@ -453,7 +454,7 @@ body {
 
 button, select, textarea, input { font: inherit; }
 body { position: relative; isolation: isolate; }
-body::before { position: fixed; z-index: 0; inset: 0; background-image: var(--theme-bg-image); background-repeat: repeat; background-size: clamp(132px, 23vw, 180px); background-position: var(--theme-bg-position); opacity: var(--theme-bg-opacity); pointer-events: none; content: ""; }
+body::before { position: fixed; z-index: 0; inset: 0; background-image: var(--theme-bg-image); background-repeat: no-repeat; background-size: var(--theme-bg-size); background-position: var(--theme-bg-position); opacity: var(--theme-bg-opacity); pointer-events: none; content: ""; }
 .shell { position: relative; z-index: 1; }
 
 .shell {
@@ -481,8 +482,8 @@ h1 {
   inset: 1px;
   border-radius: inherit;
   background-image: var(--theme-bg-image);
-  background-repeat: repeat;
-  background-size: clamp(132px, 23vw, 180px);
+  background-repeat: no-repeat;
+  background-size: var(--theme-bg-size);
   background-position: var(--theme-bg-position);
   opacity: 0.1;
   pointer-events: none;
@@ -802,31 +803,27 @@ footer p { margin: 0; }
 .pvpoke-attribution { margin-top: 5px; }
 .pvpoke-attribution a { color: var(--text-muted); text-underline-offset: 2px; }
 .pvpoke-attribution a:hover { color: var(--accent); }
-.search-segments { display: grid; gap: 10px; margin-top: 10px; }
-.search-segments[hidden] { display: none; }
-.search-segments-heading { margin: 0; color: var(--text-muted); font-size: 0.82rem; font-weight: 650; }
-.search-segment-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: end; }
-.search-segment-row label { grid-column: 1 / -1; color: var(--text-muted); font-size: 0.76rem; }
-.search-segment-row textarea { width: 100%; min-width: 0; min-height: 52px; resize: vertical; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-alt); color: var(--text); padding: 8px; font: 0.8rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; }
-.search-segment-copy { min-height: 42px; }
 .pvpoke-browser { margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12); }
-.pvpoke-browser > summary { min-height: 48px; padding: 14px 16px; color: var(--text-strong); font-weight: 700; cursor: pointer; }
-.pvpoke-browser-content { display: grid; gap: 12px; padding: 0 16px 16px; }
-.pvpoke-data-meta { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 12px; align-items: center; }
-.pvpoke-data-meta p { margin: 0; color: var(--text-muted); font-size: 0.82rem; line-height: 1.4; overflow-wrap: anywhere; }
-#pvpoke-data-version { grid-column: 1 / -1; color: var(--text-subtle); font-size: 0.74rem; }
-.pvpoke-data-meta .button { min-height: 40px; }
+.pvpoke-browser > summary { min-height: 42px; padding: 10px 14px; color: var(--text-strong); font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+.pvpoke-browser-content { display: grid; gap: 8px; padding: 0 12px 12px; }
 .pvpoke-search-control { display: grid; gap: 6px; color: var(--text-muted); font-size: 0.84rem; }
 .pvpoke-search-control input { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-alt); color: var(--text); padding: 8px 11px; }
 .pvpoke-search-control input:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-.pvpoke-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
-.pvpoke-result, .pvpoke-empty-result { min-width: 0; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-alt); padding: 10px 12px; }
-.pvpoke-result h3 { margin: 0 0 4px; color: var(--text-strong); font-size: 0.92rem; }
-.pvpoke-result p { margin: 3px 0 0; color: var(--text-muted); font-size: 0.75rem; line-height: 1.45; overflow-wrap: anywhere; }
+.pvpoke-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.pvpoke-result, .pvpoke-empty-result { min-width: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-alt); padding: 8px 10px; }
+.pvpoke-result h3 { margin: 0 0 3px; color: var(--text-strong); font-size: 0.86rem; }
+.pvpoke-result p { margin: 2px 0 0; color: var(--text-muted); font-size: 0.72rem; line-height: 1.4; overflow-wrap: anywhere; }
 .pvpoke-result .pvpoke-result-ranking { color: var(--accent); font-weight: 650; }
 .pvpoke-empty-result { grid-column: 1 / -1; color: var(--text-muted); font-size: 0.84rem; }
 .pain-cup-limit-control { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--text); font-weight: 650; }
 .pain-cup-limit-control select { min-height: 38px; border: 1px solid var(--border); border-radius: 7px; background: var(--panel-alt); color: var(--text); padding: 5px 9px; }
+.pain-cup-eligible-list { margin-top: 4px; border: 1px solid var(--border); border-radius: 8px; background: color-mix(in srgb, var(--panel-alt) 72%, transparent); }
+.pain-cup-eligible-list > summary { padding: 8px 10px; color: var(--text-strong); font-size: 0.82rem; font-weight: 650; cursor: pointer; }
+.pain-cup-eligible-list ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 0 12px; max-height: 45vh; overflow: auto; margin: 0; padding: 0 10px 8px; list-style: none; }
+.pain-cup-eligible-list li { display: grid; gap: 1px; min-width: 0; border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); padding: 5px 0; }
+.pain-cup-pokemon-name { color: var(--text); font-size: 0.78rem; font-weight: 600; overflow-wrap: anywhere; }
+.pain-cup-pokemon-meta { color: var(--text-subtle); font-size: 0.68rem; }
+.pain-cup-unmapped { color: var(--text-muted); font-size: 0.75rem; }
 .league-tile.is-disabled { opacity: 0.55; }
 .visually-hidden {
   position: absolute;
@@ -865,14 +862,8 @@ footer p { margin: 0; }
   .league-name { font-size: 0.86rem; }
   .league-limit { font-size: 0.68rem; }
   .type-leaning-types { grid-template-columns: minmax(0, 1fr); }
-  .search-segment-row { grid-template-columns: minmax(0, 1fr); }
-  .search-segment-row label { grid-column: auto; }
-  .search-segment-copy { justify-self: start; }
-  .pvpoke-data-meta { grid-template-columns: minmax(0, 1fr); }
-  #pvpoke-data-version { grid-column: auto; }
-  .pvpoke-data-meta .button { justify-self: start; }
-  .pvpoke-browser > summary { padding: 12px; }
-  .pvpoke-browser-content { padding: 0 12px 12px; }
+  .pvpoke-browser > summary { padding: 9px 11px; }
+  .pain-cup-eligible-list ul { grid-template-columns: minmax(0, 1fr); max-height: 50vh; }
 }
 
 @media (prefers-reduced-motion: reduce) {

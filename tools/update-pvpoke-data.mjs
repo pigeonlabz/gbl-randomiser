@@ -4,7 +4,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA_DIRECTORY = path.join(PROJECT_ROOT, "docs", "static", "data");
-const GITHUB_API = "https://api.github.com/repos/pvpoke/pvpoke/commits/master";
 const RAW_ROOT = "https://raw.githubusercontent.com/pvpoke/pvpoke/";
 const ALLOWED_TYPES = new Set([
   "normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground",
@@ -175,11 +174,9 @@ export async function refreshPvpokeData(options = {}) {
   const fetcher = options.fetch || globalThis.fetch;
   const outputDirectory = options.outputDirectory || DATA_DIRECTORY;
   const now = options.now || new Date();
+  const sourceRevision = String(options.sourceRevision || "");
   if (typeof fetcher !== "function") throw new Error("This updater requires a Node.js runtime with fetch support.");
-  const headers = { "User-Agent": "gbl-randomiser-pvpoke-data-refresh", "Accept": "application/vnd.github+json" };
-  const commit = await readJson(await fetcher(GITHUB_API, { headers }), "PvPoke source revision");
-  const sourceRevision = String(commit && commit.sha || "");
-  if (!/^[a-f0-9]{40}$/i.test(sourceRevision)) throw new Error("GitHub did not return a full PvPoke source commit SHA.");
+  if (!/^[a-f0-9]{40}$/i.test(sourceRevision)) throw new Error("Pass a full PvPoke Git commit SHA; the updater does not choose or poll for a revision.");
   const root = RAW_ROOT + sourceRevision + "/src/data/";
   const [gamemaster, rankingRows, licenseText] = await Promise.all([
     fetcher(root + "gamemaster.min.json").then((response) => readJson(response, "PvPoke Game Master")),
@@ -211,10 +208,10 @@ export async function refreshPvpokeData(options = {}) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  refreshPvpokeData().then((result) => {
-    process.stdout.write("Updated PvPoke snapshot at " + result.snapshot.meta.sourceRevision + " (" + result.snapshot.species.length + " species, " + result.snapshot.moves.length + " moves, " + result.snapshot.rankings.length + " rankings, " + result.bytes + " bytes).\n");
+  refreshPvpokeData({ sourceRevision: process.argv[2] }).then((result) => {
+    process.stdout.write("Imported pinned PvPoke snapshot " + result.snapshot.meta.sourceRevision + " (" + result.snapshot.species.length + " species, " + result.snapshot.moves.length + " moves, " + result.snapshot.rankings.length + " rankings, " + result.bytes + " bytes).\n");
   }).catch((error) => {
-    process.stderr.write("PvPoke data refresh failed; the previous validated snapshot was left untouched. " + error.message + "\n");
+    process.stderr.write("Manual PvPoke import failed; the previous snapshot was left untouched. " + error.message + "\n");
     process.exitCode = 1;
   });
 }

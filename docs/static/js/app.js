@@ -113,7 +113,6 @@
   const additionalFamilyWarning = document.getElementById("additional-family-warning");
   const additionalFamilyState = document.getElementById("additional-family-state");
   const searchOutput = document.getElementById("search-output");
-  const searchSegments = document.getElementById("search-segments");
   const ruleList = document.getElementById("rule-list");
   const copyButton = document.getElementById("copy-filter");
   const copyStatus = document.getElementById("copy-status");
@@ -127,9 +126,7 @@
   const customCupEditorError = document.getElementById("custom-cup-editor-error");
   const pvpokeSearchInput = document.getElementById("pvpoke-search");
   const pvpokeResults = document.getElementById("pvpoke-results");
-  const pvpokeDataStatus = document.getElementById("pvpoke-data-status");
-  const pvpokeDataVersion = document.getElementById("pvpoke-data-version");
-  const pvpokeRefreshButton = document.getElementById("pvpoke-refresh");
+  const pvpokeSnapshotLabel = document.getElementById("pvpoke-snapshot-label");
 
   const familyControlElements = new Map();
   const familyLimitElements = new Map();
@@ -150,7 +147,6 @@
   let activeSuggestionIndex = -1;
   let currentCup = null;
   let activePvPokeDataset = PVPOKE ? PVPOKE.makeFallbackDataset(window.GBL_SPECIES_DATA || []) : null;
-  let pvPokeLoadResult = { source: "fallback", warning: "PvPoke data access is unavailable." };
   let painCupLimit = 100;
   let currentPainCupData = null;
   let forcedLeagueId = "";
@@ -357,7 +353,7 @@
     const selectedCup = cupForSelection();
     if (selectedCup && selectedCup.dynamicFilter === "pvpoke-bottom-rankings" && PVPOKE) {
       currentPainCupData = PVPOKE.getBottomRanked(activePvPokeDataset, painCupLimit);
-      return currentPainCupData.batches.valid ? currentPainCupData.search : "";
+      return currentPainCupData.candidateSearch || "";
     }
     const value = cupSelect.value === "custom" ? customCupSettings.prefix : cupSelect.value ? cupPrefixInput.value : "";
     if (!value) return "";
@@ -1494,9 +1490,6 @@
       notes.push("Generated " + currentState.selected.length + " of " + currentState.requestedCount + " requested rules with the enabled families.");
     }
     if (currentState.searchError) notes.push(currentState.searchError);
-    if (currentState.cupDefinition && currentState.cupDefinition.dynamicFilter === "pvpoke-bottom-rankings" && currentState.searchSegments.length > 1) {
-      notes.push("Pain Cup is split into " + currentState.searchSegments.length + " paste-ready searches, each no longer than " + PVPOKE.SEARCH_BATCH_LIMIT + " characters. Use every batch.");
-    }
     if (configPending) notes.push("Settings changed. Generate to apply.");
     generationNote.textContent = notes.join(" ");
   }
@@ -1526,7 +1519,6 @@
         const compiled = buildSearchOutput([cpConstraint.search, cupPrefix]
           .concat(additionalRuleExpressions(), otherRules.map((rule) => rule.search), currentState.disqualifiers.map((rule) => rule.search)), cupForSelection());
         currentState.search = compiled.search;
-        currentState.searchSegments = compiled.segments;
         currentState.searchError = compiled.error;
         currentState.painCupData = currentPainCupData;
         additionalFilterPreview.textContent = currentState.search || "Add a rule or generate a filter to preview it here.";
@@ -1553,22 +1545,18 @@
   }
 
   function buildSearchOutput(parts, cup) {
-    let fullSearch;
-    try {
-      fullSearch = GENERATOR_UTILS.combineSearch(parts);
-    } catch (error) {
-      return { search: "", segments: [], error: error.message };
+    if (!cup || cup.dynamicFilter !== "pvpoke-bottom-rankings") {
+      try { return { search: GENERATOR_UTILS.combineSearch(parts), error: "" }; }
+      catch (error) { return { search: "", error: error.message }; }
     }
-    if (!cup || cup.dynamicFilter !== "pvpoke-bottom-rankings") return { search: fullSearch, segments: [], error: "" };
-    if (!currentPainCupData || !currentPainCupData.batches.valid || !currentPainCupData.mapped) {
-      return { search: "", segments: [], error: "Pain Cup needs a valid local PvPoke ranking snapshot and at least one safely mapped Pokémon." };
+    if (!currentPainCupData || !currentPainCupData.candidateCount) {
+      return { search: "", error: "Pain Cup has no eligible Pokédex numbers in this ranking window." };
     }
-    const parsed = GENERATOR_UTILS.validateSearchExpression(fullSearch);
-    if (!parsed.valid) return { search: "", segments: [], error: parsed.error };
-    const branches = parsed.alternatives.map((terms) => terms.join("&"));
-    const packed = PVPOKE.packSearchBranches(branches, PVPOKE.SEARCH_BATCH_LIMIT);
-    if (!packed.valid) return { search: "", segments: [], error: packed.error };
-    return { search: packed.batches[0] || "", segments: packed.batches, error: "" };
+    const constraints = parts.filter((part) => part && part !== currentPainCupData.candidateSearch);
+    const cpSearch = constraints.find((part) => /^!?cp(?:$|[-\d])/i.test(part)) || "cp-1500";
+    const additionalGroups = constraints.filter((part) => part !== cpSearch);
+    const result = PVPOKE.buildPainCupSearch(currentPainCupData, cpSearch, additionalGroups);
+    return { search: result.search, error: result.error };
   }
 
   function cpRangeDescription(range) {
@@ -1596,13 +1584,12 @@
     const extraFilter = getExtraFilter();
     const selectedCup = cupForSelection();
     if (selectedCup && selectedCup.dynamicFilter === "pvpoke-bottom-rankings" &&
-        (!currentPainCupData || !currentPainCupData.batches.valid || !currentPainCupData.mapped)) {
-      generationNote.textContent = "Pain Cup needs a valid local PvPoke ranking snapshot and at least one safely mapped Pokémon.";
+        (!currentPainCupData || !currentPainCupData.candidateCount)) {
+      generationNote.textContent = "Pain Cup has no eligible Pokédex numbers in this ranking window.";
       searchOutput.value = "";
-      searchSegments.hidden = true;
       return;
     }
-    let compiledSearch = { search: "", segments: [], error: "" };
+    let compiledSearch = { search: "", error: "" };
 
     for (let attempt = 0; attempt < (includeMutators ? 30 : 1); attempt += 1) {
       selected = includeMutators ? chooseSelection(profile, leagueConstraint, requestedCount, pool) : [];
@@ -1617,7 +1604,7 @@
         compiledSearch = buildSearchOutput(parts, selectedCup);
         if (compiledSearch.error) throw new Error(compiledSearch.error);
         search = compiledSearch.search;
-        searchComparison = compiledSearch.segments.length ? compiledSearch.segments.join("\n") : search;
+        searchComparison = search;
         compositionError = null;
       } catch (error) {
         compositionError = error;
@@ -1644,7 +1631,6 @@
       cupName: getCurrentCupName(),
       cupDefinition: selectedCup,
       extraFilter: extraFilter,
-      searchSegments: compiledSearch.segments,
       searchError: compiledSearch.error,
       painCupData: currentPainCupData,
       rankingLimit: painCupLimit,
@@ -1680,7 +1666,7 @@
     if (!cup) {
       status.textContent = "Custom Cup search filter. This is not a verified official Cup format.";
     } else if (cup.dynamicFilter === "pvpoke-bottom-rankings") {
-      status.textContent = "Custom ranking format · Great League overall ranking snapshot.";
+      status.textContent = "Great League · PvPoke overall rankings.";
     } else if (!cup.official) {
       status.textContent = "Custom preset · not a verified official Cup format.";
     } else if (cup.officialLeague === selectedLeagueId()) {
@@ -1713,36 +1699,47 @@
       selectorLabel.appendChild(selector);
       cupFormatInfo.appendChild(selectorLabel);
       currentPainCupData = PVPOKE ? PVPOKE.getBottomRanked(activePvPokeDataset, painCupLimit) : null;
-      const snapshot = currentPainCupData && currentPainCupData.snapshot;
-      if (snapshot && snapshot.sourceRevision && snapshot.sourceRevision !== "fallback") {
-        const snapshotNote = document.createElement("p");
-        snapshotNote.textContent = "Pinned snapshot: " + snapshot.sourceRevision.slice(0, 12) +
-          " · upstream data " + (snapshot.upstreamTimestamp || snapshot.updatedAt || "date unavailable") +
-          ". This tab keeps using this revision for the tournament.";
-        cupFormatInfo.appendChild(snapshotNote);
-      }
-      if (!currentPainCupData || !currentPainCupData.batches.valid || !currentPainCupData.mapped) {
+      if (!currentPainCupData || !currentPainCupData.candidateCount) {
         const unavailable = document.createElement("p");
         unavailable.className = "cup-format-error";
-        unavailable.textContent = "A complete local PvPoke ranking snapshot is not available, so Pain Cup cannot generate an eligible search yet.";
+        unavailable.textContent = "No eligible Pokémon are available in this local ranking window.";
         cupFormatInfo.appendChild(unavailable);
       } else {
         const summary = document.createElement("p");
-        summary.textContent = currentPainCupData.mapped + " mapped Pokémon from " + currentPainCupData.candidates +
-          " bottom-ranked entries · " + currentPainCupData.batches.batches.length + " paste-ready search batch" +
-          (currentPainCupData.batches.batches.length === 1 ? "" : "es") + ".";
+        const rankRange = currentPainCupData.rankingWindowStart && currentPainCupData.rankingWindowEnd
+          ? " (ranks " + currentPainCupData.rankingWindowStart + "–" + currentPainCupData.rankingWindowEnd + ")" : "";
+        summary.textContent = "Bottom " + currentPainCupData.candidates + " entries" + rankRange + " · " +
+          currentPainCupData.eligible + " eligible after rarity exclusions · " + currentPainCupData.candidateCount + " Pokédex candidates.";
         cupFormatInfo.appendChild(summary);
-        const mappingWarnings = currentPainCupData.ambiguous.length + currentPainCupData.unmapped.length;
-        if (mappingWarnings) {
-          const warning = document.createElement("p");
-          warning.className = "cup-manual-rules";
-          const examples = currentPainCupData.ambiguous.concat(currentPainCupData.unmapped).slice(0, 5)
-            .map((entry) => entry.name || entry.ranking && entry.ranking.name).filter(Boolean);
-          warning.textContent = mappingWarnings + " ranked form" + (mappingWarnings === 1 ? " needs" : "s need") +
-            " manual Pokémon GO search verification and were left out of the copyable batches" +
-            (examples.length ? ": " + examples.join(", ") + (mappingWarnings > examples.length ? ", …" : "") : ".");
-          cupFormatInfo.appendChild(warning);
-        }
+        const details = document.createElement("details");
+        details.className = "pain-cup-eligible-list";
+        const listLabel = document.createElement("summary");
+        listLabel.textContent = "Eligible Pokémon and forms (" + currentPainCupData.eligiblePokemon.length + ")";
+        details.appendChild(listLabel);
+        const list = document.createElement("ul");
+        currentPainCupData.eligiblePokemon.forEach((pokemon) => {
+          const item = document.createElement("li");
+          const name = document.createElement("span");
+          name.className = "pain-cup-pokemon-name";
+          name.textContent = pokemon.name;
+          const meta = document.createElement("small");
+          meta.className = "pain-cup-pokemon-meta";
+          meta.textContent = pokemon.form + " · #" + pokemon.dex + " · rank " + pokemon.rank;
+          item.append(name, meta);
+          list.appendChild(item);
+        });
+        currentPainCupData.unmapped.forEach((pokemon) => {
+          const item = document.createElement("li");
+          item.className = "pain-cup-unmapped";
+          item.textContent = pokemon.name + " · form unavailable · rank " + pokemon.rank + " · missing Game Master mapping";
+          list.appendChild(item);
+        });
+        details.appendChild(list);
+        cupFormatInfo.appendChild(details);
+        const approximate = document.createElement("p");
+        approximate.className = "cup-format-note";
+        approximate.textContent = "Candidate filter: shared Pokédex numbers can include other forms. The collapsed list shows the exact ranked forms.";
+        cupFormatInfo.appendChild(approximate);
       }
     }
 
@@ -1763,7 +1760,7 @@
       source.href = cup.sourceUrl;
       source.target = "_blank";
       source.rel = "noreferrer";
-      source.textContent = "Official format reference";
+      source.textContent = cup.id === "pain-cup" ? "PvPoke ranking source" : "Official format reference";
       cupFormatInfo.appendChild(source);
     }
   }
@@ -1915,7 +1912,6 @@
   function render() {
     searchOutput.value = currentState.search;
     resizeSearchOutput();
-    renderSearchSegments(currentState.searchSegments || []);
     additionalFilterPreview.textContent = currentState.search || "Add a rule or generate a filter to preview it here.";
     ruleList.replaceChildren();
     let ruleIndex = 0;
@@ -1923,7 +1919,7 @@
     if (currentState.cupName) {
       const cupDescription = currentState.cupDefinition && currentState.cupDefinition.dynamicFilter === "pvpoke-bottom-rankings"
         ? "Pain Cup · bottom " + currentState.rankingLimit + " Great League ranking entries · " +
-          (currentState.painCupData ? currentState.painCupData.mapped : 0) + " safely mapped Pokémon"
+          (currentState.painCupData ? currentState.painCupData.candidateCount : 0) + " Pokédex candidates"
         : currentState.cupPrefix
         ? currentState.cupName + " filter: " + currentState.cupPrefix
         : currentState.cupName === "Custom Cup"
@@ -1953,48 +1949,6 @@
     copyButton.dataset.tooltip = "Copy filter";
   }
 
-  function renderSearchSegments(segments) {
-    if (!searchSegments) return;
-    searchSegments.replaceChildren();
-    searchSegments.hidden = !Array.isArray(segments) || segments.length <= 1;
-    if (searchSegments.hidden) return;
-    const heading = document.createElement("p");
-    heading.className = "search-segments-heading";
-    heading.textContent = "Pain Cup search batches · copy and run each search in Pokémon GO";
-    searchSegments.appendChild(heading);
-    segments.forEach((value, index) => {
-      const row = document.createElement("div");
-      row.className = "search-segment-row";
-      const label = document.createElement("label");
-      label.textContent = "Batch " + (index + 1) + " of " + segments.length + " · " + value.length + " characters";
-      const textarea = document.createElement("textarea");
-      textarea.readOnly = true;
-      textarea.rows = 2;
-      textarea.spellcheck = false;
-      textarea.value = value;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "button button-secondary search-segment-copy";
-      button.textContent = "Copy batch " + (index + 1);
-      button.addEventListener("click", async () => {
-        let copied = false;
-        if (navigator.clipboard && window.isSecureContext) {
-          try { await navigator.clipboard.writeText(value); copied = true; } catch (error) { copied = false; }
-        }
-        if (!copied) {
-          textarea.focus();
-          textarea.select();
-          try { copied = document.execCommand("copy"); } catch (error) { copied = false; }
-        }
-        copyStatus.textContent = copied
-          ? "Copied Pain Cup batch " + (index + 1) + " of " + segments.length + "."
-          : "Batch " + (index + 1) + " selected. Use your device’s Copy command.";
-      });
-      row.append(label, textarea, button);
-      searchSegments.appendChild(row);
-    });
-  }
-
   async function copyFilter() {
     const value = currentState ? currentState.search : searchOutput.value;
     if (!value) return;
@@ -2016,11 +1970,8 @@
         copied = false;
       }
     }
-    const isPainCupBatch = currentState && currentState.cupDefinition && currentState.cupDefinition.dynamicFilter === "pvpoke-bottom-rankings";
     copyStatus.textContent = copied
-      ? isPainCupBatch && currentState.searchSegments.length > 1
-        ? "Copied Pain Cup batch 1 of " + currentState.searchSegments.length + ". Use the batch buttons for the remaining searches."
-        : "Copied — ready to paste into Pokémon GO."
+      ? "Copied — ready to paste into Pokémon GO."
       : "Filter selected. Use your device’s Copy command.";
     copyButton.classList.toggle("is-copied", copied);
     copyButton.setAttribute("aria-label", copied ? "Filter copied" : "Copy filter");
@@ -2303,7 +2254,7 @@
   function pvpokeDateLabel(value) {
     if (!value) return "date unavailable";
     const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? String(value) : new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(parsed);
+    return Number.isNaN(parsed.getTime()) ? String(value) : new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(parsed);
   }
 
   function renderPvpokeResults() {
@@ -2319,7 +2270,7 @@
     }
     const candidates = PVPOKE.getMetaMadnessCandidates(activePvPokeDataset);
     const qualifyingMovesBySpecies = new Map(candidates.map((entry) => [entry.species.id, new Set(entry.qualifyingMoves.map((move) => move.id))]));
-    const results = PVPOKE.searchSpecies(activePvPokeDataset, query, 12);
+    const results = PVPOKE.searchSpecies(activePvPokeDataset, query, 6);
     if (!results.length) {
       const empty = document.createElement("li");
       empty.className = "pvpoke-empty-result";
@@ -2363,49 +2314,17 @@
   }
 
   function updatePvpokeBrowserMeta() {
-    if (!activePvPokeDataset || !activePvPokeDataset.meta) return;
+    if (!pvpokeSnapshotLabel || !activePvPokeDataset || !activePvPokeDataset.meta) return;
     const meta = activePvPokeDataset.meta;
-    if (pvpokeDataStatus) {
-      pvpokeDataStatus.textContent = pvPokeLoadResult.warning ||
-        "Local snapshot ready · " + activePvPokeDataset.species.length + " species, " + activePvPokeDataset.moves.length + " moves, and " + activePvPokeDataset.rankings.length + " Great League rankings.";
-    }
-    if (pvpokeDataVersion) {
-      pvpokeDataVersion.textContent = meta.sourceRevision && meta.sourceRevision !== "fallback"
-        ? "Snapshot " + meta.sourceRevision + " · PvPoke updated " + pvpokeDateLabel(meta.upstreamTimestamp) + " · bundled " + pvpokeDateLabel(meta.generatedAt) + ". The current tab keeps this snapshot pinned for the tournament."
-        : "No validated PvPoke snapshot is cached. Rankings and Pain Cup filters need the local data refresh workflow.";
-    }
+    pvpokeSnapshotLabel.textContent = meta.sourceRevision === "fallback"
+      ? "PvPoke snapshot unavailable"
+      : "PvPoke snapshot " + pvpokeDateLabel(meta.generatedAt || meta.upstreamTimestamp) + " · MIT";
   }
 
   function setupPvpokeBrowser() {
     updatePvpokeBrowserMeta();
     renderPvpokeResults();
     if (pvpokeSearchInput) pvpokeSearchInput.addEventListener("input", renderPvpokeResults);
-    if (pvpokeRefreshButton) pvpokeRefreshButton.addEventListener("click", async () => {
-      if (!PVPOKE) return;
-      const oldDataset = activePvPokeDataset;
-      pvpokeRefreshButton.disabled = true;
-      pvpokeRefreshButton.textContent = "Loading…";
-      PVPOKE.clearPinnedSnapshot();
-      pvPokeLoadResult = await PVPOKE.load("./static/data/pvpoke-v1.json");
-      if (pvPokeLoadResult.source === "fallback" && oldDataset && oldDataset.meta && oldDataset.meta.sourceRevision !== "fallback") {
-        activePvPokeDataset = oldDataset;
-        pvPokeLoadResult = { source: "tab snapshot", warning: "The latest local snapshot could not be loaded. This tab is continuing with its previous validated revision." };
-        PVPOKE.pinDataset(oldDataset);
-      } else {
-        activePvPokeDataset = pvPokeLoadResult.dataset;
-      }
-      currentPainCupData = null;
-      pvpokeRefreshButton.disabled = false;
-      pvpokeRefreshButton.textContent = "Load latest snapshot";
-      updatePvpokeBrowserMeta();
-      renderPvpokeResults();
-      updateCupControls();
-      if (currentState && currentCup && currentCup.dynamicFilter === "pvpoke-bottom-rankings") {
-        markConfigPending();
-        configPending = false;
-        updateGenerationNote();
-      }
-    });
   }
 
   function asArrayForApp(value) {
@@ -2516,14 +2435,13 @@
 
   const dataReady = PVPOKE
     ? PVPOKE.load("./static/data/pvpoke-v1.json")
-    : Promise.resolve({ dataset: null, source: "fallback", warning: "PvPoke data access is unavailable." });
+    : Promise.resolve({ dataset: null, source: "fallback" });
   dataReady.then((result) => {
-    pvPokeLoadResult = result;
     if (result.dataset) activePvPokeDataset = result.dataset;
     setup();
     setupPvpokeBrowser();
   }).catch((error) => {
-    pvPokeLoadResult = { source: "fallback", warning: "PvPoke data could not be loaded: " + error.message };
+    activePvPokeDataset = PVPOKE.makeFallbackDataset(window.GBL_SPECIES_DATA || []);
     setup();
     setupPvpokeBrowser();
   });

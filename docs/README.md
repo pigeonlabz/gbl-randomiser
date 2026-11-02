@@ -4,19 +4,17 @@ This is the deployed, self-contained static website. It uses local HTML, CSS, Ja
 
 ## PvPoke snapshot
 
-`static/data/pvpoke-v1.json` contains the compact Great League overall ranking snapshot and the Game Master fields used by the site: species identifiers, Pokédex numbers, forms, typings, base stats, move lists, move types, Legacy/Elite TM move markers, and category tags. The snapshot records its upstream Git commit, Game Master timestamp, and generation time. `static/data/PVPOKE-LICENSE.txt` preserves PvPoke's MIT license and attribution.
+`static/data/pvpoke-v1.json` is the versioned Great League snapshot bundled with the site. It records its PvPoke source commit and snapshot date. `static/data/PVPOKE-LICENSE.txt` preserves the MIT license. The page reads this local file only and makes no request to PvPoke.
 
-The scheduled and manually triggerable `Refresh PvPoke data` workflow downloads the minified Game Master, Great League overall rankings, and license from one pinned upstream revision. The updater validates the inputs and generated snapshot before writing a temporary file and replacing the checked-in dataset. A failed download or validation leaves the previous dataset in place; the website keeps using that local snapshot and never depends on PvPoke being available at runtime.
-
-The browser keeps the validated snapshot loaded in the current tab so Pain Cup does not change during a tournament. The PvPoke lookup shows the exact revision and update time. Use **Load latest snapshot** to clear the tab pin and fetch the deployed snapshot again.
+For a future manual import, choose and review a full PvPoke commit SHA and run `node tools/update-pvpoke-data.mjs <40-character-commit-sha>` from the repository root. The script downloads that pinned revision, validates it, and replaces the local JSON and license. It never polls for newer data. There is no scheduled updater or automatic refresh workflow.
 
 ## Custom cups
 
 - **Bug Bite** forces Great League and includes `bug`, `@bug`, and negative move-type searches for every type outside Bug, Poison, and Rock. Type and move mutators are locked while this cup is active.
 - **Meta Madness** forces Great League and starts with `@special` plus Legendary, Mythical, and Ultra Beast exclusions. `@special` is only a candidate filter: manually check the equipped moves for a qualifying Community Day, event-exclusive, or legacy Elite TM move. Return and Frustration do not qualify.
-- **Pain Cup** forces Great League and selects the last 100 or 250 Great League overall ranking entries in the pinned snapshot, then removes Legendary, Mythical, and Ultra Beast Pokémon. The interface reports unmapped or ambiguous forms and omits them from copyable searches. Long outputs are split into batches of at most 200 characters; run every batch to cover the full mapped selection.
+- **Pain Cup** forces Great League and selects the last 100 or 250 ordered ranking rows in the bundled snapshot, then removes Legendary, Mythical, and Ultra Beast entries. The copied comma-separated Pokédex search is an approximate candidate filter because it can match other forms sharing a number. The collapsed list shows the exact ranked Pokémon and forms. Shared CP and rarity terms appear once.
 
-Recognized Shadow and regional form distinctions use Pokédex-number searches with matching form terms. Other form mappings require manual verification rather than a potentially over-broad Pokémon GO search.
+The bottom-N cutoff uses the final N snapshot rows before rarity exclusions. The cutoff, exclusions, candidate search and exact eligible forms are computed deterministically from the bundled snapshot.
 
 ## Existing behavior and verification
 
