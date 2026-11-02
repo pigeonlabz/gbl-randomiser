@@ -492,23 +492,28 @@ test("built-in Cup emojis are unique and carousel exposes every Cup", () => {
 
 test("Cup library search indexes names, league, type and custom eligibility metadata", () => {
   const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
-  const helperSource = app.slice(app.indexOf("function buildCupSearchIndex"), app.indexOf("function cupSearchIndex"));
-  const buildSearchIndex = vm.runInNewContext("(" + helperSource.trim() + ")");
+  const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
+  const helperSource = app.slice(app.indexOf("function normalizeCupSearchText"), app.indexOf("function cupQuickLabel"));
+  const searchHelpers = vm.runInNewContext(helperSource + "\n({ buildCupSearchIndex, matchCupSearch })");
   const species = speciesData.map(([id, name]) => ({ id, name }));
-  const index = (cup) => buildSearchIndex(cup, ruleData.types, species, ruleData.leagues);
-  const matches = (query) => cupData.filter((cup) => query.toLowerCase().split(/\s+/).every((term) => index(cup).includes(term)));
-  const getCup = (id) => cupData.find((cup) => cup.id === id);
+  const index = (cup) => searchHelpers.buildCupSearchIndex(cup, ruleData.types, species, ruleData.leagues);
+  const match = (cup, query) => searchHelpers.matchCupSearch(index(cup), query);
+  const matchingIds = (query) => Array.from(cupData.filter((cup) => match(cup, query).matches), (cup) => cup.id);
 
-  assert.ok(matches("ghost").some((cup) => cup.id === "halloween"), "Ghost matches a cup through its eligible Pokémon types");
-  assert.equal(matches("ghost").some((cup) => cup.id === "jungle"), false);
-  assert.ok(matches("steel").some((cup) => cup.id === "retro"), "Steel matches Retro through its banned type restriction");
-  assert.ok(matches("steel").some((cup) => cup.id === "fantasy"));
-  assert.ok(matches("great").some((cup) => cup.id === "halloween"), "suggested leagues are indexed");
-  assert.ok(matches("great ghost").some((cup) => cup.id === "halloween"), "multiple search terms can match different metadata fields");
-  assert.equal(matches("great").some((cup) => cup.id === "element"), false);
-  assert.ok(matches("rock").some((cup) => cup.id === "rock-challenge"), "partial name matches are supported");
-  assert.ok(index(getCup("rock-challenge")).includes("banned move type rock"));
-  assert.ok(matches("gardevoir").some((cup) => cup.id === "willpower"), "Pokédex bans resolve to species names");
+  assert.deepEqual(matchingIds("hallowee"), ["halloween", "mega-halloween"], "partial cup-name matches exclude unrelated presets");
+  assert.deepEqual(matchingIds("HALLOWEE"), ["halloween", "mega-halloween"], "cup names match case-insensitively");
+  assert.deepEqual(matchingIds("ghost"), ["halloween", "mega-halloween", "holiday", "holiday-ultra"]);
+  assert.deepEqual(matchingIds("great"), Array.from(cupData.filter((cup) => cup.suggestedLeague === "great"), (cup) => cup.id));
+  assert.deepEqual(matchingIds("rock"), ["fossil", "rock-challenge"]);
+  assert.deepEqual(matchingIds("@rock"), ["rock-challenge"], "move expressions match the cup restriction and no name-only result");
+  assert.deepEqual(matchingIds("gardevoir"), ["willpower"], "Pokédex bans resolve to species names");
+  assert.deepEqual(matchingIds("random nonsense"), []);
+  assert.deepEqual(matchingIds(""), Array.from(cupData, (cup) => cup.id));
+  assert.equal(match(cupData[0], "hallowee").reason, "");
+  assert.equal(match(cupData[0], "ghost").reason, "👻 Ghost type allowed");
+  assert.equal(match(cupData.find((cup) => cup.id === "retro"), "steel").reason, "🚫 Steel type banned");
+  assert.equal(match(cupData.find((cup) => cup.id === "rock-challenge"), "@rock").reason, "🪨 Rock moves restricted");
+  assert.equal(match(cupData[0], "great").reason, "", "suggested-league matches rely on the visible league label");
 
   const customCup = {
     id: "custom-forest",
@@ -522,14 +527,19 @@ test("Cup library search indexes names, league, type and custom eligibility meta
     keywords: ["spring event"]
   };
   const customIndex = index(customCup);
-  assert.ok(customIndex.includes("little cup"));
-  assert.ok(customIndex.includes("grass"));
-  assert.ok(customIndex.includes("steel"));
-  assert.ok(customIndex.includes("rock"));
-  assert.ok(customIndex.includes("spring event"));
-  assert.match(app, /button\.dataset\.searchText = cupSearchIndex\(cup\)/);
-  assert.match(app, /normalizeCupSearchText\(cupPickerSearch\.value\.trim\(\)\)/);
-  assert.match(app, /queryTerms\.every\(\(term\) => button\.dataset\.searchText\.includes\(term\)\)/);
+  assert.ok(customIndex.searchText.includes("little cup"));
+  assert.ok(match(customCup, "grass").matches);
+  assert.ok(match(customCup, "steel").matches);
+  assert.ok(match(customCup, "rock").matches);
+  assert.ok(match(customCup, "spring event").matches);
+  assert.match(app, /button\.cupSearchIndex = cupSearchIndex\(cup\)/);
+  assert.match(app, /matchCupSearch\(button\.cupSearchIndex, query\)/);
+
+  const searchFilter = app.slice(app.indexOf("function updateCupPickerSearch"), app.indexOf("function positionCupPicker"));
+  assert.match(searchFilter, /button\.hidden = !result\.matches/);
+  assert.match(searchFilter, /reason\.textContent = result\.reason/);
+  assert.doesNotMatch(searchFilter, /cupSelect\.value\s*=/, "searching or clearing a query does not change cup selection");
+  assert.match(css, /\.cup-picker-option\[hidden\]\s*\{\s*display:\s*none;\s*\}/, "CSS does not override the filtered button hidden state");
 });
 
 test("legacy custom .cup loading, saved sessions, and rerolls remain available", () => {

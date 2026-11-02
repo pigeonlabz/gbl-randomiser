@@ -381,49 +381,111 @@
     return String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   }
   function buildCupSearchIndex(cup, typeNames, speciesList, leagueMap) {
-    const normalize = (value) => String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    const values = [];
-    const excludedKeys = new Set(["emoji", "sourceUrl"]);
+    const normalize = normalizeCupSearchText;
     const typeSet = new Set(typeNames.map(normalize));
     const speciesById = new Map(speciesList.map((species) => [String(species.id), species.name]));
-    const addMetadata = (value, key) => {
-      if (key && excludedKeys.has(key)) return;
-      if (Array.isArray(value)) {
-        value.forEach((item) => addMetadata(item, key));
-      } else if (value && typeof value === "object") {
-        Object.entries(value).forEach(([childKey, childValue]) => addMetadata(childValue, childKey));
-      } else if (typeof value === "string" || typeof value === "number") {
-        values.push(String(value));
-      }
+    const rules = [];
+    const keywords = [];
+    const ruleKeys = new Set();
+    const typeEmojis = {
+      normal: "⚪", fire: "🔥", water: "💧", grass: "🌿", electric: "⚡", ice: "❄️",
+      fighting: "🥊", poison: "☠️", ground: "🟤", flying: "🪽", psychic: "🔮", bug: "🐛",
+      rock: "🪨", ghost: "👻", dragon: "🐉", dark: "🌑", steel: "⚙️", fairy: "🧚"
     };
-
-    addMetadata(cup);
-    const suggestedLeagueId = cup.suggestedLeague || cup.officialLeague || cup.league;
-    if (suggestedLeagueId && leagueMap[suggestedLeagueId]) values.push(leagueMap[suggestedLeagueId].label);
-    ["speciesBans", "pokemonBans", "bannedSpecies", "bannedPokemon"].forEach((key) => {
-      (Array.isArray(cup[key]) ? cup[key] : []).forEach((id) => {
-        const speciesName = speciesById.get(String(id));
-        if (speciesName) values.push(speciesName);
-      });
+    const toList = (value) => Array.isArray(value) ? value : value == null || value === "" ? [] : [value];
+    const addRule = (searchTerms, reason) => {
+      const normalizedTerms = toList(searchTerms).map(normalize).filter(Boolean);
+      if (!normalizedTerms.length) return;
+      const searchText = normalizedTerms.join(" ");
+      if (ruleKeys.has(searchText)) return;
+      ruleKeys.add(searchText);
+      rules.push({ searchText, reason });
+    };
+    const addTypeRule = (rawType, allowed) => {
+      const type = normalize(rawType);
+      if (!typeSet.has(type)) return false;
+      const title = type.charAt(0).toUpperCase() + type.slice(1);
+      addRule(type, allowed ? (typeEmojis[type] || "🔹") + " " + title + " type allowed" : "🚫 " + title + " type banned");
+      return true;
+    };
+    const addMoveRule = (move) => {
+      const label = String(move || "").trim().replace(/^!+@*/, "").replace(/^@+/, "");
+      if (!label) return;
+      const type = typeNames.find((candidate) => normalize(candidate) === normalize(label));
+      const title = type || label;
+      const icon = type ? typeEmojis[normalize(type)] || "⚡" : "⚡";
+      addRule([label, "@" + label], icon + " " + title.charAt(0).toUpperCase() + title.slice(1) + (type ? " moves restricted" : " move restriction"));
+    };
+    const addPokemonRule = (value) => {
+      const id = value && typeof value === "object" ? value.id : value;
+      const name = value && typeof value === "object" ? value.name : speciesById.get(String(id));
+      const label = name || String(value || "").trim();
+      if (label) addRule([label, id], "🚫 " + label + " restricted");
+    };
+    const addStructuredTypes = (values, allowed) => toList(values).forEach((value) => addTypeRule(value, allowed));
+    const addCustomTerms = (values) => toList(values).forEach((value) => {
+      if (typeof value !== "string" && typeof value !== "number") return;
+      const term = String(value).trim();
+      if (term) keywords.push({ searchText: normalize(term), reason: "🔎 Preset term: " + term });
     });
+
+    const suggestedLeagueId = cup.suggestedLeague || cup.officialLeague || cup.league;
+    const leagueLabel = suggestedLeagueId && leagueMap[suggestedLeagueId] ? leagueMap[suggestedLeagueId].label : "";
+    const typeRestrictions = cup.typeRestrictions && typeof cup.typeRestrictions === "object" ? cup.typeRestrictions : {};
+    addStructuredTypes(cup.eligibleTypes || cup.allowedTypes || typeRestrictions.eligible || typeRestrictions.allowed, true);
+    addStructuredTypes(cup.bannedTypes || cup.excludedTypes || cup.typeBans || typeRestrictions.banned || typeRestrictions.excluded, false);
+    if (Array.isArray(cup.types)) addStructuredTypes(cup.types, true);
+
+    ["speciesBans", "pokemonBans", "bannedSpecies", "bannedPokemon", "pokemonRestrictions", "speciesRestrictions"]
+      .forEach((key) => toList(cup[key]).forEach(addPokemonRule));
+    ["moveRestrictions", "moveBans", "bannedMoves", "requiredMoves", "allowedMoves", "moveTypes"]
+      .forEach((key) => toList(cup[key]).forEach(addMoveRule));
 
     String(cup.search || "").split(/[&,]/).forEach((rawTerm) => {
       const term = rawTerm.trim();
       if (!term) return;
       const isBanned = term.startsWith("!");
       const withoutExclusion = term.replace(/^!+/, "");
-      const isMove = withoutExclusion.startsWith("@");
-      const keyword = normalize(withoutExclusion.replace(/^@+/, ""));
-      values.push(keyword);
-      if (typeSet.has(keyword)) {
-        const restriction = isMove ? "move type" : "pokemon type";
-        values.push((isBanned ? "banned " : "eligible ") + restriction + " " + keyword);
+      if (withoutExclusion.startsWith("@")) {
+        addMoveRule(withoutExclusion);
+        return;
       }
+      if (addTypeRule(withoutExclusion, !isBanned)) return;
+      const dexId = withoutExclusion.match(/^\d+$/);
+      if (dexId && speciesById.has(dexId[0])) {
+        addPokemonRule(dexId[0]);
+        return;
+      }
+      addRule([withoutExclusion, term], "🔎 Search rule: " + term);
     });
-    return normalize(values.join(" "));
+
+    const metadata = cup.metadata && typeof cup.metadata === "object" ? cup.metadata : {};
+    [cup.searchTerms, cup.customSearchTerms, cup.keywords, metadata.searchTerms, metadata.keywords].forEach(addCustomTerms);
+    const name = normalize(cup.name);
+    const league = normalize(leagueLabel);
+    return {
+      name,
+      league,
+      leagueLabel,
+      rules,
+      keywords,
+      searchText: [name, league, rules.map((rule) => rule.searchText).join(" "), keywords.map((term) => term.searchText).join(" ")].join(" ")
+    };
   }
   function cupSearchIndex(cup) {
     return buildCupSearchIndex(cup, types, SPECIES, leagues);
+  }
+  function matchCupSearch(index, query) {
+    const terms = normalizeCupSearchText(query).split(/\s+/).filter(Boolean);
+    if (!terms.length) return { matches: true, reason: "" };
+    if (!terms.every((term) => index.searchText.includes(term))) return { matches: false, reason: "" };
+    if (terms.every((term) => index.name.includes(term))) return { matches: true, reason: "" };
+
+    const matchingRule = index.rules.find((rule) => terms.some((term) => rule.searchText.includes(term)));
+    if (matchingRule) return { matches: true, reason: matchingRule.reason };
+    const matchingKeyword = index.keywords.find((keyword) => terms.some((term) => keyword.searchText.includes(term)));
+    if (matchingKeyword) return { matches: true, reason: matchingKeyword.reason };
+    return { matches: true, reason: "" };
   }
   function cupQuickLabel(cup) {
     if (cup.id === "custom") return "Custom";
@@ -526,20 +588,26 @@
       meta.className = "cup-option-meta";
       meta.textContent = suggestedLeague ? "Suggested: " + suggestedLeague.label : cup.id === "custom" ? "Enter your own eligibility search" : "Custom preset";
       button.appendChild(meta);
-      button.dataset.searchText = cupSearchIndex(cup);
+      const matchReason = document.createElement("small");
+      matchReason.className = "cup-option-match-reason";
+      matchReason.hidden = true;
+      button.appendChild(matchReason);
+      button.cupSearchIndex = cupSearchIndex(cup);
       (cup.official ? officialCupOptions : customCupOptions).appendChild(button);
     });
     updateCupPickerSearch();
     updateCupPickerSelection();
   }
   function updateCupPickerSearch() {
-    const query = normalizeCupSearchText(cupPickerSearch.value.trim());
-    const queryTerms = query.split(/\s+/).filter(Boolean);
+    const query = cupPickerSearch.value.trim();
     let visibleCount = 0;
     cupPickerPopup.querySelectorAll("[data-cup-option]").forEach((button) => {
-      const visible = !queryTerms.length || queryTerms.every((term) => button.dataset.searchText.includes(term));
-      button.hidden = !visible;
-      if (visible) visibleCount += 1;
+      const result = matchCupSearch(button.cupSearchIndex, query);
+      button.hidden = !result.matches;
+      const reason = button.querySelector(".cup-option-match-reason");
+      reason.textContent = result.reason;
+      reason.hidden = !result.matches || !result.reason;
+      if (result.matches) visibleCount += 1;
     });
     document.getElementById("official-cup-group").hidden = !officialCupOptions.querySelector("[data-cup-option]:not([hidden])");
     document.getElementById("custom-cup-group").hidden = !customCupOptions.querySelector("[data-cup-option]:not([hidden])");
