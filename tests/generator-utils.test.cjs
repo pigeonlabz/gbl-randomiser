@@ -203,7 +203,7 @@ test("guidance is available in accessible viewport-aware contextual tooltips", (
   const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
   const tooltipIds = [
-    "league-info-tooltip",
+    "filter-info-tooltip",
     "cup-info-tooltip",
     "include-mutators-tooltip",
     "additional-rules-tooltip",
@@ -213,9 +213,9 @@ test("guidance is available in accessible viewport-aware contextual tooltips", (
     assert.match(html, new RegExp('aria-haspopup="dialog"[^>]*aria-expanded="false"[^>]*aria-controls="' + id + '"[^>]*aria-describedby="' + id + '"'));
     assert.match(html, new RegExp('id="' + id + '" class="context-tooltip" role="dialog"[^>]*hidden'));
   }
-  assert.match(html, /id="league-cup-recommendation"/);
+  assert.doesNotMatch(html, /league-info-tooltip|league-cup-recommendation|Your battle filter/);
+  assert.match(html, /Copy this search string and paste it into Pokémon GO to find eligible Pokémon\./);
   assert.ok(html.indexOf('id="cup-format-info"') > html.indexOf('id="cup-info-tooltip"'), "Cup format notes and official references are inside the Cup tooltip");
-  assert.match(html, /500 CP, Great at 1,500 CP, and Ultra at 2,500 CP/);
   assert.match(html, /Use <code>&amp;<\/code> for AND, commas for OR, and <code>!<\/code> to exclude a term/);
   assert.doesNotMatch(html, /id="cup-selector-help"|class="additional-rules-help"|id="include-mutators-help"|Combined live with the generated filter/);
   assert.match(app, /pointerenter/);
@@ -228,6 +228,12 @@ test("guidance is available in accessible viewport-aware contextual tooltips", (
   assert.match(css, /\.context-tooltip\[hidden\]\s*\{\s*display:\s*none;/);
   assert.match(css, /width:\s*min\(22rem, calc\(100vw - 24px\)\)/);
   assert.match(css, /max-height:\s*min\(28rem, calc\(100dvh - 24px\)\)/);
+  assert.match(html, /id="mutator-toggle-group" class="mutator-toggle-group" hidden/);
+  assert.match(app, /includeMutatorsToggle\.hidden = !hasCup/);
+  assert.match(css, /\.rule-list\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;/);
+  assert.match(html, /href="https:\/\/ko-fi\.com\/pigeonlabs" target="_blank" rel="noopener noreferrer"/);
+  assert.match(html, /href="https:\/\/niantic\.helpshift\.com\/hc\/en\/6-pokemon-go\/faq\/1486-searching-filtering-your-pokemon-inventory\/" target="_blank" rel="noopener noreferrer">Filter help<\/a>/);
+  assert.match(css, /\.site-version\s*\{[^}]*font-size:\s*0\.66rem/);
 });
 
 test("type leaning uses qualitative multipliers and honors disabled scopes", () => {

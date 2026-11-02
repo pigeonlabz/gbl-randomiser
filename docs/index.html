@@ -18,9 +18,19 @@
 
     <form id="filter-form" class="generator-panel">
       <section class="result-panel" aria-labelledby="result-title">
+        <h2 id="result-title" class="visually-hidden">Generated filter</h2>
         <div class="result-heading">
-          <h2 id="result-title">Your battle filter</h2>
           <span id="battle-status" class="battle-progress" aria-live="polite"></span>
+          <button class="info-trigger" type="button" aria-label="Filter information" aria-haspopup="dialog" aria-expanded="false" aria-controls="filter-info-tooltip" aria-describedby="filter-info-tooltip" data-context-tooltip-trigger>
+            <span aria-hidden="true">ⓘ</span>
+          </button>
+          <div id="filter-info-tooltip" class="context-tooltip" role="dialog" aria-labelledby="filter-info-tooltip-title" hidden>
+            <h2 id="filter-info-tooltip-title" class="visually-hidden">Using your generated filter</h2>
+            <p>Copy this search string and paste it into Pokémon GO to find eligible Pokémon.</p>
+          </div>
+          <button class="icon-action" id="generate-filter" type="submit" aria-label="Generate new filter" data-tooltip="Generate new filter">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 7v5h-5M4.8 9a7.5 7.5 0 0 1 12.8-2L20 12M4 17v-5h5m10.2 3a7.5 7.5 0 0 1-12.8 2L4 12"/></svg>
+          </button>
           <button class="button button-secondary" id="copy-filter" type="button">Copy</button>
         </div>
         <div id="filter-summary" class="filter-summary" role="list" aria-label="Active filter summary"></div>
@@ -34,20 +44,7 @@
 
       <div class="controls">
         <fieldset class="league-selector">
-          <legend>
-            <span class="label-help-row">
-              <span>League</span>
-              <button class="info-trigger" type="button" aria-label="League CP and Cup recommendation information" aria-haspopup="dialog" aria-expanded="false" aria-controls="league-info-tooltip" aria-describedby="league-info-tooltip" data-context-tooltip-trigger>
-                <span aria-hidden="true">ⓘ</span>
-              </button>
-            </span>
-          </legend>
-          <div id="league-info-tooltip" class="context-tooltip" role="dialog" aria-labelledby="league-info-tooltip-title" hidden>
-            <h2 id="league-info-tooltip-title" class="visually-hidden">League CP limits</h2>
-            <p>Little League is capped at 500 CP, Great at 1,500 CP, and Ultra at 2,500 CP. Master League has no CP cap.</p>
-            <p>The selected League controls the CP ceiling. A suggested League shown with a Cup is a recommendation only and never changes your selection.</p>
-            <div id="league-cup-recommendation"></div>
-          </div>
+          <legend>League</legend>
           <div class="league-grid" role="radiogroup" aria-label="League">
             <label class="league-tile">
               <input type="radio" name="league" value="little">
@@ -72,9 +69,9 @@
           </div>
         </fieldset>
 
-        <div class="control cup-selector">
+        <div class="control cup-selector" role="group" aria-labelledby="cup-selector-label">
           <div class="label-help-row">
-            <label for="cup-select"><span>Cup <small>optional</small></span></label>
+            <span id="cup-selector-label">Cup <small>optional</small></span>
             <button class="info-trigger" type="button" aria-label="Cup eligibility information" aria-haspopup="dialog" aria-expanded="false" aria-controls="cup-info-tooltip" aria-describedby="cup-info-tooltip" data-context-tooltip-trigger>
               <span aria-hidden="true">ⓘ</span>
             </button>
@@ -84,7 +81,8 @@
               <div id="cup-format-info" class="cup-format-info" role="status" aria-live="polite"></div>
             </div>
           </div>
-          <select id="cup-select" name="cup">
+          <div id="cup-tiles" class="cup-tile-row" role="group" aria-label="Cup quick selections"></div>
+          <select id="cup-select" name="cup" hidden aria-hidden="true" tabindex="-1">
             <option value="" selected>None — Open League</option>
             <optgroup label="Official GBL formats">
               <option value="halloween">Halloween Cup (Suggested: Great League)</option>
@@ -106,22 +104,44 @@
               <option value="custom">Custom Cup filter…</option>
             </optgroup>
           </select>
+          <div id="cup-picker-popup" class="cup-picker-popup" role="dialog" aria-labelledby="cup-picker-title" aria-modal="false" hidden>
+            <div class="cup-picker-header">
+              <h2 id="cup-picker-title">More Cups</h2>
+              <button id="cup-picker-close" class="cup-picker-close" type="button" aria-label="Close Cup picker">×</button>
+            </div>
+            <label class="visually-hidden" for="cup-picker-search">Search Cups</label>
+            <input id="cup-picker-search" class="cup-picker-search" type="search" autocomplete="off" placeholder="Search Cups">
+            <div id="cup-picker-results" class="cup-picker-results">
+              <section id="official-cup-group" class="cup-picker-group" aria-labelledby="official-cup-heading">
+                <h3 id="official-cup-heading">Official Cups</h3>
+                <div id="official-cup-options" class="cup-picker-options"></div>
+              </section>
+              <section id="custom-cup-group" class="cup-picker-group" aria-labelledby="custom-cup-heading">
+                <h3 id="custom-cup-heading">Custom Cups</h3>
+                <div id="custom-cup-options" class="cup-picker-options"></div>
+              </section>
+            </div>
+            <p id="cup-picker-empty" class="cup-picker-empty" role="status" aria-live="polite" hidden>No Cups match that search.</p>
+          </div>
           <p id="cup-format-error" class="cup-format-error" role="status" aria-live="polite" hidden></p>
         </div>
 
         <div class="mutator-options">
-          <div class="label-help-row">
-            <label class="include-mutators-control" for="include-mutators">
-              <input id="include-mutators" name="include-mutators" type="checkbox" aria-describedby="include-mutators-tooltip">
-              <span>Include mutators</span>
-            </label>
-            <button class="info-trigger" type="button" aria-label="Mutator options information" aria-haspopup="dialog" aria-expanded="false" aria-controls="include-mutators-tooltip" aria-describedby="include-mutators-tooltip" data-context-tooltip-trigger>
-              <span aria-hidden="true">ⓘ</span>
-            </button>
-            <div id="include-mutators-tooltip" class="context-tooltip" role="dialog" aria-labelledby="include-mutators-tooltip-title" hidden>
-              <h2 id="include-mutators-tooltip-title" class="visually-hidden">Include mutators</h2>
-              <p>With a Cup selected, leave this unchecked to use only the selected League CP limit and the Cup's static restrictions. Random mutators are omitted, and their settings are hidden.</p>
-              <p>Check it to restore random mutator generation. Open League keeps the existing randomiser active even when this box is unchecked. Its state is preserved when you change Cups or Leagues.</p>
+          <div class="label-help-row mutator-heading-row">
+            <h2>Mutators</h2>
+            <div id="mutator-toggle-group" class="mutator-toggle-group" hidden>
+              <label class="include-mutators-control" for="include-mutators">
+                <input id="include-mutators" name="include-mutators" type="checkbox" aria-describedby="include-mutators-tooltip">
+                <span>Include mutators</span>
+              </label>
+              <button class="info-trigger" type="button" aria-label="Mutator options information" aria-haspopup="dialog" aria-expanded="false" aria-controls="include-mutators-tooltip" aria-describedby="include-mutators-tooltip" data-context-tooltip-trigger>
+                <span aria-hidden="true">ⓘ</span>
+              </button>
+              <div id="include-mutators-tooltip" class="context-tooltip" role="dialog" aria-labelledby="include-mutators-tooltip-title" hidden>
+                <h2 id="include-mutators-tooltip-title" class="visually-hidden">Include mutators</h2>
+                <p>With a Cup selected, leave this unchecked to use only the selected League CP limit and the Cup's static restrictions. Random mutators are omitted, and their settings are hidden.</p>
+                <p>Check it to restore random mutator generation. Open League keeps the existing randomiser active even when this box is unchecked. Its state is preserved when you change Cups or Leagues.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -129,7 +149,7 @@
         <div id="mutator-settings" class="mutator-settings">
           <div class="control-grid">
             <label class="control" for="mutator-count">
-              <span>Mutators</span>
+              <span class="visually-hidden">Mutators</span>
               <select id="mutator-count" name="count">
                 <option value="1">1</option>
                 <option value="2" selected>2</option>
@@ -144,14 +164,12 @@
           <fieldset class="randomness-control">
             <legend>Randomness</legend>
             <div class="choice-row" role="radiogroup" aria-label="Randomness profile">
-              <label class="choice"><input id="randomness-chill" type="radio" name="randomness" value="chill" checked><span>Chill</span></label>
-              <label class="choice"><input id="randomness-spicy" type="radio" name="randomness" value="spicy"><span>Spicy</span></label>
-              <label class="choice"><input id="randomness-chaos" type="radio" name="randomness" value="chaos"><span>Chaos</span></label>
+              <label class="choice randomness-choice" data-tooltip="Chill"><input id="randomness-chill" type="radio" name="randomness" value="chill" aria-label="Chill" checked><span class="randomness-icon" aria-hidden="true">🍃</span></label>
+              <label class="choice randomness-choice" data-tooltip="Spicy"><input id="randomness-spicy" type="radio" name="randomness" value="spicy" aria-label="Spicy"><span class="randomness-icon" aria-hidden="true">🔥</span></label>
+              <label class="choice randomness-choice" data-tooltip="Chaos"><input id="randomness-chaos" type="radio" name="randomness" value="chaos" aria-label="Chaos"><span class="randomness-icon" aria-hidden="true">🎲</span></label>
             </div>
           </fieldset>
         </div>
-
-        <button class="button button-primary" type="submit">Generate New Filter</button>
 
         <details id="advanced-settings" class="advanced-settings">
           <summary>
@@ -278,6 +296,10 @@
     <footer>
       <p>Unofficial community tool. Not affiliated with Niantic, Pokémon, Nintendo, or The Pokémon Company.</p>
       <p class="attribution">A PigeonLabs project</p>
+      <nav class="footer-links" aria-label="Support and help">
+        <a href="https://ko-fi.com/pigeonlabs" target="_blank" rel="noopener noreferrer">Support the creator</a>
+        <a href="https://niantic.helpshift.com/hc/en/6-pokemon-go/faq/1486-searching-filtering-your-pokemon-inventory/" target="_blank" rel="noopener noreferrer">Filter help</a>
+      </nav>
       <p class="site-version">v1.0.0</p>
     </footer>
   </main>

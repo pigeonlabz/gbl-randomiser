@@ -73,6 +73,13 @@
   const form = document.getElementById("filter-form");
   const cupSettingsFields = document.getElementById("cup-settings-fields");
   const cupSelect = document.getElementById("cup-select");
+  const cupTileRow = document.getElementById("cup-tiles");
+  const cupPickerPopup = document.getElementById("cup-picker-popup");
+  const cupPickerSearch = document.getElementById("cup-picker-search");
+  const officialCupOptions = document.getElementById("official-cup-options");
+  const customCupOptions = document.getElementById("custom-cup-options");
+  const cupPickerEmpty = document.getElementById("cup-picker-empty");
+  const cupPickerClose = document.getElementById("cup-picker-close");
   const cupFormatInfo = document.getElementById("cup-format-info");
   const cupFormatError = document.getElementById("cup-format-error");
   const cupPrefixInput = document.getElementById("cup-prefix");
@@ -81,6 +88,7 @@
   const cupLockMoves = document.getElementById("cup-lock-moves");
   const leagueInputs = Array.from(document.querySelectorAll('input[name="league"]'));
   const includeMutatorsInput = document.getElementById("include-mutators");
+  const includeMutatorsToggle = document.getElementById("mutator-toggle-group");
   const mutatorSettings = document.getElementById("mutator-settings");
   const mutatorAdvancedSettings = document.getElementById("mutator-advanced-settings");
   const mutatorCount = document.getElementById("mutator-count");
@@ -134,6 +142,8 @@
   let battleCount = 0;
   let previousSearch = "";
   let copyFeedbackTimer = null;
+  const RECENT_CUPS_KEY = "gbl-filter-recent-cups-v1";
+  let recentCupIds = readRecentCupIds();
 
   function makeRuleDisplay(rule) {
     const display = Object.assign({}, rule);
@@ -341,6 +351,253 @@
   function cupDisplayName(cup) {
     const suggestedLeague = cupSuggestedLeague(cup);
     return cup.name + (suggestedLeague ? " (Suggested: " + suggestedLeague.label + ")" : "");
+  }
+  function readRecentCupIds() {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(RECENT_CUPS_KEY) || "[]");
+      if (!Array.isArray(saved)) return [];
+      return saved.filter((id, index) =>
+        (id === "custom" || CUP_PRESETS.some((cup) => cup.id === id)) && saved.indexOf(id) === index
+      ).slice(0, 5);
+    } catch (error) {
+      return [];
+    }
+  }
+  function saveRecentCupIds() {
+    try {
+      window.localStorage.setItem(RECENT_CUPS_KEY, JSON.stringify(recentCupIds));
+    } catch (error) {
+      // Storage may be disabled; Cup selection still works for this page view.
+    }
+  }
+  function cupPickerItem(id) {
+    if (id === "custom") return { id: "custom", name: "Custom Cup filter…", official: false };
+    return CUP_PRESETS.find((cup) => cup.id === id) || null;
+  }
+  function cupQuickLabel(cup) {
+    if (cup.id === "custom") return "Custom filter";
+    return cup.name.replace(/\s+Cup(?::)?/i, "").replace(/:\s*/, " ").trim();
+  }
+  function updateCupPickerSelection() {
+    const selectedId = cupSelect.value;
+    cupPickerPopup.querySelectorAll("[data-cup-option]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.cupId === selectedId));
+    });
+    cupTileRow.querySelectorAll("[data-cup-id]").forEach((button) => {
+      const selected = button.dataset.cupId === selectedId;
+      button.setAttribute("aria-pressed", String(selected));
+      button.classList.toggle("is-selected", selected);
+    });
+  }
+  function renderCupQuickSelections() {
+    cupTileRow.replaceChildren();
+    const openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.className = "cup-quick-tile cup-open-tile";
+    openButton.dataset.cupId = "";
+    openButton.setAttribute("aria-label", "Open League, no Cup restrictions");
+    openButton.setAttribute("aria-pressed", String(cupSelect.value === ""));
+    const openIcon = document.createElement("span");
+    openIcon.className = "cup-quick-icon";
+    openIcon.setAttribute("aria-hidden", "true");
+    openIcon.textContent = "○";
+    const openLabel = document.createElement("span");
+    openLabel.textContent = "Open";
+    openButton.append(openIcon, openLabel);
+    cupTileRow.appendChild(openButton);
+
+    const ids = recentCupIds.filter((id) => cupPickerItem(id));
+    const selectedId = cupSelect.value;
+    if (selectedId && cupPickerItem(selectedId)) {
+      const existingIndex = ids.indexOf(selectedId);
+      if (existingIndex >= 0) ids.splice(existingIndex, 1);
+      ids.unshift(selectedId);
+    }
+    ids.slice(0, 2).forEach((id) => {
+      const cup = cupPickerItem(id);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "cup-quick-tile";
+      button.dataset.cupId = cup.id;
+      button.setAttribute("aria-label", cupDisplayName(cup));
+      button.setAttribute("aria-pressed", String(cup.id === selectedId));
+      button.title = cupDisplayName(cup);
+      const icon = document.createElement("span");
+      icon.className = "cup-quick-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = cup.id === "custom" ? "⚙" : "🏆";
+      const label = document.createElement("span");
+      label.textContent = cupQuickLabel(cup);
+      button.append(icon, label);
+      cupTileRow.appendChild(button);
+    });
+
+    const moreButton = document.createElement("button");
+    moreButton.type = "button";
+    moreButton.className = "cup-quick-tile cup-more-tile";
+    moreButton.dataset.cupMore = "true";
+    moreButton.setAttribute("aria-haspopup", "dialog");
+    moreButton.setAttribute("aria-expanded", String(!cupPickerPopup.hidden));
+    moreButton.setAttribute("aria-controls", "cup-picker-popup");
+    moreButton.setAttribute("aria-label", "More Cups");
+    const moreIcon = document.createElement("span");
+    moreIcon.className = "cup-quick-icon";
+    moreIcon.setAttribute("aria-hidden", "true");
+    moreIcon.textContent = "⋯";
+    const moreLabel = document.createElement("span");
+    moreLabel.textContent = "More";
+    moreButton.append(moreIcon, moreLabel);
+    cupTileRow.appendChild(moreButton);
+    updateCupPickerSelection();
+  }
+  function renderCupPickerOptions() {
+    officialCupOptions.replaceChildren();
+    customCupOptions.replaceChildren();
+    const entries = CUP_PRESETS.concat([{ id: "custom", name: "Custom Cup filter…", official: false }]);
+    entries.forEach((cup) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "cup-picker-option";
+      button.dataset.cupOption = "true";
+      button.dataset.cupId = cup.id;
+      button.setAttribute("aria-pressed", String(cup.id === cupSelect.value));
+      const name = document.createElement("span");
+      name.className = "cup-option-name";
+      name.textContent = cup.name;
+      button.appendChild(name);
+      const suggestedLeague = cupSuggestedLeague(cup);
+      const meta = document.createElement("small");
+      meta.className = "cup-option-meta";
+      meta.textContent = suggestedLeague ? "Suggested: " + suggestedLeague.label : cup.id === "custom" ? "Enter your own eligibility search" : "Custom preset";
+      button.appendChild(meta);
+      button.dataset.searchText = (cup.name + " " + (suggestedLeague ? suggestedLeague.label : "") + " " + meta.textContent).toLocaleLowerCase();
+      (cup.official ? officialCupOptions : customCupOptions).appendChild(button);
+    });
+    updateCupPickerSearch();
+    updateCupPickerSelection();
+  }
+  function updateCupPickerSearch() {
+    const query = cupPickerSearch.value.trim().toLocaleLowerCase();
+    let visibleCount = 0;
+    cupPickerPopup.querySelectorAll("[data-cup-option]").forEach((button) => {
+      const visible = !query || button.dataset.searchText.includes(query);
+      button.hidden = !visible;
+      if (visible) visibleCount += 1;
+    });
+    document.getElementById("official-cup-group").hidden = !officialCupOptions.querySelector("[data-cup-option]:not([hidden])");
+    document.getElementById("custom-cup-group").hidden = !customCupOptions.querySelector("[data-cup-option]:not([hidden])");
+    cupPickerEmpty.hidden = visibleCount > 0;
+  }
+  function positionCupPicker() {
+    if (cupPickerPopup.hidden) return;
+    const anchor = cupTileRow.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const margin = 12;
+    cupPickerPopup.style.visibility = "hidden";
+    cupPickerPopup.style.left = "0px";
+    cupPickerPopup.style.top = "0px";
+    const panel = cupPickerPopup.getBoundingClientRect();
+    const left = Math.max(margin, Math.min(anchor.left + anchor.width / 2 - panel.width / 2, viewportWidth - panel.width - margin));
+    let top = anchor.bottom + 8;
+    if (top + panel.height > viewportHeight - margin && anchor.top - panel.height - 8 >= margin) top = anchor.top - panel.height - 8;
+    top = Math.max(margin, Math.min(top, viewportHeight - panel.height - margin));
+    cupPickerPopup.style.left = Math.round(left) + "px";
+    cupPickerPopup.style.top = Math.round(top) + "px";
+    cupPickerPopup.style.visibility = "";
+  }
+  function closeCupPicker(returnFocus) {
+    if (cupPickerPopup.hidden) return;
+    cupPickerPopup.hidden = true;
+    const moreButton = cupTileRow.querySelector("[data-cup-more]");
+    if (moreButton) moreButton.setAttribute("aria-expanded", "false");
+    if (returnFocus) {
+      (moreButton || cupTileRow.querySelector("[data-cup-id]")).focus();
+    }
+  }
+  function ensureCupSelectOptions() {
+    const knownIds = new Set(Array.from(cupSelect.options, (option) => option.value));
+    const groups = {
+      official: cupSelect.querySelector('optgroup[label="Official GBL formats"]'),
+      custom: cupSelect.querySelector('optgroup[label="Custom filter presets"]')
+    };
+    CUP_PRESETS.forEach((cup) => {
+      if (knownIds.has(cup.id)) return;
+      const option = document.createElement("option");
+      option.value = cup.id;
+      option.textContent = cupDisplayName(cup);
+      const group = cup.official ? groups.official : groups.custom;
+      (group || cupSelect).appendChild(option);
+      knownIds.add(cup.id);
+    });
+  }
+  function openCupPicker() {
+    cupPickerPopup.hidden = false;
+    cupPickerSearch.value = "";
+    updateCupPickerSearch();
+    const moreButton = cupTileRow.querySelector("[data-cup-more]");
+    if (moreButton) moreButton.setAttribute("aria-expanded", "true");
+    positionCupPicker();
+    cupPickerSearch.focus({ preventScroll: true });
+  }
+  function rememberCupSelection() {
+    const id = cupSelect.value;
+    if (!id) return;
+    recentCupIds = [id].concat(recentCupIds.filter((recentId) => recentId !== id)).slice(0, 5);
+    saveRecentCupIds();
+    renderCupQuickSelections();
+    renderCupPickerOptions();
+  }
+  function setupCupPicker() {
+    ensureCupSelectOptions();
+    renderCupPickerOptions();
+    renderCupQuickSelections();
+    cupTileRow.addEventListener("click", (event) => {
+      const moreButton = event.target.closest("[data-cup-more]");
+      if (moreButton) {
+        openCupPicker();
+        return;
+      }
+      const cupButton = event.target.closest("[data-cup-id]");
+      if (!cupButton) return;
+      const id = cupButton.dataset.cupId;
+      if (cupSelect.value !== id) {
+        cupSelect.value = id;
+        cupSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+    cupPickerPopup.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-cup-option]");
+      if (!button) return;
+      if (cupSelect.value !== button.dataset.cupId) {
+        cupSelect.value = button.dataset.cupId;
+        cupSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      closeCupPicker(true);
+    });
+    cupPickerSearch.addEventListener("input", updateCupPickerSearch);
+    cupPickerSearch.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") {
+        const first = cupPickerPopup.querySelector("[data-cup-option]:not([hidden])");
+        if (first) { event.preventDefault(); first.focus(); }
+      } else if (event.key === "Enter") {
+        const first = cupPickerPopup.querySelector("[data-cup-option]:not([hidden])");
+        if (first) { event.preventDefault(); first.click(); }
+      }
+    });
+    cupPickerClose.addEventListener("click", () => closeCupPicker(true));
+    document.addEventListener("pointerdown", (event) => {
+      if (!cupPickerPopup.hidden && !cupPickerPopup.contains(event.target) && !cupTileRow.contains(event.target)) closeCupPicker(false);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !cupPickerPopup.hidden) {
+        event.preventDefault();
+        closeCupPicker(true);
+      }
+    });
+    window.addEventListener("resize", positionCupPicker);
+    window.addEventListener("scroll", positionCupPicker, true);
+    cupSelect.addEventListener("change", rememberCupSelection);
   }
   function cupPresetSearch(cup) {
     const bannedSpecies = (cup.speciesBans || []).map((dex) => "!" + dex).join("&");
@@ -1061,24 +1318,6 @@
     }
   }
 
-  function updateLeagueTooltipInfo() {
-    const info = document.getElementById("league-cup-recommendation");
-    const selectedLeague = getSelectedLeague();
-    const selectedLimit = selectedLeague.maxCp;
-    const selectedStatus = document.createElement("p");
-    selectedStatus.textContent = "Selected: " + selectedLeague.label + " · CP ceiling " +
-      (Number.isFinite(selectedLimit) ? selectedLimit.toLocaleString() + " CP." : "unlimited.");
-    info.replaceChildren(selectedStatus);
-
-    const cup = cupForSelection();
-    if (!cup && !getStaticCupPrefix()) return;
-    const recommendation = document.createElement("p");
-    const suggestedLeague = cup ? cupSuggestedLeague(cup) : null;
-    recommendation.textContent = suggestedLeague
-      ? cup.name + " suggests " + suggestedLeague.label + ". This recommendation does not change the selected League."
-      : "The custom Cup filter has no suggested League; your selected League remains in control.";
-    info.appendChild(recommendation);
-  }
   function appendIndicator(wrapper, value, className) {
     if (!value) return;
     const indicator = document.createElement("span");
@@ -1333,6 +1572,7 @@
     cupLocks.disabled = !hasCup || !canGenerateMutators;
     cupLockTypes.disabled = !hasCup || !canGenerateMutators;
     cupLockMoves.disabled = !hasCup || !canGenerateMutators;
+    includeMutatorsToggle.hidden = !hasCup;
     const lockNames = [];
     if (cupLockTypes.checked && hasCup) lockNames.push("Pokémon type rules");
     if (cupLockMoves.checked && hasCup) lockNames.push("move type rules");
@@ -1343,7 +1583,6 @@
         : "Choose any overlapping rule families to pause while this Cup filter is active.";
     updateMutatorSettingsVisibility();
     updateCupFormatInfo();
-    updateLeagueTooltipInfo();
     syncFamilyControls();
   }
 
@@ -1558,6 +1797,7 @@
 
   function setup() {
     setupContextTooltips();
+    setupCupPicker();
     createFamilyControls(primaryFamilyControls, advancedFamilies.filter((definition) => definition.primary));
     createFamilyControls(additionalFamilyControls, advancedFamilies.filter((definition) => !definition.primary));
     loadProfileDefaults("chill");
@@ -1602,6 +1842,10 @@
     });
     cupSelect.addEventListener("change", onCupSelectionChanged);
     cupPrefixInput.addEventListener("input", onCupPrefixChanged);
+    cupPrefixInput.addEventListener("input", () => {
+      renderCupQuickSelections();
+      updateCupPickerSelection();
+    });
     includeMutatorsInput.addEventListener("change", () => {
       updateCupControls();
       syncMutatorModeForCurrentState(false);
@@ -1610,7 +1854,6 @@
     cupLockMoves.addEventListener("change", () => { markProfileCustom(); updateCupControls(); markConfigPending(); });
     leagueInputs.forEach((input) => input.addEventListener("change", () => {
       updateCupFormatInfo();
-      updateLeagueTooltipInfo();
       markConfigPending();
     }));
     mutatorCount.addEventListener("change", markConfigPending);
