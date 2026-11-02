@@ -727,26 +727,26 @@ legend { margin-bottom: 8px; font-weight: 700; }
 .type-leaning-scope legend { flex-basis: 100%; }
 .type-leaning-scope label { min-height: 32px; color: var(--text-muted); font-size: 0.84rem; }
 .family-fieldset { display: grid; gap: 9px; }
-.family-guidance { margin: -4px 0 0; color: var(--text-muted); font-size: 0.86rem; }
-.family-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.family-fieldset-legend { display: flex; align-items: center; gap: 8px; }
+.family-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .family-setting {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(112px, 0.86fr);
-  grid-template-areas: "heading likelihood" "description likelihood" "limits limits";
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 0.8fr);
+  grid-template-areas: "heading likelihood" "limits likelihood";
   align-items: center;
-  gap: 4px 10px;
+  gap: 6px 12px;
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--panel-alt);
-  padding: 9px 10px;
+  padding: 11px 12px;
 }
-.family-heading { grid-area: heading; display: flex; align-items: center; gap: 4px; min-width: 0; }
-.family-toggle { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 0.88rem; font-weight: 650; color: var(--text-strong); }
+.family-heading { grid-area: heading; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.family-toggle { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 0.9rem; font-weight: 650; color: var(--text-strong); }
 .family-toggle input { width: 17px; height: 17px; flex: 0 0 auto; accent-color: var(--accent); }
-.family-description { grid-area: description; display: block; margin-left: 25px; color: var(--text-muted); font-size: 0.74rem; font-weight: 400; line-height: 1.35; }
 .family-setting.is-disabled .family-toggle span { color: var(--text-subtle); }
-.family-toggle span { overflow-wrap: anywhere; }
+.family-toggle span { overflow-wrap: normal; word-break: normal; hyphens: none; }
+.family-info-trigger { width: 22px; height: 22px; font-size: 0.76rem; }
 .family-limit-button { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; }
 .family-limit-button:hover, .family-limit-button[aria-expanded="true"] { border-color: var(--border); background: var(--panel); color: var(--text-strong); }
 .family-limit-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
@@ -760,21 +760,21 @@ legend { margin-bottom: 8px; font-weight: 700; }
 .family-weight {
   grid-area: likelihood;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 1.5em;
+  grid-template-columns: minmax(0, 1fr) 2em;
   grid-template-rows: auto auto;
   align-items: center;
-  gap: 4px 7px;
+  gap: 3px 8px;
   min-width: 0;
 }
 
-.family-weight::before { grid-column: 1 / -1; content: "Likelihood"; color: var(--text-muted); font-size: 0.72rem; }
-.family-weight input[type="range"] { width: 100%; min-width: 0; height: 22px; margin: 0; padding: 0; appearance: none; background: transparent; cursor: pointer; }
-.family-weight input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(to right, var(--slider-fill) 0 var(--range-progress, 0%), var(--slider-track) var(--range-progress, 0%) 100%); }
-.family-weight input[type="range"]::-moz-range-track { height: 6px; border-radius: 999px; background: var(--slider-track); }
-.family-weight input[type="range"]::-moz-range-progress { height: 6px; border-radius: 999px; background: var(--slider-fill); }
-.family-weight input[type="range"]::-webkit-slider-thumb { width: 16px; height: 16px; margin-top: -5px; appearance: none; border: 2px solid var(--panel); border-radius: 50%; background: var(--slider-thumb); box-shadow: 0 0 0 1px var(--border-strong); }
-.family-weight input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: 2px solid var(--panel); border-radius: 50%; background: var(--slider-thumb); box-shadow: 0 0 0 1px var(--border-strong); }
-.family-weight output { color: var(--text); font-size: 0.8rem; text-align: right; font-variant-numeric: tabular-nums; }
+.family-weight::before { grid-column: 1 / -1; content: "Likelihood"; color: var(--text-muted); font-size: 0.72rem; font-weight: 650; letter-spacing: 0.02em; }
+.family-weight input[type="range"] { width: 100%; min-width: 0; height: 30px; margin: 0; padding: 0; appearance: none; background: transparent; cursor: pointer; }
+.family-weight input[type="range"]::-webkit-slider-runnable-track { height: 5px; border-radius: 999px; background: linear-gradient(to right, var(--slider-fill) 0 var(--range-progress, 0%), var(--slider-track) var(--range-progress, 0%) 100%); }
+.family-weight input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; background: var(--slider-track); }
+.family-weight input[type="range"]::-moz-range-progress { height: 5px; border-radius: 999px; background: var(--slider-fill); }
+.family-weight input[type="range"]::-webkit-slider-thumb { width: 18px; height: 18px; margin-top: -7px; appearance: none; border: 2px solid var(--panel); border-radius: 50%; background: var(--slider-thumb); box-shadow: 0 0 0 1px var(--border-strong); }
+.family-weight input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 2px solid var(--panel); border-radius: 50%; background: var(--slider-thumb); box-shadow: 0 0 0 1px var(--border-strong); }
+.family-weight output { justify-self: end; min-width: 1.9em; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text-strong); padding: 2px 4px; font-size: 0.78rem; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
 .family-toggle input:focus-visible, .family-weight input:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .additional-families { border-top: 1px solid var(--border); padding-top: 12px; }
 .additional-families > summary { color: var(--text-muted); font-size: 0.9rem; }
@@ -984,18 +984,30 @@ footer p { margin: 0; }
 }
 
 @media (max-width: 640px) {
+  .result-heading { gap: 10px; margin-bottom: 8px; }
+  .result-title { font-size: 1.23rem; }
+  .result-heading > .info-trigger { width: 29px; height: 29px; }
   .mutator-section { gap: 3px; }
   .mutator-options { gap: 0; }
   .mutator-heading-row { justify-content: flex-start; flex-wrap: nowrap; gap: 8px; }
   .mutator-heading-row h2 { margin-right: 0; font-size: 0.98rem; }
-  .include-mutators-control { min-height: 36px; gap: 6px; font-size: 0.82rem; }
+  .include-mutators-control { min-height: 40px; gap: 7px; font-size: 0.86rem; }
   .mutator-toggle-group { gap: 5px; }
   .mutator-toggle-group .info-trigger { width: 23px; height: 23px; }
-  .mutator-settings { grid-template-columns: 68px minmax(0, 1fr); align-items: center; gap: 8px; }
+  .mutator-settings { grid-template-columns: 76px minmax(0, 1fr); align-items: end; gap: 12px; }
   .mutator-settings .control-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-  .mutator-settings select { min-height: 40px; padding: 6px 8px; }
-  .mutator-settings .randomness-control { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 7px; min-width: 0; }
-  .mutator-settings .randomness-control legend { margin: 0; font-size: 0.78rem; }
-  .mutator-settings .choice-row { gap: 4px; }
-  .mutator-settings .choice span { min-height: 40px; }
+  .mutator-settings select { min-height: 46px; padding: 7px 9px; font-size: 1rem; font-weight: 700; text-align: center; }
+  .mutator-settings .randomness-control { display: block; min-width: 0; }
+  .mutator-settings .randomness-control legend { margin: 0 0 6px; font-size: 0.82rem; }
+  .mutator-settings .choice-row { gap: 6px; }
+  .mutator-settings .choice span { min-height: 46px; border-radius: 10px; }
+  .mutator-settings .randomness-icon { font-size: 1.3rem; }
+  .family-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .family-setting { grid-template-columns: minmax(0, 1fr); grid-template-areas: "heading" "likelihood" "limits"; gap: 8px; padding: 12px 14px; }
+  .family-heading { gap: 8px; }
+  .family-toggle { min-height: 34px; gap: 9px; font-size: 0.94rem; }
+  .family-info-trigger { width: 25px; height: 25px; }
+  .family-weight { grid-template-columns: minmax(0, 1fr) 2.4em; gap: 4px 10px; }
+  .family-weight input[type="range"] { height: 32px; }
+  .family-limits { margin: 0; }
 }

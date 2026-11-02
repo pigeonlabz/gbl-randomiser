@@ -206,6 +206,7 @@ test("guidance is available in accessible viewport-aware contextual tooltips", (
     "filter-info-tooltip",
     "cup-info-tooltip",
     "include-mutators-tooltip",
+    "family-guidance-tooltip",
     "additional-rules-tooltip",
     "raw-expression-tooltip"
   ];
@@ -258,9 +259,33 @@ test("compact mobile result keeps filter actions and rule explanations accessibl
   const mutatorMobileStyles = css.slice(css.lastIndexOf("@media (max-width: 640px)"));
   assert.match(mobileStyles, /\.league-tile\s*\{[^}]*min-height:\s*98px/);
   assert.match(mobileStyles, /\.league-ball\s*\{[^}]*width:\s*26px;\s*height:\s*26px/);
-  assert.match(mutatorMobileStyles, /\.mutator-settings\s*\{[^}]*grid-template-columns:\s*68px minmax\(0, 1fr\)/);
-  assert.match(mutatorMobileStyles, /\.mutator-settings \.randomness-control\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\)/);
+  assert.match(mutatorMobileStyles, /\.mutator-settings\s*\{[^}]*grid-template-columns:\s*76px minmax\(0, 1fr\)/);
+  assert.match(mutatorMobileStyles, /\.mutator-settings \.randomness-control\s*\{\s*display:\s*block/);
   assert.match(mobileStyles, /\.copy-label\s*\{\s*display:\s*none;/);
+});
+
+test("rule family cards keep every family, concise labels, and tooltip explanations", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../docs/index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
+  const definitions = app.slice(app.indexOf("const advancedFamilies = ["), app.indexOf("const additionalFamilyIds"));
+  const mobileStyles = css.slice(css.lastIndexOf("@media (max-width: 640px)"));
+
+  assert.equal((definitions.match(/\{ id:/g) || []).length, 20, "all rule family definitions remain available");
+  assert.match(definitions, /shortLabel: "Extra CP"/);
+  assert.match(definitions, /shortLabel: "Types"/);
+  assert.match(definitions, /shortLabel: "Regions"/);
+  assert.match(definitions, /shortLabel: "Move Types"/);
+  assert.match(app, /title\.textContent = definition\.shortLabel \|\| definition\.label/);
+  assert.match(app, /helper\.className = "context-tooltip family-description-tooltip"/);
+  assert.match(app, /infoButton\.setAttribute\("data-context-tooltip-trigger", ""\)/);
+  assert.match(app, /elements\.helper\.textContent = blocked[\s\S]*?definition\.description/);
+  assert.match(html, /Higher likelihood makes a family more likely to be selected\./);
+  assert.doesNotMatch(html, /class="family-guidance"/);
+  assert.match(mobileStyles, /\.family-grid\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/);
+  assert.match(mobileStyles, /\.family-setting\s*\{[^}]*grid-template-areas:\s*"heading" "likelihood" "limits"/);
+  assert.match(css, /\.family-toggle span\s*\{\s*overflow-wrap:\s*normal;\s*word-break:\s*normal/);
+  assert.match(css, /\.family-weight input\[type="range"\]::-webkit-slider-thumb\s*\{[^}]*width:\s*18px/);
 });
 
 test("type leaning uses qualitative multipliers and honors disabled scopes", () => {

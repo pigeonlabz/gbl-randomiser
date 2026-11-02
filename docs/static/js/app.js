@@ -10,11 +10,11 @@
 
   const advancedFamilies = [
     { id: "shiny", label: "Shiny", description: "Restricts the battle to shiny Pokémon.", ruleFamilies: ["visual-status"], primary: true },
-    { id: "rarity", label: "Legendary / Mythical", description: "Uses Legendary, Mythical, or Ultra Beast Pokémon.", ruleFamilies: ["rarity"], primary: true },
-    { id: "cp", label: "Extra CP limit", description: "Adds an additional random CP cap.", ruleFamilies: ["cp"], primary: true },
-    { id: "pokemon-type", label: "Pokémon types", description: "Allows or bans selected Pokémon types.", ruleFamilies: ["pokemon-type"], primary: true },
-    { id: "region", label: "Region", description: "Uses regions such as Kanto, Johto, Hoenn, or Paldea.", ruleFamilies: ["region"], primary: true },
-    { id: "move-typing", label: "Move types", description: "Requires or bans moves of selected types.", ruleFamilies: ["move-type", "move-slot"], primary: true },
+    { id: "rarity", label: "Legendary / Mythical", shortLabel: "Legendary / Mythical", description: "Uses Legendary, Mythical, or Ultra Beast Pokémon.", ruleFamilies: ["rarity"], primary: true },
+    { id: "cp", label: "Extra CP limit", shortLabel: "Extra CP", description: "Adds an additional random CP cap.", ruleFamilies: ["cp"], primary: true },
+    { id: "pokemon-type", label: "Pokémon types", shortLabel: "Types", description: "Allows or bans selected Pokémon types.", ruleFamilies: ["pokemon-type"], primary: true },
+    { id: "region", label: "Region", shortLabel: "Regions", description: "Uses regions such as Kanto, Johto, Hoenn, or Paldea.", ruleFamilies: ["region"], primary: true },
+    { id: "move-typing", label: "Move types", shortLabel: "Move Types", description: "Requires or bans moves of selected types.", ruleFamilies: ["move-type", "move-slot"], primary: true },
     { id: "shadow", label: "Shadow", description: "Uses Shadow Pokémon or excludes them.", ruleFamilies: ["shadow"], primary: true },
     { id: "time", label: "Time", description: "Restricts catches by age or date range.", ruleFamilies: ["age"], primary: true, limits: "time" },
     { id: "xl-size", label: "XL / XXL", description: "Uses oversized Pokémon.", ruleFamilies: ["size-xl"], primary: true },
@@ -24,11 +24,11 @@
     { id: "mega", label: "Mega", description: "Uses Mega-related eligibility or progress.", ruleFamilies: ["mega", "mega-level"], primary: true, limits: "mega" },
     { id: "meta-moves", label: "Meta moves", description: "Excludes selected powerful or commonly used moves.", ruleFamilies: ["meta-moves"] },
     { id: "purified", label: "Purified", description: "Uses Purified Pokémon or excludes them.", ruleFamilies: ["purified"] },
-    { id: "type-matchups", label: "Type matchups", description: "Uses battle matchup and type-effectiveness restrictions.", ruleFamilies: ["type-effectiveness"], primary: true },
-    { id: "acquisition", label: "How it was obtained", description: "Uses traits such as Lucky, Traded, Hatched, or Costume.", ruleFamilies: ["origin", "origin-special", "year"], primary: true },
-    { id: "battle-stats", label: "Appraisal / IVs", description: "Uses appraisal star ranges or battle-stat filters.", ruleFamilies: ["appraisal", "hp", "iv-attack", "iv-defense", "iv-hp", "iv-combo"] },
-    { id: "collection", label: "Collection traits", description: "Uses unusual collection and inventory traits.", ruleFamilies: ["lucky", "costume", "candy", "candy-xl", "powered-xl", "distance", "background", "copy-count", "buddy-candy"] },
-    { id: "special-forms", label: "Special forms", description: "Uses Dynamax, Gigantamax, or other special forms.", ruleFamilies: ["max", "max-count", "max-move", "special-status"] }
+    { id: "type-matchups", label: "Type matchups", shortLabel: "Matchups", description: "Uses battle matchup and type-effectiveness restrictions.", ruleFamilies: ["type-effectiveness"], primary: true },
+    { id: "acquisition", label: "How it was obtained", shortLabel: "Origin", description: "Uses traits such as Lucky, Traded, Hatched, or Costume.", ruleFamilies: ["origin", "origin-special", "year"], primary: true },
+    { id: "battle-stats", label: "Appraisal / IVs", shortLabel: "Appraisal / IVs", description: "Uses appraisal star ranges or battle-stat filters.", ruleFamilies: ["appraisal", "hp", "iv-attack", "iv-defense", "iv-hp", "iv-combo"] },
+    { id: "collection", label: "Collection traits", shortLabel: "Collection", description: "Uses unusual collection and inventory traits.", ruleFamilies: ["lucky", "costume", "candy", "candy-xl", "powered-xl", "distance", "background", "copy-count", "buddy-candy"] },
+    { id: "special-forms", label: "Special forms", shortLabel: "Special Forms", description: "Uses Dynamax, Gigantamax, or other special forms.", ruleFamilies: ["max", "max-count", "max-move", "special-status"] }
   ];
   const additionalFamilyIds = new Set(advancedFamilies.filter((definition) => !definition.primary).map((definition) => definition.id));
 
@@ -1015,14 +1015,39 @@
       checkbox.type = "checkbox";
       checkbox.id = "family-" + definition.id + "-enabled";
       const title = document.createElement("span");
-      title.textContent = definition.label;
-      const helper = document.createElement("small");
-      helper.className = "family-description";
-      helper.id = "family-" + definition.id + "-description";
-      helper.textContent = definition.description;
+      title.textContent = definition.shortLabel || definition.label;
+      const tooltipId = "family-" + definition.id + "-tooltip";
+      const helper = document.createElement("div");
+      helper.className = "context-tooltip family-description-tooltip";
+      helper.id = tooltipId;
+      helper.setAttribute("role", "dialog");
+      helper.setAttribute("aria-labelledby", tooltipId + "-title");
+      helper.hidden = true;
+      const tooltipTitle = document.createElement("h2");
+      tooltipTitle.id = tooltipId + "-title";
+      tooltipTitle.className = "visually-hidden";
+      tooltipTitle.textContent = definition.label + " details";
+      const tooltipDescription = document.createElement("p");
+      tooltipDescription.className = "family-description";
+      tooltipDescription.textContent = definition.description;
+      helper.append(tooltipTitle, tooltipDescription);
       checkbox.setAttribute("aria-describedby", helper.id);
       toggleLabel.append(checkbox, title);
       heading.appendChild(toggleLabel);
+      const infoButton = document.createElement("button");
+      infoButton.className = "info-trigger family-info-trigger";
+      infoButton.type = "button";
+      infoButton.setAttribute("aria-label", definition.label + " information");
+      infoButton.setAttribute("aria-haspopup", "dialog");
+      infoButton.setAttribute("aria-expanded", "false");
+      infoButton.setAttribute("aria-controls", helper.id);
+      infoButton.setAttribute("aria-describedby", helper.id);
+      infoButton.setAttribute("data-context-tooltip-trigger", "");
+      const infoIcon = document.createElement("span");
+      infoIcon.setAttribute("aria-hidden", "true");
+      infoIcon.textContent = "ⓘ";
+      infoButton.appendChild(infoIcon);
+      heading.appendChild(infoButton);
       let limitControls = null;
       if (definition.limits) {
         limitControls = createFamilyLimitControls(definition);
@@ -1041,10 +1066,10 @@
       const output = document.createElement("output");
       output.htmlFor = range.id;
       weightLabel.append(range, output);
-      row.append(heading, helper, weightLabel);
+      row.append(heading, weightLabel, helper);
       if (limitControls) row.appendChild(limitControls.panel);
       container.appendChild(row);
-      familyControlElements.set(definition.id, { checkbox: checkbox, range: range, output: output, row: row, helper: helper });
+      familyControlElements.set(definition.id, { checkbox: checkbox, range: range, output: output, row: row, helper: tooltipDescription });
       if (limitControls) familyLimitElements.set(definition.id, limitControls);
 
       checkbox.addEventListener("change", () => {

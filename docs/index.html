@@ -246,8 +246,15 @@
               </fieldset>
 
               <fieldset class="family-fieldset">
-                <legend>Rule families</legend>
-                <p class="family-guidance">Higher likelihood makes a family more likely to be selected.</p>
+                <legend class="family-fieldset-legend">Rule families
+                  <button class="info-trigger family-info-trigger" type="button" aria-label="Rule family likelihood information" aria-haspopup="dialog" aria-expanded="false" aria-controls="family-guidance-tooltip" aria-describedby="family-guidance-tooltip" data-context-tooltip-trigger>
+                    <span aria-hidden="true">ⓘ</span>
+                  </button>
+                </legend>
+                <div id="family-guidance-tooltip" class="context-tooltip" role="dialog" aria-labelledby="family-guidance-tooltip-title" hidden>
+                  <h2 id="family-guidance-tooltip-title" class="visually-hidden">Rule family likelihood</h2>
+                  <p>Higher likelihood makes a family more likely to be selected.</p>
+                </div>
                 <div id="primary-family-controls" class="family-grid"></div>
               </fieldset>
 
