@@ -11,6 +11,18 @@ vm.runInNewContext(
   ruleDataContext
 );
 const ruleData = ruleDataContext.window.GBL_RULE_DATA;
+const speciesDataContext = { window: {} };
+vm.runInNewContext(
+  fs.readFileSync(path.join(__dirname, "../docs/static/js/species-data.js"), "utf8"),
+  speciesDataContext
+);
+const speciesData = speciesDataContext.window.GBL_SPECIES_DATA;
+const cupDataContext = { window: {} };
+vm.runInNewContext(
+  fs.readFileSync(path.join(__dirname, "../docs/static/js/cup-data.js"), "utf8"),
+  cupDataContext
+);
+const cupData = cupDataContext.window.GBL_CUP_DATA;
 
 function seededRandom(seed) {
   let value = seed >>> 0;
@@ -73,7 +85,7 @@ function makeRepresentativeBatch(seed, count = 100) {
   });
 }
 
-test("league CP limits are optional and generated CP ranges are intersected once", () => {
+test("legacy optional CP helper stays compatible and generated ranges intersect once", () => {
   const little = { label: "Little Cup", search: "cp0-500", minCp: null, maxCp: 500 };
   const great = { label: "Great League", search: "cp0-1500", minCp: null, maxCp: 1500 };
   const ultra = { label: "Ultra League", search: "cp0-2500", minCp: null, maxCp: 2500 };
@@ -98,7 +110,7 @@ test("league CP limits are optional and generated CP ranges are intersected once
   assert.equal(utils.leagueWithOptionalCpLimit(master, true).search, "");
 });
 
-test("league CP preference persists between capped leagues and through Master League", () => {
+test("legacy league CP preference helper persists across league changes", () => {
   let state = utils.leagueCpUiState("master", false, false, true);
   assert.deepEqual(state, { enabled: false, checked: false, preference: false });
 
@@ -112,6 +124,27 @@ test("league CP preference persists between capped leagues and through Master Le
   assert.deepEqual(state, { enabled: false, checked: false, preference: true });
   state = utils.leagueCpUiState("great", state.preference, state.checked, true);
   assert.deepEqual(state, { enabled: true, checked: true, preference: true });
+});
+
+test("selected league caps remain authoritative and cup caps can only lower them", () => {
+  const leagues = {
+    little: { label: "Little Cup", search: "cp0-500", minCp: null, maxCp: 500 },
+    great: { label: "Great League", search: "cp0-1500", minCp: null, maxCp: 1500 },
+    ultra: { label: "Ultra League", search: "cp0-2500", minCp: null, maxCp: 2500 },
+    master: { label: "Master League", search: "", minCp: null, maxCp: null }
+  };
+  const aggressiveRule = { family: "cp", search: "cp2000-", minCp: 2000, maxCp: null };
+  assert.equal(utils.normalizeCpConstraint(leagues.little, [aggressiveRule]).search, "cp0-500");
+  assert.equal(utils.normalizeCpConstraint(leagues.great, [aggressiveRule]).search, "cp0-1500");
+  assert.equal(utils.normalizeCpConstraint(leagues.ultra, [aggressiveRule]).search, "cp2000-2500");
+  assert.equal(utils.normalizeCpConstraint(leagues.master, [aggressiveRule]).search, "cp2000-");
+
+  const littleCupOnGreat = utils.leagueWithCupCap(leagues.great, 500);
+  assert.equal(littleCupOnGreat.maxCp, 500);
+  assert.equal(utils.normalizeCpConstraint(littleCupOnGreat, [aggressiveRule]).search, "cp0-500");
+  const greatCupOnMaster = utils.leagueWithCupCap(leagues.master, 1500);
+  assert.equal(utils.normalizeCpConstraint(greatCupOnMaster, [aggressiveRule]).search, "cp0-1500");
+  assert.equal(utils.leagueWithCupCap(leagues.little, 1500).maxCp, 500);
 });
 
 test("type leaning uses qualitative multipliers and honors disabled scopes", () => {
@@ -157,22 +190,89 @@ test("weighted type samples do not duplicate a selected type", () => {
 
 test("published generator markup keeps result and controls in one form", () => {
   const html = fs.readFileSync(path.join(__dirname, "../docs/index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
   const formStart = html.indexOf('<form id="filter-form" class="generator-panel">');
   const resultStart = html.indexOf('<section class="result-panel"', formStart);
   const controlsStart = html.indexOf('<div class="controls">', resultStart);
   const formEnd = html.indexOf("</form>", controlsStart);
   assert.ok(formStart >= 0 && resultStart > formStart && controlsStart > resultStart && formEnd > controlsStart);
   assert.ok(html.indexOf('id="extra-filter"', controlsStart) < formEnd);
-  assert.ok(html.indexOf('id="league-cp-limit"', controlsStart) < formEnd);
+  assert.ok(html.indexOf('class="league-selector"') < html.indexOf('id="cup-select"'));
+  assert.ok(html.indexOf('id="cup-select"') < html.indexOf('id="mutator-count"'));
   const utilitiesScript = html.indexOf('<script src="./static/js/generator-utils.js">');
+  const speciesScript = html.indexOf('<script src="./static/js/species-data.js">');
+  const cupsScript = html.indexOf('<script src="./static/js/cup-data.js">');
   const appScript = html.indexOf('<script src="./static/js/app.js">');
-  assert.ok(html.indexOf('id="type-leaning-add"') < utilitiesScript && utilitiesScript < appScript);
-  assert.match(html, /<option value="master" selected>Master League<\/option>/);
-  assert.match(html, /id="league-cp-limit"[^>]*disabled/);
+  assert.ok(html.indexOf('id="type-leaning-add"') < speciesScript && speciesScript < cupsScript && cupsScript < utilitiesScript && utilitiesScript < appScript);
+  assert.equal((html.match(/type="radio" name="league"/g) || []).length, 4);
+  assert.equal((html.match(/type="radio" name="league"[^>]*\schecked/g) || []).length, 1);
+  assert.match(html, /value="little"[\s\S]*?500 CP[\s\S]*?value="great"[\s\S]*?1,500 CP[\s\S]*?value="ultra"[\s\S]*?2,500 CP[\s\S]*?value="master" checked[\s\S]*?Unlimited CP/);
+  assert.doesNotMatch(html, /id="league-select"|id="league-cp-limit"/);
+  assert.match(html, /<option value="" selected>None — Open League<\/option>/);
+  assert.match(html, /id="additional-rule-input"[^>]*role="combobox"/);
+  assert.match(html, /id="add-additional-rule"[^>]*aria-label="Add rule"/);
+  assert.match(html, /Additional Rules/);
+  const ids = Array.from(html.matchAll(/\sid="([^"]+)"/g), (match) => match[1]);
+  assert.equal(new Set(ids).size, ids.length, "published markup IDs stay unique");
+  for (const [, id] of app.matchAll(/getElementById\("([^"]+)"\)/g)) {
+    assert.ok(ids.includes(id), "app element exists in markup: " + id);
+  }
+  const cupChange = app.slice(app.indexOf("function onCupSelectionChanged"), app.indexOf("function onCupPrefixChanged"));
+  assert.doesNotMatch(cupChange, /leagueInputs[^\n]*checked\s*=|leagueSelect\.value\s*=/, "cup changes keep the chosen league");
+  const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
+  assert.match(css, /\.league-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/);
+  assert.doesNotMatch(html, /<script[^>]+src="https?:\/\//, "the static page does not add runtime network scripts");
   assert.match(html, /name="type-leaning-strength" value="medium" checked/);
   assert.match(html, /id="type-leaning-pokemon" type="checkbox" checked/);
   assert.match(html, /id="type-leaning-move" type="checkbox" checked/);
   assert.match(html, /<p class="site-version">v1\.0\.0<\/p>/);
+});
+
+test("search composition distributes AND across OR groups and validates empty branches", () => {
+  assert.equal(
+    utils.combineSearch(["fire,water", "shiny,shadow"]),
+    "fire&shiny,fire&shadow,water&shiny,water&shadow"
+  );
+  assert.equal(utils.combineSearch(["0attack,1attack", "water"]), "0attack&water,1attack&water");
+  assert.equal(
+    utils.combineSearch(["fighting,psychic,dark", "!282&!570"]),
+    "fighting&!282&!570,psychic&!282&!570,dark&!282&!570"
+  );
+  assert.equal(utils.validateSearchExpression("fire:water;grass").normalized, "fire,water,grass");
+  for (const invalid of ["fire,,water", "fire&", "&water", "!", "\"unclosed"]) {
+    assert.equal(utils.validateSearchExpression(invalid).valid, false, invalid);
+    assert.throws(() => utils.combineSearch([invalid]), Error);
+  }
+  assert.equal(utils.validateSearchExpression("@King's Shield").valid, true);
+  assert.equal(utils.combineSearch(["water", "water"]), "water");
+});
+
+test("bundled species and official cup snapshots cover supported presets", () => {
+  assert.equal(speciesData.length, 1025);
+  assert.deepEqual(Array.from(speciesData[0]), [1, "Bulbasaur"]);
+  assert.deepEqual(Array.from(speciesData.at(-1)), [1025, "Pecharunt"]);
+  assert.ok(speciesData.some(([id, name]) => id === 939 && name === "Bellibolt"));
+
+  const getCup = (id) => cupData.find((cup) => cup.id === id);
+  for (const cup of cupData) {
+    assert.equal(utils.validateSearchExpression(cup.search).valid, true, cup.id + " cup search is valid");
+    if (cup.official) assert.ok(cup.sourceUrl, cup.id + " has an official source");
+  }
+  assert.equal(getCup("halloween").maxCp, 1500);
+  assert.equal(getCup("jungle").search, "normal,grass,electric,poison,ground,flying,bug,dark");
+  assert.equal(getCup("fantasy").search, "dragon,steel,fairy");
+  assert.equal(getCup("retro").search, "!dark&!steel&!fairy");
+  assert.deepEqual(Array.from(getCup("willpower").speciesBans), [282, 570, 571]);
+  assert.equal(getCup("element").manualRules.length, 1);
+  assert.match(getCup("love").manualRules[0], /red or pink/);
+  assert.equal(getCup("rock-challenge").official, false);
+
+  const willpower = getCup("willpower");
+  const banned = willpower.speciesBans.map((dex) => "!" + dex).join("&");
+  assert.equal(
+    utils.combineSearch([willpower.search, banned]),
+    "fighting&!282&!570&!571,psychic&!282&!570&!571,dark&!282&!570&!571"
+  );
 });
 
 test("random time rules use broad age bands and keep calendar-year searches out of the pool", () => {
@@ -247,8 +347,11 @@ test("individual IV rules use grouped appraisal bands and retain their AND seman
     assert.match(matches[0].search, /^(?:[0-4](?:attack|defense|hp))(?:,(?:[0-4](?:attack|defense|hp)))+$/);
   }
   assert.ok(ruleData.rules.every((rule) => !/(?:^|[&,])(?:attack|defense)-\d/.test(rule.search)));
-  assert.equal(utils.combineSearch([expected["iv-attack"], "water"]), "0attack,1attack&water");
-  assert.equal(utils.combineSearch([expected["iv-attack"], expected["iv-defense"]]), "0attack,1attack&3defense,4defense");
+  assert.equal(utils.combineSearch([expected["iv-attack"], "water"]), "0attack&water,1attack&water");
+  assert.equal(
+    utils.combineSearch([expected["iv-attack"], expected["iv-defense"]]),
+    "0attack&3defense,0attack&4defense,1attack&3defense,1attack&4defense"
+  );
 });
 
 test("normal appraisal selection favors two-star-band OR groups", () => {

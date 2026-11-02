@@ -97,8 +97,83 @@
     return chooseRule(disqualifiers, options);
   }
 
+  function splitSearchLevel(value, delimiters) {
+    const parts = [];
+    let quote = "";
+    let escaped = false;
+    let start = 0;
+    for (let index = 0; index < value.length; index += 1) {
+      const character = value[index];
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (character === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (quote) {
+        if (character === quote) quote = "";
+        continue;
+      }
+      if (character === "\"") {
+        quote = character;
+        continue;
+      }
+      if (delimiters.includes(character)) {
+        parts.push(value.slice(start, index).trim());
+        start = index + 1;
+      }
+    }
+    if (quote) return { parts: [], error: "Close the quote in this search expression." };
+    parts.push(value.slice(start).trim());
+    return { parts: parts, error: "" };
+  }
+
+  function validateSearchExpression(expression) {
+    const value = String(expression == null ? "" : expression).trim();
+    if (!value) return { valid: true, normalized: "", alternatives: [], error: "" };
+
+    const orParts = splitSearchLevel(value, ",;:");
+    if (orParts.error) return { valid: false, normalized: "", alternatives: [], error: orParts.error };
+    const alternatives = [];
+    for (const branch of orParts.parts) {
+      if (!branch) return { valid: false, normalized: "", alternatives: [], error: "Add a search term on both sides of each OR separator." };
+      const andParts = splitSearchLevel(branch, "&");
+      if (andParts.error) return { valid: false, normalized: "", alternatives: [], error: andParts.error };
+      if (andParts.parts.some((term) => !term || term === "!")) {
+        return { valid: false, normalized: "", alternatives: [], error: "Add a search term after each AND or exclusion marker." };
+      }
+      alternatives.push(andParts.parts);
+    }
+    const normalized = alternatives.map((terms) => terms.join("&")).join(",");
+    return { valid: true, normalized: normalized, alternatives: alternatives, error: "" };
+  }
+
   function combineSearch(parts) {
-    return parts.filter(Boolean).join("&");
+    const expressions = parts.map((part) => String(part == null ? "" : part).trim()).filter(Boolean);
+    if (!expressions.length) return "";
+
+    let clauses = [[]];
+    for (const expression of expressions) {
+      const parsed = validateSearchExpression(expression);
+      if (!parsed.valid) throw new Error(parsed.error);
+      let expanded = [];
+      for (const clause of clauses) {
+        for (const alternative of parsed.alternatives) {
+          const terms = clause.slice();
+          alternative.forEach((term) => {
+            if (!terms.some((existing) => existing.toLowerCase() === term.toLowerCase())) terms.push(term);
+          });
+          if (!expanded.some((existing) => existing.join("&").toLowerCase() === terms.join("&").toLowerCase())) {
+            expanded.push(terms);
+          }
+          if (expanded.length > 4096) throw new Error("This filter has too many OR combinations. Simplify one of its search expressions.");
+        }
+      }
+      clauses = expanded;
+    }
+    return clauses.map((clause) => clause.join("&")).join(",");
   }
 
   function cpSearchForRange(minCp, maxCp) {
@@ -124,6 +199,14 @@
     const generatedMax = generatedRule.maxCp == null ? Infinity : generatedRule.maxCp;
     const minCp = Math.max(leagueMin, generatedMin);
     const maxCp = Math.min(leagueMax, generatedMax);
+    if (minCp > maxCp) {
+      return {
+        generatedRule: null,
+        minCp: leagueMin,
+        maxCp: leagueMax,
+        search: league.search
+      };
+    }
     const unchanged = minCp === generatedMin && maxCp === generatedMax;
 
     return {
@@ -137,6 +220,14 @@
   function leagueWithOptionalCpLimit(league, enabled) {
     if (enabled && league.maxCp) return league;
     return Object.assign({}, league, { minCp: null, maxCp: null, search: "" });
+  }
+
+  function leagueWithCupCap(league, cupMaxCp) {
+    if (!Number.isFinite(cupMaxCp)) return league;
+    const minCp = league.minCp == null ? 0 : league.minCp;
+    const leagueMax = league.maxCp == null ? Infinity : league.maxCp;
+    const maxCp = Math.min(leagueMax, cupMaxCp);
+    return Object.assign({}, league, { minCp: minCp, maxCp: maxCp, search: cpSearchForRange(minCp, maxCp) });
   }
 
   function isAllowedForLeague(rule, league) {
@@ -157,10 +248,12 @@
     chooseRule: chooseRule,
     chooseChallengeRule: chooseChallengeRule,
     chooseOptionalDisqualifier: chooseOptionalDisqualifier,
+    validateSearchExpression: validateSearchExpression,
     combineSearch: combineSearch,
     cpSearchForRange: cpSearchForRange,
     normalizeCpConstraint: normalizeCpConstraint,
     leagueWithOptionalCpLimit: leagueWithOptionalCpLimit,
+    leagueWithCupCap: leagueWithCupCap,
     isAllowedForLeague: isAllowedForLeague
   });
 

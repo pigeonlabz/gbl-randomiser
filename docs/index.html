@@ -33,24 +33,61 @@
       </section>
 
       <div class="controls">
-        <div class="control-grid">
-          <div class="league-control-group">
-            <label class="control" for="league-select">
-              <span>League</span>
-              <select id="league-select" name="league">
-                <option value="little">Little Cup</option>
-                <option value="great">Great League</option>
-                <option value="ultra">Ultra League</option>
-                <option value="master" selected>Master League</option>
-              </select>
+        <fieldset class="league-selector">
+          <legend>League</legend>
+          <div class="league-grid" role="radiogroup" aria-label="League">
+            <label class="league-tile">
+              <input type="radio" name="league" value="little">
+              <svg class="league-ball ball-poke" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="19"/><path class="ball-top" d="M3 22a19 19 0 0 1 38 0H3Z"/><path class="ball-band" d="M3 20h38v5H3z"/><circle class="ball-button" cx="22" cy="22.5" r="6"/></svg>
+              <span class="league-name">Little</span><span class="league-limit">500 CP</span>
             </label>
-            <label class="league-cp-toggle" for="league-cp-limit">
-              <input id="league-cp-limit" name="league-cp-limit" type="checkbox" aria-describedby="league-cp-help" disabled>
-              <span>Apply league CP limit</span>
+            <label class="league-tile">
+              <input type="radio" name="league" value="great">
+              <svg class="league-ball ball-great" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="19"/><path class="ball-top" d="M3 22a19 19 0 0 1 38 0H3Z"/><path class="ball-band" d="M3 20h38v5H3z"/><circle class="ball-button" cx="22" cy="22.5" r="6"/><path class="ball-detail" d="m10 11 4 2-4 4-4-2zm24 0-4 2 4 4 4-2z"/></svg>
+              <span class="league-name">Great</span><span class="league-limit">1,500 CP</span>
             </label>
-            <small id="league-cp-help" class="league-cp-help">Master League has no standard CP limit.</small>
+            <label class="league-tile">
+              <input type="radio" name="league" value="ultra">
+              <svg class="league-ball ball-ultra" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="19"/><path class="ball-top" d="M3 22a19 19 0 0 1 38 0H3Z"/><path class="ball-band" d="M3 20h38v5H3z"/><circle class="ball-button" cx="22" cy="22.5" r="6"/><path class="ball-detail" d="m9 8 8 4-5 5-6-3zm26 0-8 4 5 5 6-3z"/></svg>
+              <span class="league-name">Ultra</span><span class="league-limit">2,500 CP</span>
+            </label>
+            <label class="league-tile">
+              <input type="radio" name="league" value="master" checked>
+              <svg class="league-ball ball-master" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="19"/><path class="ball-top" d="M3 22a19 19 0 0 1 38 0H3Z"/><path class="ball-band" d="M3 20h38v5H3z"/><circle class="ball-button" cx="22" cy="22.5" r="6"/><text x="22" y="16" text-anchor="middle">M</text></svg>
+              <span class="league-name">Master</span><span class="league-limit">Unlimited CP</span>
+            </label>
           </div>
+        </fieldset>
 
+        <div class="control cup-selector">
+          <label for="cup-select"><span>Cup <small>optional</small></span></label>
+          <select id="cup-select" name="cup">
+            <option value="" selected>None — Open League</option>
+            <optgroup label="Official GBL formats">
+              <option value="halloween">Halloween Cup — Great League</option>
+              <option value="mega-halloween">Mega Halloween Cup — Great League</option>
+              <option value="jungle">Jungle Cup — Great League</option>
+              <option value="fantasy">Fantasy Cup — Great League</option>
+              <option value="fantasy-ultra">Fantasy Cup — Ultra League</option>
+              <option value="retro">Retro Cup — Great League</option>
+              <option value="willpower">Willpower Cup — Great League</option>
+              <option value="element">Element Cup — Little Edition</option>
+              <option value="fossil">Fossil Cup — Great League</option>
+              <option value="holiday">Holiday Cup — Great League</option>
+              <option value="holiday-ultra">Holiday Cup — Ultra League</option>
+              <option value="love">Love Cup — Great League</option>
+              <option value="scroll">Scroll Cup — Great League</option>
+            </optgroup>
+            <optgroup label="Custom filter presets">
+              <option value="rock-challenge">Rock challenge (custom filter)</option>
+              <option value="custom">Custom Cup filter…</option>
+            </optgroup>
+          </select>
+          <small id="cup-selector-help">Cup restrictions apply to the selected league. Official eligibility notes are shown separately when search cannot enforce them.</small>
+          <div id="cup-format-info" class="cup-format-info" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="control-grid">
           <label class="control" for="mutator-count">
             <span>Mutators</span>
             <select id="mutator-count" name="count">
@@ -73,11 +110,26 @@
           </div>
         </fieldset>
 
-        <label class="control manual-rules-control" for="extra-filter">
-          <span>Extra filter</span>
-          <input id="extra-filter" name="extra-filter" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. !shadow or tag:practice">
-          <small>Applies on top of generated filters.</small>
-        </label>
+        <section class="additional-rules" aria-labelledby="additional-rules-title">
+          <h2 id="additional-rules-title">Additional Rules</h2>
+          <p class="additional-rules-help">Exclude Pokémon by name or Pokédex number, or add a Pokémon GO search term as a chip.</p>
+          <label class="visually-hidden" for="additional-rule-input">Search Pokémon or enter a rule</label>
+          <div class="rule-composer">
+            <input id="additional-rule-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="additional-rule-suggestions" autocomplete="off" spellcheck="false" placeholder="Pokémon name, Pokédex number, or search rule">
+            <button id="add-additional-rule" class="button button-secondary add-rule-button" type="button" aria-label="Add rule">+</button>
+          </div>
+          <div id="additional-rule-suggestions" class="rule-suggestions" role="listbox" aria-label="Pokémon suggestions" hidden></div>
+          <p id="additional-rule-status" class="status" role="status" aria-live="polite"></p>
+          <div id="additional-rule-chips" class="additional-rule-chips" role="list" aria-label="Additional rule chips"></div>
+          <label class="control advanced-expression-control" for="extra-filter">
+            <span>Advanced raw expression</span>
+            <input id="extra-filter" name="extra-filter" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. !shadow&@water or #practice">
+            <small>Combined live with the generated filter using Pokémon GO AND/OR precedence.</small>
+          </label>
+          <p id="advanced-expression-status" class="status" role="status" aria-live="polite"></p>
+          <p class="additional-preview-label">Combined search preview</p>
+          <output id="additional-filter-preview" class="additional-filter-preview" aria-live="polite"></output>
+        </section>
 
         <button class="button button-primary" type="submit">Generate New Filter</button>
 
@@ -132,30 +184,9 @@
             </details>
 
             <details class="cup-settings">
-              <summary>Cup settings</summary>
-              <label class="cup-settings-toggle" for="cup-settings-enabled">
-                <input id="cup-settings-enabled" type="checkbox" aria-controls="cup-settings-fields">
-                <span>Enable Cup settings</span>
-              </label>
-              <fieldset id="cup-settings-fields" class="cup-settings-fields" disabled>
+              <summary>More Cup settings</summary>
+              <fieldset id="cup-settings-fields" class="cup-settings-fields">
                 <div class="cup-controls-grid">
-                  <label class="control" for="cup-select">
-                    <span>Cup preset</span>
-                    <select id="cup-select" name="cup">
-                      <option value="">No Cup</option>
-                      <option value="element">Element Cup</option>
-                      <option value="fantasy">Fantasy Cup</option>
-                      <option value="fossil">Fossil Cup</option>
-                      <option value="halloween">Halloween Cup</option>
-                      <option value="holiday">Holiday Cup</option>
-                      <option value="jungle">Jungle Cup</option>
-                      <option value="love">Love Cup</option>
-                      <option value="rock">Rock Cup</option>
-                      <option value="scroll">Scroll Cup</option>
-                      <option value="custom">Custom Cup filter…</option>
-                    </select>
-                  </label>
-
                   <label class="control" for="battle-target">
                     <span>Battle target <small>optional</small></span>
                     <input id="battle-target" name="battle-target" type="number" min="1" max="99" inputmode="numeric" placeholder="No limit">
@@ -164,7 +195,7 @@
                   <label class="control cup-prefix-control" for="cup-prefix">
                     <span>Cup search prefix</span>
                     <input id="cup-prefix" name="cup-prefix" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. rock&!@rock">
-                    <small id="cup-help">Cup filters are bundled with this static page. New server-loaded Cups and shared battle sessions need a server.</small>
+                    <small id="cup-prefix-help">Cup filters are bundled with this static page. New server-loaded Cups and shared battle sessions need a server.</small>
                   </label>
                 </div>
 
@@ -191,6 +222,8 @@
   </main>
 
   <script src="./static/js/rule-data.js"></script>
+  <script src="./static/js/species-data.js"></script>
+  <script src="./static/js/cup-data.js"></script>
   <script src="./static/js/generator-utils.js"></script>
   <script src="./static/js/app.js"></script>
 </body>
