@@ -28,7 +28,7 @@
     { id: "acquisition", label: "Origin", shortLabel: "Origin", description: "How you obtained the Pokémon.", ruleFamilies: ["origin", "origin-special", "year"], primary: true },
     { id: "battle-stats", label: "Appraisal / IVs", shortLabel: "Appraisal / IVs", description: "Uses appraisal star ranges or battle-stat filters.", ruleFamilies: ["appraisal", "hp", "iv-attack", "iv-defense", "iv-hp", "iv-combo"] },
     { id: "collection", label: "Collection traits", shortLabel: "Collection", description: "Uses unusual collection and inventory traits.", ruleFamilies: ["lucky", "costume", "candy", "candy-xl", "powered-xl", "background", "copy-count", "buddy-candy"] },
-    { id: "distance", label: "Distance", description: "How far away a Pokémon was caught from your current location.", ruleFamilies: ["distance"] },
+    { id: "distance", label: "Distance", description: "How far away a Pokémon was caught from your current location.", ruleFamilies: ["distance"], primary: true },
     { id: "special-forms", label: "Special forms", shortLabel: "Special Forms", description: "Uses Dynamax, Gigantamax, or other special forms.", ruleFamilies: ["max", "max-count", "max-move", "special-status"] }
   ];
   const additionalFamilyIds = new Set(advancedFamilies.filter((definition) => !definition.primary).map((definition) => definition.id));

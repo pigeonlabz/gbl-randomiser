@@ -169,7 +169,7 @@ test("Distance offers nearby and distant filters, defaults to likelihood 4, and 
 
   const profiles = app.slice(app.indexOf("const profileDefaults = {"), app.indexOf("const profilePoolWeights = {"));
   assert.equal((profiles.match(/distance: 4/g) || []).length, 3, "each randomness profile uses likelihood 4");
-  assert.match(app, /id: "distance", label: "Distance", description: "How far away a Pokémon was caught from your current location\.", ruleFamilies: \["distance"\] \}/);
+  assert.match(app, /id: "distance", label: "Distance", description: "How far away a Pokémon was caught from your current location\.", ruleFamilies: \["distance"\], primary: true \}/);
   assert.match(app, /collection"[^\n]*ruleFamilies: \[[^\]]*"powered-xl", "background"/);
 
   const great = { label: "Great League", search: "cp0-1500", minCp: null, maxCp: 1500 };
