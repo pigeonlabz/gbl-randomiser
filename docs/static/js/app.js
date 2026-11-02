@@ -74,6 +74,7 @@
   const cupSettingsFields = document.getElementById("cup-settings-fields");
   const cupSelect = document.getElementById("cup-select");
   const cupTileRow = document.getElementById("cup-tiles");
+  const cupLibraryButton = document.getElementById("cup-library-open");
   const cupPickerPopup = document.getElementById("cup-picker-popup");
   const cupPickerSearch = document.getElementById("cup-picker-search");
   const officialCupOptions = document.getElementById("official-cup-options");
@@ -437,22 +438,6 @@
       cupTileRow.appendChild(button);
     });
 
-    const moreButton = document.createElement("button");
-    moreButton.type = "button";
-    moreButton.className = "cup-quick-tile cup-more-tile";
-    moreButton.dataset.cupMore = "true";
-    moreButton.setAttribute("aria-haspopup", "dialog");
-    moreButton.setAttribute("aria-expanded", String(!cupPickerPopup.hidden));
-    moreButton.setAttribute("aria-controls", "cup-picker-popup");
-    moreButton.setAttribute("aria-label", "More Cups");
-    const moreIcon = document.createElement("span");
-    moreIcon.className = "cup-quick-icon";
-    moreIcon.setAttribute("aria-hidden", "true");
-    moreIcon.textContent = "⋯";
-    const moreLabel = document.createElement("span");
-    moreLabel.textContent = "More";
-    moreButton.append(moreIcon, moreLabel);
-    cupTileRow.appendChild(moreButton);
     updateCupPickerSelection();
   }
   function renderCupPickerOptions() {
@@ -522,11 +507,8 @@
   function closeCupPicker(returnFocus) {
     if (cupPickerPopup.hidden) return;
     cupPickerPopup.hidden = true;
-    const moreButton = cupTileRow.querySelector("[data-cup-more]");
-    if (moreButton) moreButton.setAttribute("aria-expanded", "false");
-    if (returnFocus) {
-      (moreButton || cupTileRow.querySelector("[data-cup-id]")).focus();
-    }
+    cupLibraryButton.setAttribute("aria-expanded", "false");
+    if (returnFocus) cupLibraryButton.focus();
   }
   function ensureCupSelectOptions() {
     const knownIds = new Set(Array.from(cupSelect.options, (option) => option.value));
@@ -548,14 +530,16 @@
     cupPickerPopup.hidden = false;
     cupPickerSearch.value = "";
     updateCupPickerSearch();
-    const moreButton = cupTileRow.querySelector("[data-cup-more]");
-    if (moreButton) moreButton.setAttribute("aria-expanded", "true");
+    cupLibraryButton.setAttribute("aria-expanded", "true");
     positionCupPicker();
     cupPickerSearch.focus({ preventScroll: true });
   }
   function rememberCupSelection() {
     const id = cupSelect.value;
-    if (!id) return;
+    if (!id) {
+      updateCupPickerSelection();
+      return;
+    }
     recentCupIds = [id].concat(recentCupIds.filter((recentId) => recentId !== id)).slice(0, 5);
     saveRecentCupIds();
     renderCupQuickSelections();
@@ -566,11 +550,6 @@
     renderCupPickerOptions();
     renderCupQuickSelections();
     cupTileRow.addEventListener("click", (event) => {
-      const moreButton = event.target.closest("[data-cup-more]");
-      if (moreButton) {
-        openCupPicker();
-        return;
-      }
       const cupButton = event.target.closest("[data-cup-id]");
       if (!cupButton) return;
       const id = cupButton.dataset.cupId;
@@ -578,6 +557,10 @@
         cupSelect.value = id;
         cupSelect.dispatchEvent(new Event("change", { bubbles: true }));
       }
+    });
+    cupLibraryButton.addEventListener("click", () => {
+      if (cupPickerPopup.hidden) openCupPicker();
+      else closeCupPicker(false);
     });
     cupPickerPopup.addEventListener("click", (event) => {
       const button = event.target.closest("[data-cup-option]");
@@ -600,7 +583,8 @@
     });
     cupPickerClose.addEventListener("click", () => closeCupPicker(true));
     document.addEventListener("pointerdown", (event) => {
-      if (!cupPickerPopup.hidden && !cupPickerPopup.contains(event.target) && !cupTileRow.contains(event.target)) closeCupPicker(false);
+      if (!cupPickerPopup.hidden && !cupPickerPopup.contains(event.target) &&
+        !cupTileRow.contains(event.target) && !cupLibraryButton.contains(event.target)) closeCupPicker(false);
     });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !cupPickerPopup.hidden) {
@@ -1623,11 +1607,13 @@
       cupLockMoves.checked = false;
     }
     battleCount = 0;
+    updateCupPickerSelection();
     updateCupControls();
     syncMutatorModeForCurrentState(true);
   }
 
   function onCupPrefixChanged() {
+    const previousSelection = cupSelect.value;
     if (cupSelect.value && cupSelect.value !== "custom" && cupPrefixInput.value.trim() !== currentCup.search) {
       cupSelect.value = "custom";
       currentCup = null;
@@ -1638,6 +1624,8 @@
       cupSelect.value = "";
       currentCup = null;
     }
+    if (cupSelect.value !== previousSelection && cupSelect.value) rememberCupSelection();
+    else updateCupPickerSelection();
     updateCupControls();
     syncMutatorModeForCurrentState(true);
   }

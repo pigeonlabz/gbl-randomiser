@@ -82,7 +82,12 @@
               <div id="cup-format-info" class="cup-format-info" role="status" aria-live="polite"></div>
             </div>
           </div>
-          <div id="cup-tiles" class="cup-tile-row" role="group" aria-label="Cup quick selections"></div>
+          <div class="cup-carousel" role="group" aria-label="Cup selection">
+            <div id="cup-tiles" class="cup-tile-row" role="group" aria-label="Open and recently used Cups"></div>
+            <button id="cup-library-open" class="icon-action cup-library-button" type="button" aria-label="Search all Cups" aria-haspopup="dialog" aria-expanded="false" aria-controls="cup-picker-popup" data-tooltip="Browse all Cups">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4.2 4.2"/></svg>
+            </button>
+          </div>
           <select id="cup-select" name="cup" hidden aria-hidden="true" tabindex="-1">
             <option value="" selected>None — Open League</option>
             <optgroup label="Official GBL formats">

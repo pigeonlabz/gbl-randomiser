@@ -198,6 +198,44 @@ test("Cup-only filters keep the selected CP limit and omit mutators until enable
   assert.equal(compose(master, false, false), "shiny", "Open League still applies its generated mutator");
 });
 
+test("cup selection replaces the active cup and Open League clears cup restrictions", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../docs/index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
+  const setupCupPicker = app.slice(app.indexOf("function setupCupPicker"), app.indexOf("function cupPresetSearch"));
+  const selectionHandler = app.slice(app.indexOf("function onCupSelectionChanged"), app.indexOf("function onCupPrefixChanged"));
+  const getCup = (id) => cupData.find((cup) => cup.id === id);
+
+  assert.match(html, /<select id="cup-select" name="cup" hidden aria-hidden="true"/);
+  assert.match(html, /id="cup-library-open" class="icon-action cup-library-button"[^>]*aria-label="Search all Cups"/);
+  assert.match(html, /class="cup-carousel"[^>]*>[\s\S]*?id="cup-tiles"[^>]*><\/div>\s*<button id="cup-library-open"/);
+  assert.doesNotMatch(html, /class="cup-more-tile"|data-cup-more/);
+  assert.doesNotMatch(app, /data-cup-more/);
+  assert.match(setupCupPicker, /cupTileRow\.addEventListener\("click"[\s\S]*?cupSelect\.value = id;[\s\S]*?cupSelect\.dispatchEvent/);
+  assert.match(setupCupPicker, /cupPickerPopup\.addEventListener\("click"[\s\S]*?cupSelect\.value = button\.dataset\.cupId;[\s\S]*?cupSelect\.dispatchEvent/);
+  assert.match(setupCupPicker, /cupLibraryButton\.addEventListener\("click"[\s\S]*?openCupPicker\(\)[\s\S]*?closeCupPicker\(false\)/);
+  assert.match(setupCupPicker, /cupPickerClose\.addEventListener\("click", \(\) => closeCupPicker\(true\)\)/);
+  assert.match(setupCupPicker, /event\.key === "Escape"[\s\S]*?closeCupPicker\(true\)/);
+  assert.match(setupCupPicker, /!cupTileRow\.contains\(event\.target\) && !cupLibraryButton\.contains\(event\.target\)/);
+  assert.match(css, /\.cup-carousel\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 44px/);
+  assert.match(selectionHandler, /currentCup = CUP_PRESETS\.find\(\(cup\) => cup\.id === id\) \|\| null/);
+  assert.match(selectionHandler, /if \(currentCup\) \{\s*cupPrefixInput\.value = cupPresetSearch\(currentCup\)/);
+  assert.match(selectionHandler, /else if \(id === "custom"\) \{\s*cupPrefixInput\.value = ""/);
+  assert.match(selectionHandler, /else \{\s*cupPrefixInput\.value = ""/);
+  assert.doesNotMatch(selectionHandler, /cupPrefixInput\.value\s*\+=|cupPrefixInput\.value\s*=\s*cupPrefixInput\.value/);
+
+  let activeCupPrefix = "";
+  const selectCup = (id) => {
+    const cup = getCup(id);
+    activeCupPrefix = cup ? cup.search : "";
+    return activeCupPrefix;
+  };
+  selectCup("halloween");
+  assert.equal(selectCup("fossil"), getCup("fossil").search);
+  assert.equal(activeCupPrefix.includes(getCup("halloween").search), false, "switching cups replaces the previous restriction");
+  assert.equal(selectCup(""), "", "Open League clears all cup search restrictions");
+});
+
 test("guidance is available in accessible viewport-aware contextual tooltips", () => {
   const html = fs.readFileSync(path.join(__dirname, "../docs/index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
