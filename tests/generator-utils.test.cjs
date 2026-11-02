@@ -208,7 +208,8 @@ test("cup selection replaces the active cup and Open League clears cup restricti
 
   assert.match(html, /<select id="cup-select" name="cup" hidden aria-hidden="true"/);
   assert.match(html, /id="cup-library-open" class="icon-action cup-library-button"[^>]*aria-label="Search all Cups"/);
-  assert.match(html, /class="cup-carousel"[^>]*>[\s\S]*?id="cup-tiles"[^>]*><\/div>\s*<button id="cup-library-open"/);
+  assert.match(html, /class="label-help-row"[\s\S]*?button id="cup-library-open"[\s\S]*?id="cup-tiles" class="cup-tile-row"/);
+  assert.doesNotMatch(html, /class="cup-carousel"/);
   assert.doesNotMatch(html, /class="cup-more-tile"|data-cup-more/);
   assert.doesNotMatch(app, /data-cup-more/);
   assert.match(setupCupPicker, /cupTileRow\.addEventListener\("click"[\s\S]*?cupSelect\.value = id;[\s\S]*?cupSelect\.dispatchEvent/);
@@ -217,7 +218,8 @@ test("cup selection replaces the active cup and Open League clears cup restricti
   assert.match(setupCupPicker, /cupPickerClose\.addEventListener\("click", \(\) => closeCupPicker\(true\)\)/);
   assert.match(setupCupPicker, /event\.key === "Escape"[\s\S]*?closeCupPicker\(true\)/);
   assert.match(setupCupPicker, /!cupTileRow\.contains\(event\.target\) && !cupLibraryButton\.contains\(event\.target\)/);
-  assert.match(css, /\.cup-carousel\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 44px/);
+  assert.match(css, /\.cup-tile-row\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*overflow-x:\s*auto/);
+  assert.match(css, /\.cup-library-button\s*\{[^}]*margin-left:\s*auto/);
   assert.match(selectionHandler, /currentCup = CUP_PRESETS\.find\(\(cup\) => cup\.id === id\) \|\| null/);
   assert.match(selectionHandler, /if \(currentCup\) \{\s*cupPrefixInput\.value = cupPresetSearch\(currentCup\)/);
   assert.match(selectionHandler, /else if \(id === "custom"\) \{\s*cupPrefixInput\.value = ""/);
@@ -463,7 +465,7 @@ test("bundled species and official cup snapshots cover supported presets", () =>
   );
 });
 
-test("built-in Cup emojis are unique and carousel keeps selected and recent Cups visible", () => {
+test("built-in Cup emojis are unique and carousel exposes every Cup", () => {
   const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
   const quickPicker = app.slice(app.indexOf("function renderCupQuickSelections"), app.indexOf("function renderCupPickerOptions"));
@@ -473,16 +475,61 @@ test("built-in Cup emojis are unique and carousel keeps selected and recent Cups
   assert.ok(emojis.every((emoji) => typeof emoji === "string" && emoji.trim()), "every built-in Cup has an emoji");
   assert.equal(new Set(emojis).size, cups.length, "built-in Cup emojis are distinct");
   assert.match(app, /return emoji \|\| \(cup && cup\.official \? "🏆" : "🧩"\)/, "user-created cups have a fallback emoji");
-  assert.match(quickPicker, /ids\.unshift\(selectedId\)/, "the selected Cup is placed before recent Cups");
-  assert.match(quickPicker, /const visibleRecentCount = selectedId && cupPickerItem\(selectedId\) \? 4 : 3/);
-  assert.match(quickPicker, /ids\.slice\(0, visibleRecentCount\)/, "the carousel shows the selection plus up to three recent Cups");
+  assert.match(quickPicker, /ids\.unshift\(cupSelect\.value\)/, "the selected Cup is prioritised ahead of persisted recent Cups");
+  assert.match(quickPicker, /ids\.concat\(CUP_PRESETS\.map\(\(cup\) => cup\.id\), "custom"\)/, "the carousel includes every preset and the custom filter entry");
+  assert.match(quickPicker, /orderedIds\.forEach/);
+  assert.doesNotMatch(quickPicker, /visibleRecentCount|ids\.slice\(/, "recent selections do not hide other Cups");
   assert.match(quickPicker, /icon\.textContent = cupEmoji\(cup\)/);
   assert.match(app, /emoji\.textContent = cupEmoji\(cup\)/, "Browse All options show the same emoji");
   assert.match(app, /RECENT_CUPS_KEY = "gbl-filter-recent-cups-v1"/);
   assert.match(app, /recentCupIds = \[id\]\.concat\(recentCupIds\.filter\(\(recentId\) => recentId !== id\)\)\.slice\(0, 5\)/, "existing recent Cup persistence remains intact");
-  assert.match(css, /\.cup-tile-row\s*\{[^}]*overflow-x:\s*auto;[^}]*scroll-behavior:\s*smooth;[^}]*-webkit-overflow-scrolling:\s*touch/);
+  assert.match(css, /\.cup-tile-row\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*overflow-x:\s*auto;[^}]*scroll-behavior:\s*smooth;[^}]*-webkit-overflow-scrolling:\s*touch/);
+  assert.match(app, /function scrollSelectedCupIntoView\(\)/);
+  assert.match(app, /cupTileRow\.scrollTo\(\{ left: nextScrollLeft, behavior: "smooth" \}\)/);
   assert.match(css, /\.cup-quick-tile\s*\{[^}]*scroll-snap-align:\s*start/);
   assert.match(css, /\.cup-picker-option\s*\{[^}]*min-height:\s*44px/);
+});
+
+test("Cup library search indexes names, league, type and custom eligibility metadata", () => {
+  const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
+  const helperSource = app.slice(app.indexOf("function buildCupSearchIndex"), app.indexOf("function cupSearchIndex"));
+  const buildSearchIndex = vm.runInNewContext("(" + helperSource.trim() + ")");
+  const species = speciesData.map(([id, name]) => ({ id, name }));
+  const index = (cup) => buildSearchIndex(cup, ruleData.types, species, ruleData.leagues);
+  const matches = (query) => cupData.filter((cup) => query.toLowerCase().split(/\s+/).every((term) => index(cup).includes(term)));
+  const getCup = (id) => cupData.find((cup) => cup.id === id);
+
+  assert.ok(matches("ghost").some((cup) => cup.id === "halloween"), "Ghost matches a cup through its eligible Pokémon types");
+  assert.equal(matches("ghost").some((cup) => cup.id === "jungle"), false);
+  assert.ok(matches("steel").some((cup) => cup.id === "retro"), "Steel matches Retro through its banned type restriction");
+  assert.ok(matches("steel").some((cup) => cup.id === "fantasy"));
+  assert.ok(matches("great").some((cup) => cup.id === "halloween"), "suggested leagues are indexed");
+  assert.ok(matches("great ghost").some((cup) => cup.id === "halloween"), "multiple search terms can match different metadata fields");
+  assert.equal(matches("great").some((cup) => cup.id === "element"), false);
+  assert.ok(matches("rock").some((cup) => cup.id === "rock-challenge"), "partial name matches are supported");
+  assert.ok(index(getCup("rock-challenge")).includes("banned move type rock"));
+  assert.ok(matches("gardevoir").some((cup) => cup.id === "willpower"), "Pokédex bans resolve to species names");
+
+  const customCup = {
+    id: "custom-forest",
+    name: "Forest Format",
+    official: false,
+    suggestedLeague: "little",
+    search: "",
+    eligibleTypes: ["grass"],
+    bannedTypes: ["steel"],
+    moveRestrictions: ["!@rock"],
+    keywords: ["spring event"]
+  };
+  const customIndex = index(customCup);
+  assert.ok(customIndex.includes("little cup"));
+  assert.ok(customIndex.includes("grass"));
+  assert.ok(customIndex.includes("steel"));
+  assert.ok(customIndex.includes("rock"));
+  assert.ok(customIndex.includes("spring event"));
+  assert.match(app, /button\.dataset\.searchText = cupSearchIndex\(cup\)/);
+  assert.match(app, /normalizeCupSearchText\(cupPickerSearch\.value\.trim\(\)\)/);
+  assert.match(app, /queryTerms\.every\(\(term\) => button\.dataset\.searchText\.includes\(term\)\)/);
 });
 
 test("legacy custom .cup loading, saved sessions, and rerolls remain available", () => {

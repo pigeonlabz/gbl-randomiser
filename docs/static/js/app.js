@@ -377,10 +377,69 @@
     if (id === "custom") return { id: "custom", name: "Custom Cup filter…", official: false };
     return CUP_PRESETS.find((cup) => cup.id === id) || null;
   }
+  function normalizeCupSearchText(value) {
+    return String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+  function buildCupSearchIndex(cup, typeNames, speciesList, leagueMap) {
+    const normalize = (value) => String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const values = [];
+    const excludedKeys = new Set(["emoji", "sourceUrl"]);
+    const typeSet = new Set(typeNames.map(normalize));
+    const speciesById = new Map(speciesList.map((species) => [String(species.id), species.name]));
+    const addMetadata = (value, key) => {
+      if (key && excludedKeys.has(key)) return;
+      if (Array.isArray(value)) {
+        value.forEach((item) => addMetadata(item, key));
+      } else if (value && typeof value === "object") {
+        Object.entries(value).forEach(([childKey, childValue]) => addMetadata(childValue, childKey));
+      } else if (typeof value === "string" || typeof value === "number") {
+        values.push(String(value));
+      }
+    };
+
+    addMetadata(cup);
+    const suggestedLeagueId = cup.suggestedLeague || cup.officialLeague || cup.league;
+    if (suggestedLeagueId && leagueMap[suggestedLeagueId]) values.push(leagueMap[suggestedLeagueId].label);
+    ["speciesBans", "pokemonBans", "bannedSpecies", "bannedPokemon"].forEach((key) => {
+      (Array.isArray(cup[key]) ? cup[key] : []).forEach((id) => {
+        const speciesName = speciesById.get(String(id));
+        if (speciesName) values.push(speciesName);
+      });
+    });
+
+    String(cup.search || "").split(/[&,]/).forEach((rawTerm) => {
+      const term = rawTerm.trim();
+      if (!term) return;
+      const isBanned = term.startsWith("!");
+      const withoutExclusion = term.replace(/^!+/, "");
+      const isMove = withoutExclusion.startsWith("@");
+      const keyword = normalize(withoutExclusion.replace(/^@+/, ""));
+      values.push(keyword);
+      if (typeSet.has(keyword)) {
+        const restriction = isMove ? "move type" : "pokemon type";
+        values.push((isBanned ? "banned " : "eligible ") + restriction + " " + keyword);
+      }
+    });
+    return normalize(values.join(" "));
+  }
+  function cupSearchIndex(cup) {
+    return buildCupSearchIndex(cup, types, SPECIES, leagues);
+  }
   function cupQuickLabel(cup) {
     if (cup.id === "custom") return "Custom";
     if (cup.id === "rock-challenge") return "Rock Challenge";
     return cup.name.replace(/\s+Cup(?::)?/i, "").replace(/:\s*/, " ").replace(/\s+League$/i, "").trim();
+  }
+  function scrollSelectedCupIntoView() {
+    const selected = Array.from(cupTileRow.querySelectorAll("[data-cup-id]"))
+      .find((button) => button.dataset.cupId === cupSelect.value);
+    if (!selected) return;
+    const rowBounds = cupTileRow.getBoundingClientRect();
+    const tileBounds = selected.getBoundingClientRect();
+    let nextScrollLeft = cupTileRow.scrollLeft;
+    if (tileBounds.left < rowBounds.left) nextScrollLeft += tileBounds.left - rowBounds.left;
+    else if (tileBounds.right > rowBounds.right) nextScrollLeft += tileBounds.right - rowBounds.right;
+    if (nextScrollLeft !== cupTileRow.scrollLeft) cupTileRow.scrollTo({ left: nextScrollLeft, behavior: "smooth" });
   }
   function updateCupPickerSelection() {
     const selectedId = cupSelect.value;
@@ -392,6 +451,7 @@
       button.setAttribute("aria-pressed", String(selected));
       button.classList.toggle("is-selected", selected);
     });
+    scrollSelectedCupIntoView();
   }
   function renderCupQuickSelections() {
     cupTileRow.replaceChildren();
@@ -410,22 +470,20 @@
     openButton.append(openIcon, openLabel);
     cupTileRow.appendChild(openButton);
 
-    const ids = recentCupIds.filter((id) => cupPickerItem(id));
-    const selectedId = cupSelect.value;
-    if (selectedId && cupPickerItem(selectedId)) {
-      const existingIndex = ids.indexOf(selectedId);
-      if (existingIndex >= 0) ids.splice(existingIndex, 1);
-      ids.unshift(selectedId);
+    const ids = recentCupIds.filter((id) => id && cupPickerItem(id));
+    if (cupSelect.value && cupPickerItem(cupSelect.value)) {
+      ids.unshift(cupSelect.value);
     }
-    const visibleRecentCount = selectedId && cupPickerItem(selectedId) ? 4 : 3;
-    ids.slice(0, visibleRecentCount).forEach((id) => {
+    const orderedIds = Array.from(new Set(ids.concat(CUP_PRESETS.map((cup) => cup.id), "custom")));
+    orderedIds.forEach((id) => {
       const cup = cupPickerItem(id);
       const button = document.createElement("button");
       button.type = "button";
       button.className = "cup-quick-tile";
       button.dataset.cupId = cup.id;
-      button.setAttribute("aria-label", cupDisplayName(cup));
-      button.setAttribute("aria-pressed", String(cup.id === selectedId));
+      const cupName = cup.id === "custom" ? "Custom Cup filter: enter your own eligibility search" : cupDisplayName(cup);
+      button.setAttribute("aria-label", cupName);
+      button.setAttribute("aria-pressed", String(cup.id === cupSelect.value));
       button.title = cupDisplayName(cup);
       const icon = document.createElement("span");
       icon.className = "cup-quick-icon";
@@ -468,17 +526,18 @@
       meta.className = "cup-option-meta";
       meta.textContent = suggestedLeague ? "Suggested: " + suggestedLeague.label : cup.id === "custom" ? "Enter your own eligibility search" : "Custom preset";
       button.appendChild(meta);
-      button.dataset.searchText = (cup.name + " " + (suggestedLeague ? suggestedLeague.label : "") + " " + meta.textContent).toLocaleLowerCase();
+      button.dataset.searchText = cupSearchIndex(cup);
       (cup.official ? officialCupOptions : customCupOptions).appendChild(button);
     });
     updateCupPickerSearch();
     updateCupPickerSelection();
   }
   function updateCupPickerSearch() {
-    const query = cupPickerSearch.value.trim().toLocaleLowerCase();
+    const query = normalizeCupSearchText(cupPickerSearch.value.trim());
+    const queryTerms = query.split(/\s+/).filter(Boolean);
     let visibleCount = 0;
     cupPickerPopup.querySelectorAll("[data-cup-option]").forEach((button) => {
-      const visible = !query || button.dataset.searchText.includes(query);
+      const visible = !queryTerms.length || queryTerms.every((term) => button.dataset.searchText.includes(term));
       button.hidden = !visible;
       if (visible) visibleCount += 1;
     });
@@ -488,7 +547,7 @@
   }
   function positionCupPicker() {
     if (cupPickerPopup.hidden) return;
-    const anchor = cupTileRow.getBoundingClientRect();
+    const anchor = cupLibraryButton.getBoundingClientRect();
     const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
     const viewportHeight = window.innerHeight;
     const margin = 12;
@@ -595,6 +654,11 @@
     window.addEventListener("resize", positionCupPicker);
     window.addEventListener("scroll", positionCupPicker, true);
     cupSelect.addEventListener("change", rememberCupSelection);
+    cupTileRow.addEventListener("wheel", (event) => {
+      if (event.ctrlKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX) || cupTileRow.scrollWidth <= cupTileRow.clientWidth) return;
+      event.preventDefault();
+      cupTileRow.scrollLeft += event.deltaY;
+    }, { passive: false });
   }
   function cupPresetSearch(cup) {
     const bannedSpecies = (cup.speciesBans || []).map((dex) => "!" + dex).join("&");

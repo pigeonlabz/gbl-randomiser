@@ -76,18 +76,16 @@
             <button class="info-trigger" type="button" aria-label="Cup eligibility information" aria-haspopup="dialog" aria-expanded="false" aria-controls="cup-info-tooltip" aria-describedby="cup-info-tooltip" data-context-tooltip-trigger>
               <span aria-hidden="true">ⓘ</span>
             </button>
+            <button id="cup-library-open" class="icon-action cup-library-button" type="button" aria-label="Search all Cups" aria-haspopup="dialog" aria-expanded="false" aria-controls="cup-picker-popup" data-tooltip="Browse all Cups">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4.2 4.2"/></svg>
+            </button>
             <div id="cup-info-tooltip" class="context-tooltip" role="dialog" aria-labelledby="cup-info-tooltip-title" hidden>
               <h2 id="cup-info-tooltip-title" class="visually-hidden">Cup format and eligibility</h2>
               <p>Cup restrictions apply to your selected League and do not change its CP ceiling. Some eligibility rules cannot be represented in Pokémon GO search and need a manual check.</p>
               <div id="cup-format-info" class="cup-format-info" role="status" aria-live="polite"></div>
             </div>
           </div>
-          <div class="cup-carousel" role="group" aria-label="Cup selection">
-            <div id="cup-tiles" class="cup-tile-row" role="group" aria-label="Open and recently used Cups"></div>
-            <button id="cup-library-open" class="icon-action cup-library-button" type="button" aria-label="Search all Cups" aria-haspopup="dialog" aria-expanded="false" aria-controls="cup-picker-popup" data-tooltip="Browse all Cups">
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4.2 4.2"/></svg>
-            </button>
-          </div>
+          <div id="cup-tiles" class="cup-tile-row" role="group" aria-label="Cup carousel"></div>
           <select id="cup-select" name="cup" hidden aria-hidden="true" tabindex="-1">
             <option value="" selected>None — Open League</option>
             <optgroup label="Official GBL formats">
@@ -112,7 +110,7 @@
           </select>
           <div id="cup-picker-popup" class="cup-picker-popup" role="dialog" aria-labelledby="cup-picker-title" aria-modal="false" hidden>
             <div class="cup-picker-header">
-              <h2 id="cup-picker-title">More Cups</h2>
+              <h2 id="cup-picker-title">Browse Cups</h2>
               <button id="cup-picker-close" class="cup-picker-close" type="button" aria-label="Close Cup picker">×</button>
             </div>
             <label class="visually-hidden" for="cup-picker-search">Search Cups</label>
