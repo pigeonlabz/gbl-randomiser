@@ -151,45 +151,6 @@
           </fieldset>
         </div>
 
-        <section class="additional-rules" aria-labelledby="additional-rules-title">
-          <div class="label-help-row additional-rules-heading">
-            <h2 id="additional-rules-title">Additional Rules</h2>
-            <button class="info-trigger" type="button" aria-label="Additional Rules information" aria-haspopup="dialog" aria-expanded="false" aria-controls="additional-rules-tooltip" aria-describedby="additional-rules-tooltip" data-context-tooltip-trigger>
-              <span aria-hidden="true">ⓘ</span>
-            </button>
-            <div id="additional-rules-tooltip" class="context-tooltip" role="dialog" aria-labelledby="additional-rules-tooltip-title" hidden>
-              <h2 id="additional-rules-tooltip-title" class="visually-hidden">Additional Rules help</h2>
-              <p>Exclude Pokémon by name or Pokédex number, or add a Pokémon GO search term as a removable rule chip. Press Enter to add a selected Pokémon or valid search term.</p>
-            </div>
-          </div>
-          <label class="visually-hidden" for="additional-rule-input">Search Pokémon or enter a rule</label>
-          <div class="rule-composer">
-            <input id="additional-rule-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="additional-rule-suggestions" autocomplete="off" spellcheck="false" placeholder="Pokémon name, Pokédex number, or search rule">
-            <button id="add-additional-rule" class="button button-secondary add-rule-button" type="button" aria-label="Add rule">+</button>
-          </div>
-          <div id="additional-rule-suggestions" class="rule-suggestions" role="listbox" aria-label="Pokémon suggestions" hidden></div>
-          <p id="additional-rule-status" class="status" role="status" aria-live="polite"></p>
-          <div id="additional-rule-chips" class="additional-rule-chips" role="list" aria-label="Additional rule chips"></div>
-          <div class="control advanced-expression-control">
-            <div class="label-help-row">
-              <label for="extra-filter">Advanced raw expression</label>
-              <button class="info-trigger" type="button" aria-label="Search syntax and precedence information" aria-haspopup="dialog" aria-expanded="false" aria-controls="raw-expression-tooltip" aria-describedby="raw-expression-tooltip" data-context-tooltip-trigger>
-                <span aria-hidden="true">ⓘ</span>
-              </button>
-              <div id="raw-expression-tooltip" class="context-tooltip" role="dialog" aria-labelledby="raw-expression-tooltip-title" hidden>
-                <h2 id="raw-expression-tooltip-title" class="visually-hidden">Pokémon GO search syntax</h2>
-                <p>Enter a Pokémon GO search expression. Use <code>&amp;</code> for AND, commas for OR, and <code>!</code> to exclude a term.</p>
-                <p>Example: <code>!shadow&amp;@water</code> excludes Shadow Pokémon and requires a Water-type move. <code>fire,water</code> matches either type.</p>
-                <p>The expression is combined with the generated filter using Pokémon GO AND/OR precedence.</p>
-              </div>
-            </div>
-            <input id="extra-filter" name="extra-filter" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. !shadow&@water or #practice">
-          </div>
-          <p id="advanced-expression-status" class="status" role="status" aria-live="polite"></p>
-          <p class="additional-preview-label">Combined search preview</p>
-          <output id="additional-filter-preview" class="additional-filter-preview" aria-live="polite"></output>
-        </section>
-
         <button class="button button-primary" type="submit">Generate New Filter</button>
 
         <details id="advanced-settings" class="advanced-settings">
@@ -198,6 +159,45 @@
             <span id="custom-badge" class="customised" hidden>Customised</span>
           </summary>
           <div class="advanced-content">
+            <section class="additional-rules" aria-labelledby="additional-rules-title">
+              <div class="label-help-row additional-rules-heading">
+                <h2 id="additional-rules-title">Additional Rules</h2>
+                <button class="info-trigger" type="button" aria-label="Additional Rules information" aria-haspopup="dialog" aria-expanded="false" aria-controls="additional-rules-tooltip" aria-describedby="additional-rules-tooltip" data-context-tooltip-trigger>
+                  <span aria-hidden="true">ⓘ</span>
+                </button>
+                <div id="additional-rules-tooltip" class="context-tooltip" role="dialog" aria-labelledby="additional-rules-tooltip-title" hidden>
+                  <h2 id="additional-rules-tooltip-title" class="visually-hidden">Additional Rules help</h2>
+                  <p>Exclude Pokémon by name or Pokédex number, or add a Pokémon GO search term as a removable rule chip. Press Enter to add a selected Pokémon or valid search term.</p>
+                </div>
+              </div>
+              <label class="visually-hidden" for="additional-rule-input">Search Pokémon or enter a rule</label>
+              <div class="rule-composer">
+                <input id="additional-rule-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="additional-rule-suggestions" autocomplete="off" spellcheck="false" placeholder="Pokémon name, Pokédex number, or search rule">
+                <button id="add-additional-rule" class="button button-secondary add-rule-button" type="button" aria-label="Add rule">+</button>
+              </div>
+              <div id="additional-rule-suggestions" class="rule-suggestions" role="listbox" aria-label="Pokémon suggestions" hidden></div>
+              <p id="additional-rule-status" class="status" role="status" aria-live="polite"></p>
+              <div id="additional-rule-chips" class="additional-rule-chips" role="list" aria-label="Additional rule chips"></div>
+              <div class="control advanced-expression-control">
+                <div class="label-help-row">
+                  <label for="extra-filter">Advanced raw expression</label>
+                  <button class="info-trigger" type="button" aria-label="Search syntax and precedence information" aria-haspopup="dialog" aria-expanded="false" aria-controls="raw-expression-tooltip" aria-describedby="raw-expression-tooltip" data-context-tooltip-trigger>
+                    <span aria-hidden="true">ⓘ</span>
+                  </button>
+                  <div id="raw-expression-tooltip" class="context-tooltip" role="dialog" aria-labelledby="raw-expression-tooltip-title" hidden>
+                    <h2 id="raw-expression-tooltip-title" class="visually-hidden">Pokémon GO search syntax</h2>
+                    <p>Enter a Pokémon GO search expression. Use <code>&amp;</code> for AND, commas for OR, and <code>!</code> to exclude a term.</p>
+                    <p>Example: <code>!shadow&amp;@water</code> excludes Shadow Pokémon and requires a Water-type move. <code>fire,water</code> matches either type.</p>
+                    <p>The expression is combined with the generated filter using Pokémon GO AND/OR precedence.</p>
+                  </div>
+                </div>
+                <input id="extra-filter" name="extra-filter" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. !shadow&@water or #practice">
+              </div>
+              <p id="advanced-expression-status" class="status" role="status" aria-live="polite"></p>
+              <p class="additional-preview-label">Combined search preview</p>
+              <output id="additional-filter-preview" class="additional-filter-preview" aria-live="polite"></output>
+            </section>
+
             <div id="mutator-advanced-settings" class="mutator-advanced-settings">
               <fieldset class="type-leaning-fieldset">
                 <legend>Type Leaning</legend>
