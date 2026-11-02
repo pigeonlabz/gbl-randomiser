@@ -39,13 +39,24 @@ test("all type-background URLs resolve from local pages and the GitHub Pages sub
       }
     }
   }
-  assert.match(css, /body::before[^}]*background-image:\s*var\(--theme-bg-image\)/);
-  assert.match(css, /body::before[^}]*background-repeat:\s*no-repeat/);
-  assert.match(css, /body::before[^}]*background-size:\s*var\(--theme-bg-size\)/);
-  assert.match(css, /body::before[^}]*opacity:\s*var\(--theme-bg-opacity\)/);
-  assert.match(css, /body::before[^}]*pointer-events:\s*none/);
+  const bodyBackground = /body::before\s*\{([^}]+)\}/.exec(css);
+  const panelBackground = /\.generator-panel::before\s*\{([^}]+)\}/.exec(css);
+  assert.ok(bodyBackground, "the viewport background layer exists");
+  assert.ok(panelBackground, "the panel background layer exists");
+  for (const background of [bodyBackground[1], panelBackground[1]]) {
+    assert.match(background, /background-image:\s*var\(--theme-bg-image\)/);
+    assert.match(background, /background-repeat:\s*repeat/);
+    assert.match(background, /background-size:\s*clamp\(132px,\s*23vw,\s*180px\)/);
+    assert.match(background, /background-position:\s*var\(--theme-bg-position\)/);
+  }
+  assert.match(bodyBackground[1], /position:\s*fixed/);
+  assert.match(bodyBackground[1], /inset:\s*0/);
+  assert.match(bodyBackground[1], /opacity:\s*var\(--theme-bg-opacity\)/);
+  assert.match(panelBackground[1], /opacity:\s*0\.1/);
+  assert.match(css, /--theme-bg-opacity:\s*0\.07/);
+  assert.match(css, /--bg:\s*#17111e/);
+  assert.match(bodyBackground[1], /pointer-events:\s*none/);
   assert.match(css, /\.shell\s*\{[^}]*z-index:\s*1/);
-  assert.doesNotMatch(css, /--theme-bg-image:\s*none[^;]*;\s*body::before[^}]*background-image:\s*none/);
 });
 
 test("cup controls, collapsed ranking lists, and the optional lookup stay compact on mobile", () => {
