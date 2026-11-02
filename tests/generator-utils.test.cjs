@@ -198,6 +198,38 @@ test("Cup-only filters keep the selected CP limit and omit mutators until enable
   assert.equal(compose(master, false, false), "shiny", "Open League still applies its generated mutator");
 });
 
+test("guidance is available in accessible viewport-aware contextual tooltips", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../docs/index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
+  const tooltipIds = [
+    "league-info-tooltip",
+    "cup-info-tooltip",
+    "include-mutators-tooltip",
+    "additional-rules-tooltip",
+    "raw-expression-tooltip"
+  ];
+  for (const id of tooltipIds) {
+    assert.match(html, new RegExp('aria-haspopup="dialog"[^>]*aria-expanded="false"[^>]*aria-controls="' + id + '"[^>]*aria-describedby="' + id + '"'));
+    assert.match(html, new RegExp('id="' + id + '" class="context-tooltip" role="dialog"[^>]*hidden'));
+  }
+  assert.match(html, /id="league-cup-recommendation"/);
+  assert.ok(html.indexOf('id="cup-format-info"') > html.indexOf('id="cup-info-tooltip"'), "Cup format notes and official references are inside the Cup tooltip");
+  assert.match(html, /500 CP, Great at 1,500 CP, and Ultra at 2,500 CP/);
+  assert.match(html, /Use <code>&amp;<\/code> for AND, commas for OR, and <code>!<\/code> to exclude a term/);
+  assert.doesNotMatch(html, /id="cup-selector-help"|class="additional-rules-help"|id="include-mutators-help"|Combined live with the generated filter/);
+  assert.match(app, /pointerenter/);
+  assert.match(app, /item\.trigger\.addEventListener\("focus"/);
+  assert.match(app, /item\.trigger\.addEventListener\("click"/);
+  assert.match(app, /event\.key === "Escape"/);
+  assert.match(app, /activeItem\.panel\.contains\(event\.target\)/, "outside clicks close an open tooltip");
+  assert.match(app, /viewportWidth - panelRect\.width - margin/);
+  assert.match(app, /window\.addEventListener\("resize"/);
+  assert.match(css, /\.context-tooltip\[hidden\]\s*\{\s*display:\s*none;/);
+  assert.match(css, /width:\s*min\(22rem, calc\(100vw - 24px\)\)/);
+  assert.match(css, /max-height:\s*min\(28rem, calc\(100dvh - 24px\)\)/);
+});
+
 test("type leaning uses qualitative multipliers and honors disabled scopes", () => {
   const preferred = ["water"];
   assert.equal(utils.typeWeight("water", preferred, "light", true), 2);

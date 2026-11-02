@@ -34,7 +34,20 @@
 
       <div class="controls">
         <fieldset class="league-selector">
-          <legend>League</legend>
+          <legend>
+            <span class="label-help-row">
+              <span>League</span>
+              <button class="info-trigger" type="button" aria-label="League CP and Cup recommendation information" aria-haspopup="dialog" aria-expanded="false" aria-controls="league-info-tooltip" aria-describedby="league-info-tooltip" data-context-tooltip-trigger>
+                <span aria-hidden="true">ⓘ</span>
+              </button>
+            </span>
+          </legend>
+          <div id="league-info-tooltip" class="context-tooltip" role="dialog" aria-labelledby="league-info-tooltip-title" hidden>
+            <h2 id="league-info-tooltip-title" class="visually-hidden">League CP limits</h2>
+            <p>Little League is capped at 500 CP, Great at 1,500 CP, and Ultra at 2,500 CP. Master League has no CP cap.</p>
+            <p>The selected League controls the CP ceiling. A suggested League shown with a Cup is a recommendation only and never changes your selection.</p>
+            <div id="league-cup-recommendation"></div>
+          </div>
           <div class="league-grid" role="radiogroup" aria-label="League">
             <label class="league-tile">
               <input type="radio" name="league" value="little">
@@ -60,7 +73,17 @@
         </fieldset>
 
         <div class="control cup-selector">
-          <label for="cup-select"><span>Cup <small>optional</small></span></label>
+          <div class="label-help-row">
+            <label for="cup-select"><span>Cup <small>optional</small></span></label>
+            <button class="info-trigger" type="button" aria-label="Cup eligibility information" aria-haspopup="dialog" aria-expanded="false" aria-controls="cup-info-tooltip" aria-describedby="cup-info-tooltip" data-context-tooltip-trigger>
+              <span aria-hidden="true">ⓘ</span>
+            </button>
+            <div id="cup-info-tooltip" class="context-tooltip" role="dialog" aria-labelledby="cup-info-tooltip-title" hidden>
+              <h2 id="cup-info-tooltip-title" class="visually-hidden">Cup format and eligibility</h2>
+              <p>Cup restrictions apply to your selected League and do not change its CP ceiling. Some eligibility rules cannot be represented in Pokémon GO search and need a manual check.</p>
+              <div id="cup-format-info" class="cup-format-info" role="status" aria-live="polite"></div>
+            </div>
+          </div>
           <select id="cup-select" name="cup">
             <option value="" selected>None — Open League</option>
             <optgroup label="Official GBL formats">
@@ -83,16 +106,24 @@
               <option value="custom">Custom Cup filter…</option>
             </optgroup>
           </select>
-          <small id="cup-selector-help">Cup restrictions apply to the selected league. Official eligibility notes are shown separately when search cannot enforce them.</small>
-          <div id="cup-format-info" class="cup-format-info" role="status" aria-live="polite"></div>
+          <p id="cup-format-error" class="cup-format-error" role="status" aria-live="polite" hidden></p>
         </div>
 
         <div class="mutator-options">
-          <label class="include-mutators-control" for="include-mutators">
-            <input id="include-mutators" name="include-mutators" type="checkbox" aria-describedby="include-mutators-help">
-            <span>Include mutators</span>
-          </label>
-          <small id="include-mutators-help">With a Cup selected, uncheck this to use only the league limit and Cup restrictions. Open League keeps the existing randomiser active.</small>
+          <div class="label-help-row">
+            <label class="include-mutators-control" for="include-mutators">
+              <input id="include-mutators" name="include-mutators" type="checkbox" aria-describedby="include-mutators-tooltip">
+              <span>Include mutators</span>
+            </label>
+            <button class="info-trigger" type="button" aria-label="Mutator options information" aria-haspopup="dialog" aria-expanded="false" aria-controls="include-mutators-tooltip" aria-describedby="include-mutators-tooltip" data-context-tooltip-trigger>
+              <span aria-hidden="true">ⓘ</span>
+            </button>
+            <div id="include-mutators-tooltip" class="context-tooltip" role="dialog" aria-labelledby="include-mutators-tooltip-title" hidden>
+              <h2 id="include-mutators-tooltip-title" class="visually-hidden">Include mutators</h2>
+              <p>With a Cup selected, leave this unchecked to use only the selected League CP limit and the Cup's static restrictions. Random mutators are omitted, and their settings are hidden.</p>
+              <p>Check it to restore random mutator generation. Open League keeps the existing randomiser active even when this box is unchecked. Its state is preserved when you change Cups or Leagues.</p>
+            </div>
+          </div>
         </div>
 
         <div id="mutator-settings" class="mutator-settings">
@@ -121,8 +152,16 @@
         </div>
 
         <section class="additional-rules" aria-labelledby="additional-rules-title">
-          <h2 id="additional-rules-title">Additional Rules</h2>
-          <p class="additional-rules-help">Exclude Pokémon by name or Pokédex number, or add a Pokémon GO search term as a chip.</p>
+          <div class="label-help-row additional-rules-heading">
+            <h2 id="additional-rules-title">Additional Rules</h2>
+            <button class="info-trigger" type="button" aria-label="Additional Rules information" aria-haspopup="dialog" aria-expanded="false" aria-controls="additional-rules-tooltip" aria-describedby="additional-rules-tooltip" data-context-tooltip-trigger>
+              <span aria-hidden="true">ⓘ</span>
+            </button>
+            <div id="additional-rules-tooltip" class="context-tooltip" role="dialog" aria-labelledby="additional-rules-tooltip-title" hidden>
+              <h2 id="additional-rules-tooltip-title" class="visually-hidden">Additional Rules help</h2>
+              <p>Exclude Pokémon by name or Pokédex number, or add a Pokémon GO search term as a removable rule chip. Press Enter to add a selected Pokémon or valid search term.</p>
+            </div>
+          </div>
           <label class="visually-hidden" for="additional-rule-input">Search Pokémon or enter a rule</label>
           <div class="rule-composer">
             <input id="additional-rule-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="additional-rule-suggestions" autocomplete="off" spellcheck="false" placeholder="Pokémon name, Pokédex number, or search rule">
@@ -131,11 +170,21 @@
           <div id="additional-rule-suggestions" class="rule-suggestions" role="listbox" aria-label="Pokémon suggestions" hidden></div>
           <p id="additional-rule-status" class="status" role="status" aria-live="polite"></p>
           <div id="additional-rule-chips" class="additional-rule-chips" role="list" aria-label="Additional rule chips"></div>
-          <label class="control advanced-expression-control" for="extra-filter">
-            <span>Advanced raw expression</span>
+          <div class="control advanced-expression-control">
+            <div class="label-help-row">
+              <label for="extra-filter">Advanced raw expression</label>
+              <button class="info-trigger" type="button" aria-label="Search syntax and precedence information" aria-haspopup="dialog" aria-expanded="false" aria-controls="raw-expression-tooltip" aria-describedby="raw-expression-tooltip" data-context-tooltip-trigger>
+                <span aria-hidden="true">ⓘ</span>
+              </button>
+              <div id="raw-expression-tooltip" class="context-tooltip" role="dialog" aria-labelledby="raw-expression-tooltip-title" hidden>
+                <h2 id="raw-expression-tooltip-title" class="visually-hidden">Pokémon GO search syntax</h2>
+                <p>Enter a Pokémon GO search expression. Use <code>&amp;</code> for AND, commas for OR, and <code>!</code> to exclude a term.</p>
+                <p>Example: <code>!shadow&amp;@water</code> excludes Shadow Pokémon and requires a Water-type move. <code>fire,water</code> matches either type.</p>
+                <p>The expression is combined with the generated filter using Pokémon GO AND/OR precedence.</p>
+              </div>
+            </div>
             <input id="extra-filter" name="extra-filter" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. !shadow&@water or #practice">
-            <small>Combined live with the generated filter using Pokémon GO AND/OR precedence.</small>
-          </label>
+          </div>
           <p id="advanced-expression-status" class="status" role="status" aria-live="polite"></p>
           <p class="additional-preview-label">Combined search preview</p>
           <output id="additional-filter-preview" class="additional-filter-preview" aria-live="polite"></output>

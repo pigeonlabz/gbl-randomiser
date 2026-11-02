@@ -828,21 +828,39 @@ footer p { margin: 0; }
 .include-mutators-control { display: flex; align-items: center; gap: 9px; min-height: 42px; color: var(--text); font-weight: 700; cursor: pointer; }
 .include-mutators-control input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
 .include-mutators-control input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-#include-mutators-help { color: var(--text-muted); font-size: 0.82rem; line-height: 1.4; }
+.label-help-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.label-help-row > label { margin: 0; }
+.additional-rules-heading h2 { margin: 0; }
+.info-trigger {
+  display: inline-grid; flex: 0 0 auto; width: 25px; height: 25px; place-items: center;
+  border: 1px solid var(--border-strong); border-radius: 50%; background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+  color: var(--accent); padding: 0; font: 700 0.88rem/1 system-ui, sans-serif; cursor: pointer;
+}
+.info-trigger:hover, .info-trigger[aria-expanded="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--panel)); color: var(--text-strong); }
+.info-trigger:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.context-tooltip {
+  position: fixed; z-index: 1200; box-sizing: border-box; width: min(22rem, calc(100vw - 24px));
+  max-height: min(28rem, calc(100dvh - 24px)); overflow: auto; overscroll-behavior: contain;
+  border: 1px solid var(--border-strong); border-radius: 12px; background: var(--tooltip-bg); color: var(--tooltip-text);
+  padding: 12px 14px; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.42); font-size: 0.86rem; font-weight: 400; line-height: 1.5;
+}
+.context-tooltip[hidden] { display: none; }
+.context-tooltip p { margin: 0 0 9px; }
+.context-tooltip p:last-child { margin-bottom: 0; }
+.context-tooltip a { color: var(--focus); font-weight: 700; text-underline-offset: 2px; }
+.context-tooltip code { border-radius: 4px; background: color-mix(in srgb, var(--accent) 13%, transparent); padding: 1px 4px; color: var(--text-strong); font-size: 0.94em; }
 .mutator-settings, .mutator-advanced-settings { display: grid; gap: 18px; }
 .mutator-settings[hidden], .mutator-advanced-settings[hidden] { display: none; }
 .cup-selector { margin-top: 2px; }
 .cup-selector label > span { display: flex; align-items: baseline; gap: 6px; }
 .cup-selector label > span small { color: var(--text-muted); font-size: 0.8rem; font-weight: 500; }
-.cup-selector #cup-selector-help { color: var(--text-muted); font-size: 0.82rem; font-weight: 400; line-height: 1.4; }
 .cup-format-info { display: grid; gap: 5px; color: var(--text-muted); font-size: 0.84rem; font-weight: 400; line-height: 1.4; }
 .cup-format-info p { margin: 0; }
 .cup-format-info .cup-manual-rules { border-left: 3px solid var(--accent); border-radius: 0 5px 5px 0; background: color-mix(in srgb, var(--accent) 9%, transparent); padding: 6px 9px; color: var(--text); }
-.cup-format-info .cup-format-error { color: #ffb4b4; }
+.cup-format-error { margin: 0; color: #ffb4b4; font-size: 0.82rem; font-weight: 500; line-height: 1.4; }
 .cup-format-info a { width: fit-content; color: var(--focus); font-weight: 650; }
 .additional-rules { display: grid; gap: 8px; min-width: 0; }
-.additional-rules h2 { margin: 0; color: var(--text-strong); font-size: 1.05rem; }
-.additional-rules-help { margin: -3px 0 2px; color: var(--text-muted); font-size: 0.84rem; line-height: 1.4; }
+.additional-rules h2 { color: var(--text-strong); font-size: 1.05rem; }
 .rule-composer { display: grid; grid-template-columns: minmax(0, 1fr) 48px; gap: 8px; min-width: 0; }
 .rule-composer input {
   width: 100%; min-width: 0; min-height: 46px; border: 1px solid var(--border); border-radius: 8px;
@@ -864,7 +882,6 @@ footer p { margin: 0; }
 .additional-rule-chip button:hover { background: var(--border); color: var(--text-strong); }
 .additional-rule-chip button:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
 .advanced-expression-control { margin-top: 3px; }
-.advanced-expression-control small { color: var(--text-muted); font-size: 0.82rem; font-weight: 400; line-height: 1.4; }
 .additional-preview-label { margin: 2px 0 -4px; color: var(--text-muted); font-size: 0.82rem; font-weight: 700; }
 .additional-filter-preview { display: block; min-height: 42px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-alt); padding: 9px 11px; color: var(--text); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.83rem; line-height: 1.4; overflow-wrap: anywhere; }
 .filter-chip--additional { font-size: 0.78rem; padding: 4px 7px; }

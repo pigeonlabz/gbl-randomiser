@@ -74,6 +74,7 @@
   const cupSettingsFields = document.getElementById("cup-settings-fields");
   const cupSelect = document.getElementById("cup-select");
   const cupFormatInfo = document.getElementById("cup-format-info");
+  const cupFormatError = document.getElementById("cup-format-error");
   const cupPrefixInput = document.getElementById("cup-prefix");
   const cupLocks = document.getElementById("cup-locks");
   const cupLockTypes = document.getElementById("cup-lock-types");
@@ -1016,49 +1017,27 @@
     const cup = cupForSelection();
     const rawPrefix = cupPrefixInput.value.trim();
     const prefixState = rawPrefix ? GENERATOR_UTILS.validateSearchExpression(rawPrefix) : { valid: true, error: "" };
-    if (rawPrefix && !prefixState.valid) {
-      const error = document.createElement("p");
-      error.className = "cup-format-error";
-      error.textContent = "Cup search needs attention: " + prefixState.error;
-      cupFormatInfo.appendChild(error);
-    }
+    cupFormatError.hidden = !rawPrefix || prefixState.valid;
+    cupFormatError.textContent = cupFormatError.hidden ? "" : "Cup search needs attention: " + prefixState.error;
     if (!cup && !rawPrefix) {
       cupFormatInfo.textContent = cupSelect.value === "custom"
-        ? "Custom Cup filter for " + getSelectedLeague().label + " — enter a search prefix in More Cup settings."
-        : "Open League — only the selected league’s CP ceiling applies.";
+        ? "Custom Cup filter selected. Enter a search prefix in More Cup settings."
+        : "Open League — no Cup eligibility restrictions are active.";
       return;
     }
     const status = document.createElement("p");
     status.className = "cup-format-status";
-    const suggestedLeague = cup ? cupSuggestedLeague(cup) : null;
-    const selectedLeague = getSelectedLeague();
     if (!cup) {
-      status.textContent = "Custom Cup filter for " + selectedLeague.label + ". The selected league controls the CP ceiling.";
+      status.textContent = "Custom Cup search filter. This is not a verified official Cup format.";
     } else if (!cup.official) {
-      status.textContent = "Custom preset · not a verified official cup format. " +
-        (suggestedLeague ? "Suggested league: " + suggestedLeague.label + ". " : "") +
-        "Applying restrictions to " + selectedLeague.label + "; its CP ceiling stays selected.";
+      status.textContent = "Custom preset · not a verified official Cup format.";
     } else if (cup.officialLeague === selectedLeagueId()) {
       status.textContent = "Official format · " + (cup.edition || "verified GBL cup") + ". " +
-        (suggestedLeague ? "Suggested league: " + suggestedLeague.label + ". " : "") +
-        "CP ceiling follows the selected league.";
+        "Eligibility restrictions are listed below.";
     } else {
-      status.textContent = "Custom league/cup combination. Official " + cup.name + " rules are listed for " +
-        ((leagues[cup.officialLeague] || {}).label || "their original league") + ". " +
-        (suggestedLeague ? "Suggested: " + suggestedLeague.label + ". " : "") +
-        "Applying eligibility to " + selectedLeague.label + "; its CP ceiling stays selected.";
+      status.textContent = "Custom league/Cup combination. Official " + cup.name + " eligibility restrictions are being used with the selected League.";
     }
     cupFormatInfo.appendChild(status);
-
-    if (cup) {
-      const cupLimit = document.createElement("p");
-      const selectedLimit = selectedLeague.maxCp;
-      cupLimit.className = "selected-league-cp-note";
-      cupLimit.textContent = "Selected league CP ceiling: " +
-        (Number.isFinite(selectedLimit) ? selectedLimit.toLocaleString() + " CP." : "unlimited.") +
-        " Cup recommendations never change this ceiling.";
-      cupFormatInfo.appendChild(cupLimit);
-    }
 
     if (cup && Array.isArray(cup.manualRules) && cup.manualRules.length) {
       const manual = document.createElement("p");
@@ -1080,6 +1059,25 @@
       source.textContent = "Official format reference";
       cupFormatInfo.appendChild(source);
     }
+  }
+
+  function updateLeagueTooltipInfo() {
+    const info = document.getElementById("league-cup-recommendation");
+    const selectedLeague = getSelectedLeague();
+    const selectedLimit = selectedLeague.maxCp;
+    const selectedStatus = document.createElement("p");
+    selectedStatus.textContent = "Selected: " + selectedLeague.label + " · CP ceiling " +
+      (Number.isFinite(selectedLimit) ? selectedLimit.toLocaleString() + " CP." : "unlimited.");
+    info.replaceChildren(selectedStatus);
+
+    const cup = cupForSelection();
+    if (!cup && !getStaticCupPrefix()) return;
+    const recommendation = document.createElement("p");
+    const suggestedLeague = cup ? cupSuggestedLeague(cup) : null;
+    recommendation.textContent = suggestedLeague
+      ? cup.name + " suggests " + suggestedLeague.label + ". This recommendation does not change the selected League."
+      : "The custom Cup filter has no suggested League; your selected League remains in control.";
+    info.appendChild(recommendation);
   }
   function appendIndicator(wrapper, value, className) {
     if (!value) return;
@@ -1345,6 +1343,7 @@
         : "Choose any overlapping rule families to pause while this Cup filter is active.";
     updateMutatorSettingsVisibility();
     updateCupFormatInfo();
+    updateLeagueTooltipInfo();
     syncFamilyControls();
   }
 
@@ -1444,7 +1443,121 @@
     markConfigPending();
   }
 
+  function setupContextTooltips() {
+    const items = Array.from(document.querySelectorAll("[data-context-tooltip-trigger]"))
+      .map((trigger) => ({
+        trigger: trigger,
+        panel: document.getElementById(trigger.getAttribute("aria-controls")),
+        hoveringTrigger: false,
+        hoveringPanel: false
+      }))
+      .filter((item) => item.panel);
+    let activeItem = null;
+    let closeTimer = null;
+
+    function clearCloseTimer() {
+      if (closeTimer !== null) window.clearTimeout(closeTimer);
+      closeTimer = null;
+    }
+
+    function isFocused(item) {
+      return item.trigger === document.activeElement || item.panel.contains(document.activeElement);
+    }
+
+    function position(item) {
+      if (item.panel.hidden) return;
+      item.panel.style.visibility = "hidden";
+      item.panel.style.left = "0px";
+      item.panel.style.top = "0px";
+      const triggerRect = item.trigger.getBoundingClientRect();
+      const panelRect = item.panel.getBoundingClientRect();
+      const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const margin = 12;
+      const gap = 8;
+      let left = triggerRect.left + triggerRect.width / 2 - panelRect.width / 2;
+      left = Math.max(margin, Math.min(left, viewportWidth - panelRect.width - margin));
+      let top = triggerRect.bottom + gap;
+      const topIfAbove = triggerRect.top - panelRect.height - gap;
+      if (top + panelRect.height > viewportHeight - margin && topIfAbove >= margin) top = topIfAbove;
+      top = Math.max(margin, Math.min(top, viewportHeight - panelRect.height - margin));
+      item.panel.style.left = Math.round(left) + "px";
+      item.panel.style.top = Math.round(top) + "px";
+      item.panel.style.visibility = "";
+    }
+
+    function close(item, returnFocus) {
+      if (!item || activeItem !== item) return;
+      clearCloseTimer();
+      item.trigger.setAttribute("aria-expanded", "false");
+      item.panel.hidden = true;
+      activeItem = null;
+      if (returnFocus) item.trigger.focus();
+    }
+
+    function open(item) {
+      clearCloseTimer();
+      if (activeItem && activeItem !== item) close(activeItem, false);
+      activeItem = item;
+      item.panel.hidden = false;
+      item.trigger.setAttribute("aria-expanded", "true");
+      position(item);
+    }
+
+    function scheduleClose(item) {
+      clearCloseTimer();
+      closeTimer = window.setTimeout(() => {
+        if (activeItem === item && !item.hoveringTrigger && !item.hoveringPanel && !isFocused(item)) close(item, false);
+      }, 220);
+    }
+
+    items.forEach((item) => {
+      item.trigger.addEventListener("pointerenter", (event) => {
+        if (event.pointerType !== "mouse") return;
+        item.hoveringTrigger = true;
+        open(item);
+      });
+      item.trigger.addEventListener("pointerleave", (event) => {
+        if (event.pointerType !== "mouse") return;
+        item.hoveringTrigger = false;
+        scheduleClose(item);
+      });
+      item.panel.addEventListener("pointerenter", (event) => {
+        if (event.pointerType !== "mouse") return;
+        item.hoveringPanel = true;
+        clearCloseTimer();
+      });
+      item.panel.addEventListener("pointerleave", (event) => {
+        if (event.pointerType !== "mouse") return;
+        item.hoveringPanel = false;
+        scheduleClose(item);
+      });
+      item.trigger.addEventListener("focus", () => open(item));
+      item.panel.addEventListener("focusin", () => open(item));
+      item.trigger.addEventListener("focusout", () => window.setTimeout(() => {
+        if (activeItem === item && !isFocused(item) && !item.hoveringTrigger && !item.hoveringPanel) close(item, false);
+      }, 0));
+      item.panel.addEventListener("focusout", () => window.setTimeout(() => {
+        if (activeItem === item && !isFocused(item) && !item.hoveringTrigger && !item.hoveringPanel) close(item, false);
+      }, 0));
+      item.trigger.addEventListener("click", () => open(item));
+    });
+
+    document.addEventListener("pointerdown", (event) => {
+      if (activeItem && !activeItem.trigger.contains(event.target) && !activeItem.panel.contains(event.target)) close(activeItem, false);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && activeItem) {
+        event.preventDefault();
+        close(activeItem, true);
+      }
+    });
+    window.addEventListener("resize", () => { if (activeItem) position(activeItem); });
+    window.addEventListener("scroll", () => { if (activeItem) position(activeItem); }, true);
+  }
+
   function setup() {
+    setupContextTooltips();
     createFamilyControls(primaryFamilyControls, advancedFamilies.filter((definition) => definition.primary));
     createFamilyControls(additionalFamilyControls, advancedFamilies.filter((definition) => !definition.primary));
     loadProfileDefaults("chill");
@@ -1497,6 +1610,7 @@
     cupLockMoves.addEventListener("change", () => { markProfileCustom(); updateCupControls(); markConfigPending(); });
     leagueInputs.forEach((input) => input.addEventListener("change", () => {
       updateCupFormatInfo();
+      updateLeagueTooltipInfo();
       markConfigPending();
     }));
     mutatorCount.addEventListener("change", markConfigPending);
