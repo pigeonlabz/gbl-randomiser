@@ -321,7 +321,7 @@ test("guidance is available in accessible viewport-aware contextual tooltips", (
   }
   assert.doesNotMatch(html, /league-info-tooltip|league-cup-recommendation|Your battle filter/);
   assert.match(html, /Copy this search string and paste it into Pokémon GO to find eligible Pokémon\./);
-  assert.match(html, /id="cup-info-tooltip"[\s\S]*?Cup rules use your selected league\. Some restrictions may need a manual check\./);
+  assert.match(html, /id="cup-info-tooltip"[\s\S]*?Cup rules use your selected league\. Some restrictions may need a manual check\.[\s\S]*?🧪 = unofficial homegrown cup\./);
   assert.ok(html.indexOf('id="cup-format-info"') > html.indexOf('id="cup-tiles"') && html.indexOf('id="cup-format-info"') < html.indexOf('id="cup-select"'), "format notes and official references remain adjacent to cup selection, outside the concise tooltip");
   assert.match(html, /Use <code>&amp;<\/code> for AND, commas for OR, and <code>!<\/code> to exclude a term/);
   assert.doesNotMatch(html, /id="cup-selector-help"|class="additional-rules-help"|id="include-mutators-help"|Combined live with the generated filter/);
@@ -614,10 +614,16 @@ test("built-in Cup emojis are unique and carousel exposes every Cup", () => {
   assert.ok(emojis.every((emoji) => typeof emoji === "string" && emoji.trim()), "every built-in Cup has an emoji");
   assert.equal(new Set(emojis).size, cups.length, "built-in Cup emojis are distinct");
   assert.match(app, /return emoji \|\| \(cup && cup\.official \? "🏆" : "🧩"\)/, "user-created cups have a fallback emoji");
-  assert.match(quickPicker, /ids\.unshift\(cupSelect\.value\)/, "the selected Cup is prioritised ahead of persisted recent Cups");
-  assert.match(quickPicker, /ids\.concat\(CUP_PRESETS\.map\(\(cup\) => cup\.id\), "custom"\)/, "the carousel includes every preset and the custom filter entry");
-  assert.match(quickPicker, /orderedIds\.forEach/);
-  assert.doesNotMatch(quickPicker, /visibleRecentCount|ids\.slice\(/, "recent selections do not hide other Cups");
+  assert.match(quickPicker, /ids\.unshift\(cupSelect\.value\)/, "the selected Cup remains prioritised within its origin group");
+  assert.match(quickPicker, /ids\.concat\(CUP_PRESETS\.map\(\(cup\) => cup\.id\), "custom"\)/, "the carousel includes every preset and custom filter entry");
+  assert.match(quickPicker, /orderedIds\.map\(cupPickerItem\)/);
+  assert.match(quickPicker, /const homegrownCups = orderedCups\.filter\(isHomegrownCup\)/, "homegrown Cups form the first carousel group");
+  assert.match(quickPicker, /const otherCups = orderedCups\.filter\(\(cup\) => !isHomegrownCup\(cup\) && cup\.id !== "custom"\)/, "other Cups retain their preset order in the second group");
+  assert.match(quickPicker, /cupGroups\.forEach/);
+  assert.match(quickPicker, /cup-carousel-divider/);
+  assert.match(quickPicker, /cupIndex \+ 1/, "numbering restarts at one for each group");
+  assert.match(quickPicker, /homegrownMark\.textContent = "🧪"/);
+  assert.match(quickPicker, /unofficial homegrown cup/, "homegrown status is included in accessible carousel names");
   assert.match(quickPicker, /icon\.textContent = cupEmoji\(cup\)/);
   assert.match(app, /emoji\.textContent = cupEmoji\(cup\)/, "Browse All options show the same emoji");
   assert.match(app, /RECENT_CUPS_KEY = "gbl-filter-recent-cups-v1"/);
@@ -626,6 +632,8 @@ test("built-in Cup emojis are unique and carousel exposes every Cup", () => {
   assert.match(app, /function scrollSelectedCupIntoView\(\)/);
   assert.match(app, /cupTileRow\.scrollTo\(\{ left: nextScrollLeft, behavior: "smooth" \}\)/);
   assert.match(css, /\.cup-quick-tile\s*\{[^}]*scroll-snap-align:\s*start/);
+  assert.match(css, /\.cup-carousel-divider\s*\{[^}]*border-left:\s*1px solid/);
+  assert.match(css, /\.cup-quick-number\s*\{[^}]*position:\s*absolute/);
   assert.match(css, /\.cup-picker-option\s*\{[^}]*min-height:\s*44px/);
 });
 
@@ -641,10 +649,10 @@ test("Cup library search indexes names, league, type and custom eligibility meta
 
   assert.deepEqual(matchingIds("hallowee"), ["halloween", "mega-halloween"], "partial cup-name matches exclude unrelated presets");
   assert.deepEqual(matchingIds("HALLOWEE"), ["halloween", "mega-halloween"], "cup names match case-insensitively");
-  assert.deepEqual(matchingIds("ghost"), ["halloween", "mega-halloween", "holiday", "holiday-ultra", "bug-bite"]);
+  assert.deepEqual(matchingIds("ghost"), ["halloween", "mega-halloween", "holiday", "holiday-ultra", "haunted-machinery", "frostbite-cup"]);
   assert.deepEqual(matchingIds("great"), Array.from(cupData.filter((cup) => cup.suggestedLeague === "great"), (cup) => cup.id));
-  assert.deepEqual(matchingIds("rock"), ["fossil", "rock-challenge"]);
-  assert.deepEqual(matchingIds("@rock"), ["rock-challenge"], "move expressions match the cup restriction and no name-only result");
+  assert.deepEqual(matchingIds("rock"), ["fossil", "rock-challenge", "bug-bite"]);
+  assert.deepEqual(matchingIds("@rock"), ["rock-challenge", "bug-bite"], "move expressions match the cup restriction and no name-only result");
   assert.deepEqual(matchingIds("gardevoir"), ["willpower"], "Pokédex bans resolve to species names");
   assert.deepEqual(matchingIds("random nonsense"), []);
   assert.deepEqual(matchingIds(""), Array.from(cupData, (cup) => cup.id));

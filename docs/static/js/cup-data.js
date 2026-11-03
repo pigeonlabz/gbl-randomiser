@@ -179,6 +179,7 @@
       name: "Rock challenge (custom filter)",
       emoji: "🪨",
       official: false,
+      origin: "homegrown",
       officialLeague: null,
       suggestedLeague: "master",
       search: "rock&!@rock",
@@ -191,17 +192,19 @@
       name: "Bug Bite",
       emoji: "🐛",
       official: false,
-      search: "bug&@bug&!@normal&!@fire&!@water&!@electric&!@grass&!@ice&!@fighting&!@ground&!@flying&!@psychic&!@ghost&!@dragon&!@dark&!@steel&!@fairy",
+      origin: "homegrown",
+      search: "bug&@bug,@poison,@rock",
       lockTypes: true,
       lockMoves: true,
-      manualRules: ["Pokémon must be Bug-type and know at least one Bug-type attack. Bug-, Poison-, and Rock-type attacks are allowed; the negative @type searches exclude every other move type from the currently equipped attacks."],
-      notes: ["This filter encodes the Pokémon typing and all move-type restrictions. Check the Pokémon GO search results in-game before a tournament if the client changes how negated move-type searches work."]
+      manualRules: ["Pokémon must be Bug-type and know at least one Bug-, Poison-, or Rock-type attack."],
+      notes: ["The positive move searches find Pokémon with at least one Bug-, Poison-, or Rock-type attack; they do not exclude other equipped move types."]
     },
     {
       id: "meta-madness",
       name: "Meta Madness",
       emoji: "🌀",
       official: false,
+      origin: "homegrown",
       search: "@special&!legendary&!mythical&!ultrabeast",
       blockedFamilies: ["rarity"],
       lockTypes: false,
@@ -214,6 +217,7 @@
       name: "Pain Cup",
       emoji: "📉",
       official: false,
+      origin: "homegrown",
       rankingLimit: 250,
       dynamicFilter: "pvpoke-bottom-rankings",
       search: "",
@@ -222,6 +226,56 @@
       lockTypes: true,
       lockMoves: true,
       manualRules: ["Use the union of the bottom 250 (or 100) Great, Ultra, and Master overall ranking rows. Deduplicate exact species/forms, then exclude Legendary, Mythical, and Ultra Beast entries. The same pool applies in every selected league; its CP limit is applied to the search."]
+    },
+    {
+      id: "explorer-cup",
+      name: "Explorer Cup",
+      emoji: "🏞️",
+      official: false,
+      origin: "homegrown",
+      search: "fighting,water,bug,poison,steel&@fighting,@water,@bug,@poison,@steel&!fire&!@fire",
+      lockTypes: true,
+      lockMoves: false
+    },
+    {
+      id: "earth-wind-fire",
+      name: "Earth, Wind and Fire",
+      emoji: "🌍",
+      official: false,
+      origin: "homegrown",
+      search: "Ground,Flying,Fire&@ground,@flying,@fire&!legendary&!ultrabeast",
+      lockTypes: true,
+      lockMoves: false
+    },
+    {
+      id: "haunted-machinery",
+      name: "Haunted Machinery",
+      emoji: "⚙️",
+      official: false,
+      origin: "homegrown",
+      search: "ghost,steel,electric,ground&@ghost,@steel,@electric,@ground",
+      lockTypes: true,
+      lockMoves: false
+    },
+    {
+      id: "toxic-depths",
+      name: "Toxic Depths",
+      emoji: "☠️",
+      official: false,
+      origin: "homegrown",
+      search: "water,poison,psychic,electric&@water,@poison,@psychic,@electric",
+      lockTypes: true,
+      lockMoves: false
+    },
+    {
+      id: "frostbite-cup",
+      name: "Frostbite Cup",
+      emoji: "🥶",
+      official: false,
+      origin: "homegrown",
+      search: "ice,fighting,ghost,poison&@ice,@fighting,@ghost,@poison&!legendary&!ultrabeast",
+      lockTypes: true,
+      lockMoves: false
     }
   ];
 

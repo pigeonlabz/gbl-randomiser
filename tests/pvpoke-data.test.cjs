@@ -288,13 +288,11 @@ test("Bug Bite and Meta Madness preserve their mandatory cup rules", () => {
   const cups = context.window.GBL_CUP_DATA;
   const bugBite = cups.find((cup) => cup.id === "bug-bite");
   const metaMadness = cups.find((cup) => cup.id === "meta-madness");
-  const allTypes = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
-  const bugSearch = utils.validateSearchExpression(bugBite.search);
-  const bugTerms = bugSearch.alternatives[0];
-  assert.equal(bugSearch.valid, true);
-  assert.ok(bugTerms.includes("bug") && bugTerms.includes("@bug"));
-  for (const type of allTypes.filter((value) => !["bug", "poison", "rock"].includes(value))) assert.ok(bugTerms.includes("!@" + type), "Bug Bite excludes " + type + " moves");
-  assert.ok(!bugTerms.includes("!@poison") && !bugTerms.includes("!@rock"));
+  assert.equal(bugBite.search, "bug&@bug,@poison,@rock");
+  assert.equal(utils.validateSearchExpression(bugBite.search).valid, true);
+  assert.equal(bugBite.origin, "homegrown");
+  assert.ok(bugBite.manualRules.join(" ").includes("Bug-, Poison-, or Rock-type attack"));
+  assert.ok(bugBite.notes.join(" ").includes("do not exclude other equipped move types"));
   assert.equal(bugBite.requiredLeague, undefined, "Bug Bite does not pin a league");
   assert.equal(bugBite.suggestedLeague, undefined, "Bug Bite does not imply a preferred league");
   assert.equal(metaMadness.requiredLeague, undefined, "Meta Madness does not pin a league");
@@ -307,8 +305,9 @@ test("Bug Bite and Meta Madness preserve their mandatory cup rules", () => {
   assert.ok(metaMadness.notes.join(" ").includes("candidate filter"));
   assert.deepEqual(Array.from(metaMadness.blockedFamilies), ["rarity"]);
   for (let roll = 0; roll < 20; roll += 1) {
-    const search = utils.combineSearch([bugBite.search, roll % 2 ? "shiny" : "age0-30"]);
-    assert.ok(search.includes("@bug") && search.includes("!@fire"), "rerolls retain the mandatory Bug Bite cup prefix");
+    const challenge = roll % 2 ? "shiny" : "age0-30";
+    const search = utils.combineSearch([bugBite.search, challenge]);
+    assert.equal(search, "bug&@bug&" + challenge + ",@poison&" + challenge + ",@rock&" + challenge, "rerolls retain each Bug Bite OR branch");
   }
 });
 
@@ -316,7 +315,16 @@ test("homegrown cup rules combine with each league CP limit without changing cup
   const cupContext = { window: {} };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../docs/static/js/cup-data.js"), "utf8"), cupContext);
   const cups = cupContext.window.GBL_CUP_DATA.filter((cup) => !cup.official);
-  assert.deepEqual(Array.from(cups, (cup) => cup.id), ["rock-challenge", "bug-bite", "meta-madness", "pain-cup"]);
+  assert.deepEqual(Array.from(cups, (cup) => cup.id), ["rock-challenge", "bug-bite", "meta-madness", "pain-cup", "explorer-cup", "earth-wind-fire", "haunted-machinery", "toxic-depths", "frostbite-cup"]);
+  assert.ok(cups.every((cup) => cup.origin === "homegrown"), "all Pigeon Labs original cups are marked homegrown");
+  const homegrownSearches = {
+    "explorer-cup": "fighting,water,bug,poison,steel&@fighting,@water,@bug,@poison,@steel&!fire&!@fire",
+    "earth-wind-fire": "Ground,Flying,Fire&@ground,@flying,@fire&!legendary&!ultrabeast",
+    "haunted-machinery": "ghost,steel,electric,ground&@ghost,@steel,@electric,@ground",
+    "toxic-depths": "water,poison,psychic,electric&@water,@poison,@psychic,@electric",
+    "frostbite-cup": "ice,fighting,ghost,poison&@ice,@fighting,@ghost,@poison&!legendary&!ultrabeast"
+  };
+  for (const [id, search] of Object.entries(homegrownSearches)) assert.equal(cups.find((cup) => cup.id === id).search, search, id + " preserves its exact filter operators and casing");
   for (const cup of cups) assert.equal(cup.requiredLeague, undefined, cup.id + " does not pin a league");
   const ruleContext = { window: {} };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../docs/static/js/rule-data.js"), "utf8"), ruleContext);
@@ -335,7 +343,11 @@ test("homegrown cup rules combine with each league CP limit without changing cup
         ? pvpoke.buildPainCupSearch(pool, cpSearch)
         : { valid: true, search: utils.combineSearch([cup.search, cpSearch]) };
       assert.equal(result.valid, true, cup.id + " in " + leagueId);
-      assert.ok(result.search.includes(cup.id === "pain-cup" ? pool.candidateSearch : cup.search), cup.id + " eligibility remains in " + leagueId);
+      if (cup.id === "pain-cup") {
+        assert.ok(result.search.includes(pool.candidateSearch), "Pain Cup candidate pool remains in " + leagueId);
+      } else {
+        assert.equal(result.search, utils.combineSearch([cup.search, cpSearch]), cup.id + " eligibility remains in " + leagueId);
+      }
       if (cpSearch) assert.ok(result.search.includes(cpSearch), cup.id + " receives " + leagueId + " CP limit");
       else assert.doesNotMatch(result.search, /(?:^|[&,])cp(?:\d|-)/i, cup.id + " has no CP limit in Master League");
       for (const otherLeague of ["little", "great", "ultra", "master"].filter((id) => id !== leagueId)) {
@@ -344,7 +356,7 @@ test("homegrown cup rules combine with each league CP limit without changing cup
       }
     }
   }
-  assert.equal(new Set(cups.map((cup) => cup.id)).size, 4, "all homegrown presets are independently selectable across leagues");
+  assert.equal(new Set(cups.map((cup) => cup.id)).size, 9, "all homegrown presets are independently selectable across leagues");
   assert.doesNotMatch(app, /forcedLeagueId|cup\.requiredLeague/, "cup metadata cannot reset or lock the selected league");
 });
 

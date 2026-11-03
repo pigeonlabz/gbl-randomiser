@@ -560,6 +560,9 @@
     if (cup.id === "rock-challenge") return "Rock Challenge";
     return cup.name.replace(/\s+Cup(?::)?/i, "").replace(/:\s*/, " ").replace(/\s+League$/i, "").trim();
   }
+  function isHomegrownCup(cup) {
+    return cup && cup.origin === "homegrown";
+  }
   function scrollSelectedCupIntoView() {
     const selected = Array.from(cupTileRow.querySelectorAll("[data-cup-id]"))
       .find((button) => button.dataset.cupId === cupSelect.value);
@@ -601,30 +604,70 @@
     cupTileRow.appendChild(openButton);
 
     const ids = recentCupIds.filter((id) => id && cupPickerItem(id));
-    if (cupSelect.value && cupPickerItem(cupSelect.value)) {
-      ids.unshift(cupSelect.value);
-    }
+    if (cupSelect.value && cupPickerItem(cupSelect.value)) ids.unshift(cupSelect.value);
     const orderedIds = Array.from(new Set(ids.concat(CUP_PRESETS.map((cup) => cup.id), "custom")));
-    orderedIds.forEach((id) => {
-      const cup = cupPickerItem(id);
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "cup-quick-tile";
-      button.dataset.cupId = cup.id;
-      const cupName = cup.id === "custom" ? "Custom Cup filter: enter your own eligibility search" : cupDisplayName(cup);
-      button.setAttribute("aria-label", cupName);
-      button.setAttribute("aria-pressed", String(cup.id === cupSelect.value));
-      button.title = cupDisplayName(cup);
-      const icon = document.createElement("span");
-      icon.className = "cup-quick-icon";
-      icon.setAttribute("aria-hidden", "true");
-      icon.textContent = cupEmoji(cup);
-      const label = document.createElement("span");
-      label.className = "cup-quick-label";
-      label.textContent = cupQuickLabel(cup);
-      button.append(icon, label);
-      cupTileRow.appendChild(button);
+    const orderedCups = orderedIds.map(cupPickerItem).filter(Boolean);
+    const homegrownCups = orderedCups.filter(isHomegrownCup);
+    const otherCups = orderedCups.filter((cup) => !isHomegrownCup(cup) && cup.id !== "custom");
+    const cupGroups = [homegrownCups, otherCups];
+    cupGroups.forEach((group, groupIndex) => {
+      if (!group.length) return;
+      if (groupIndex > 0 && homegrownCups.length && otherCups.length) {
+        const divider = document.createElement("span");
+        divider.className = "cup-carousel-divider";
+        divider.setAttribute("role", "separator");
+        divider.setAttribute("aria-orientation", "vertical");
+        divider.setAttribute("aria-label", "Other Cups");
+        cupTileRow.appendChild(divider);
+      }
+      group.forEach((cup, cupIndex) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "cup-quick-tile";
+        button.dataset.cupId = cup.id;
+        const cupName = cupDisplayName(cup) + (isHomegrownCup(cup) ? ", unofficial homegrown cup" : "");
+        button.setAttribute("aria-label", (isHomegrownCup(cup) ? "Homegrown Cup " : "Cup ") + (cupIndex + 1) + ": " + cupName);
+        button.setAttribute("aria-pressed", String(cup.id === cupSelect.value));
+        button.title = cupDisplayName(cup);
+        const number = document.createElement("span");
+        number.className = "cup-quick-number";
+        number.setAttribute("aria-hidden", "true");
+        number.textContent = String(cupIndex + 1);
+        const icon = document.createElement("span");
+        icon.className = "cup-quick-icon";
+        icon.setAttribute("aria-hidden", "true");
+        icon.textContent = cupEmoji(cup);
+        const label = document.createElement("span");
+        label.className = "cup-quick-label";
+        label.textContent = cupQuickLabel(cup);
+        button.append(number, icon);
+        if (isHomegrownCup(cup)) {
+          const homegrownMark = document.createElement("span");
+          homegrownMark.className = "cup-homegrown-mark";
+          homegrownMark.setAttribute("aria-hidden", "true");
+          homegrownMark.textContent = "🧪";
+          label.appendChild(homegrownMark);
+        }
+        button.appendChild(label);
+        cupTileRow.appendChild(button);
+      });
     });
+    const customCupButton = document.createElement("button");
+    customCupButton.type = "button";
+    customCupButton.className = "cup-quick-tile";
+    customCupButton.dataset.cupId = "custom";
+    customCupButton.setAttribute("aria-label", "Custom Cup filter: enter your own eligibility search");
+    customCupButton.setAttribute("aria-pressed", String(cupSelect.value === "custom"));
+    customCupButton.title = "Custom Cup filter";
+    const customIcon = document.createElement("span");
+    customIcon.className = "cup-quick-icon";
+    customIcon.setAttribute("aria-hidden", "true");
+    customIcon.textContent = cupEmoji({ official: false });
+    const customLabel = document.createElement("span");
+    customLabel.className = "cup-quick-label";
+    customLabel.textContent = "Custom";
+    customCupButton.append(customIcon, customLabel);
+    cupTileRow.appendChild(customCupButton);
 
     updateCupPickerSelection();
   }
@@ -639,7 +682,7 @@
       button.dataset.cupOption = "true";
       button.dataset.cupId = cup.id;
       button.setAttribute("aria-pressed", String(cup.id === cupSelect.value));
-      button.setAttribute("aria-label", cupDisplayName(cup) + (cup.official ? ", official format" : ", custom cup"));
+      button.setAttribute("aria-label", cupDisplayName(cup) + (cup.official ? ", official format" : ", custom cup") + (isHomegrownCup(cup) ? ", unofficial homegrown cup" : ""));
       const name = document.createElement("span");
       name.className = "cup-option-name";
       const emoji = document.createElement("span");
@@ -650,6 +693,13 @@
       title.className = "cup-option-title";
       title.textContent = cup.name;
       name.append(emoji, title);
+      if (isHomegrownCup(cup)) {
+        const homegrownMark = document.createElement("span");
+        homegrownMark.className = "cup-homegrown-mark";
+        homegrownMark.setAttribute("aria-hidden", "true");
+        homegrownMark.textContent = "🧪";
+        name.appendChild(homegrownMark);
+      }
       button.appendChild(name);
       const suggestedLeague = cupSuggestedLeague(cup);
       const meta = document.createElement("small");

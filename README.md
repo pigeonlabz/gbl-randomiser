@@ -10,7 +10,8 @@ To import a future snapshot manually, choose and review a full PvPoke commit SHA
 
 ## Custom cups
 
-- **Bug Bite** supports any selected league and includes `bug`, `@bug`, and negative move-type searches for every type outside Bug, Poison, and Rock. Type and move mutators are locked while this cup is active.
+- **Bug Bite** is a Pigeon Labs homegrown cup for any selected league. Its exact search is `bug&@bug,@poison,@rock`; the positive move terms find Pokémon with at least one Bug-, Poison-, or Rock-type attack and do not exclude other equipped move types. The cup's manual rule still requires Bug typing. Type and move mutators are locked while this cup is active.
+- **Explorer Cup**, **Earth, Wind and Fire**, **Haunted Machinery**, **Toxic Depths**, and **Frostbite Cup** are also Pigeon Labs homegrown cups. Their saved search expressions are preserved as configured; positive move terms identify candidates with at least one matching move and do not imply that every other move type is excluded.
 - **Meta Madness** supports any selected league and starts with `@special` plus Legendary, Mythical, and Ultra Beast exclusions. `@special` is only a candidate filter: manually check the equipped moves for a qualifying Community Day, event-exclusive, or legacy Elite TM move. Return and Frustration do not qualify.
 - **Pain Cup** uses one shared eligibility pool: the union of the bottom 250 (or 100) Great, Ultra, and Master overall ranking rows, deduplicated by exact species/form before Legendary, Mythical, and Ultra Beast entries are removed. It works in Little, Great, Ultra, and Master League; only the selected league's CP rule is added. The copied comma-separated Pokédex search is an approximate candidate filter because it can match other forms sharing a number. The collapsed list shows the exact eligible forms and their per-league ranks.
 
