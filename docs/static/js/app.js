@@ -620,19 +620,15 @@
         divider.setAttribute("aria-label", "Other Cups");
         cupTileRow.appendChild(divider);
       }
-      group.forEach((cup, cupIndex) => {
+      group.forEach((cup) => {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "cup-quick-tile";
         button.dataset.cupId = cup.id;
         const cupName = cupDisplayName(cup) + (isHomegrownCup(cup) ? ", unofficial homegrown cup" : "");
-        button.setAttribute("aria-label", (isHomegrownCup(cup) ? "Homegrown Cup " : "Cup ") + (cupIndex + 1) + ": " + cupName);
+        button.setAttribute("aria-label", cupName);
         button.setAttribute("aria-pressed", String(cup.id === cupSelect.value));
         button.title = cupDisplayName(cup);
-        const number = document.createElement("span");
-        number.className = "cup-quick-number";
-        number.setAttribute("aria-hidden", "true");
-        number.textContent = String(cupIndex + 1);
         const icon = document.createElement("span");
         icon.className = "cup-quick-icon";
         icon.setAttribute("aria-hidden", "true");
@@ -640,13 +636,13 @@
         const label = document.createElement("span");
         label.className = "cup-quick-label";
         label.textContent = cupQuickLabel(cup);
-        button.append(number, icon);
+        button.appendChild(icon);
         if (isHomegrownCup(cup)) {
           const homegrownMark = document.createElement("span");
           homegrownMark.className = "cup-homegrown-mark";
           homegrownMark.setAttribute("aria-hidden", "true");
           homegrownMark.textContent = "🧪";
-          label.appendChild(homegrownMark);
+          button.appendChild(homegrownMark);
         }
         button.appendChild(label);
         cupTileRow.appendChild(button);

@@ -954,11 +954,10 @@ footer p { margin: 0; }
   border: 1px solid var(--border); border-radius: 9px; background: var(--panel-alt); color: var(--text); padding: 4px 6px;
   font: inherit; font-size: 0.72rem; font-weight: 700; line-height: 1.1; text-align: center; cursor: pointer;
 }
-.cup-quick-tile > span:last-child { display: -webkit-box; max-width: 100%; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.cup-quick-label { display: -webkit-box; max-width: 100%; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 .cup-quick-icon { color: var(--accent); font-size: 1.35rem; line-height: 1; }
-.cup-quick-number { position: absolute; top: 4px; right: 6px; color: var(--text-muted); font-size: 0.62rem; font-weight: 600; line-height: 1; }
 .cup-homegrown-mark { flex: 0 0 auto; font-size: 0.74em; line-height: 1; }
-.cup-quick-label .cup-homegrown-mark { display: inline-block; margin-left: 3px; }
+.cup-quick-tile > .cup-homegrown-mark { position: absolute; top: 4px; right: 6px; display: block; font-size: 0.8rem; }
 .cup-carousel-divider { flex: 0 0 1px; align-self: center; height: 38px; margin: 0 3px; border-left: 1px solid var(--border-strong); opacity: 0.8; }
 .cup-library-button { width: 44px; height: 44px; flex: 0 0 44px; margin-left: auto; padding: 8px; }
 .cup-quick-tile:hover { border-color: var(--accent); color: var(--text-strong); }

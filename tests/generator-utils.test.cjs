@@ -621,8 +621,9 @@ test("built-in Cup emojis are unique and carousel exposes every Cup", () => {
   assert.match(quickPicker, /const otherCups = orderedCups\.filter\(\(cup\) => !isHomegrownCup\(cup\) && cup\.id !== "custom"\)/, "other Cups retain their preset order in the second group");
   assert.match(quickPicker, /cupGroups\.forEach/);
   assert.match(quickPicker, /cup-carousel-divider/);
-  assert.match(quickPicker, /cupIndex \+ 1/, "numbering restarts at one for each group");
   assert.match(quickPicker, /homegrownMark\.textContent = "🧪"/);
+  assert.match(quickPicker, /button\.appendChild\(homegrownMark\)/, "the homegrown marker is positioned on its carousel tile");
+  assert.doesNotMatch(quickPicker, /cup-quick-number|cupIndex \+ 1/, "carousel numbering is omitted");
   assert.match(quickPicker, /unofficial homegrown cup/, "homegrown status is included in accessible carousel names");
   assert.match(quickPicker, /icon\.textContent = cupEmoji\(cup\)/);
   assert.match(app, /emoji\.textContent = cupEmoji\(cup\)/, "Browse All options show the same emoji");
@@ -633,7 +634,7 @@ test("built-in Cup emojis are unique and carousel exposes every Cup", () => {
   assert.match(app, /cupTileRow\.scrollTo\(\{ left: nextScrollLeft, behavior: "smooth" \}\)/);
   assert.match(css, /\.cup-quick-tile\s*\{[^}]*scroll-snap-align:\s*start/);
   assert.match(css, /\.cup-carousel-divider\s*\{[^}]*border-left:\s*1px solid/);
-  assert.match(css, /\.cup-quick-number\s*\{[^}]*position:\s*absolute/);
+  assert.match(css, /\.cup-quick-tile\s*>\s*\.cup-homegrown-mark\s*\{[^}]*top:\s*4px;\s*right:\s*6px/);
   assert.match(css, /\.cup-picker-option\s*\{[^}]*min-height:\s*44px/);
 });
 
