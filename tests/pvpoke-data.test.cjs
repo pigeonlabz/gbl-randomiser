@@ -290,6 +290,7 @@ test("Bug Bite and Meta Madness preserve their mandatory cup rules", () => {
   const metaMadness = cups.find((cup) => cup.id === "meta-madness");
   assert.equal(bugBite.search, "bug&@bug,@poison,@rock");
   assert.equal(utils.validateSearchExpression(bugBite.search).valid, true);
+  assert.equal(utils.combineSearch([bugBite.search]), "bug&@bug,@poison,@rock");
   assert.equal(bugBite.origin, "homegrown");
   assert.ok(bugBite.manualRules.join(" ").includes("Bug-, Poison-, or Rock-type attack"));
   assert.ok(bugBite.notes.join(" ").includes("do not exclude other equipped move types"));
@@ -307,7 +308,7 @@ test("Bug Bite and Meta Madness preserve their mandatory cup rules", () => {
   for (let roll = 0; roll < 20; roll += 1) {
     const challenge = roll % 2 ? "shiny" : "age0-30";
     const search = utils.combineSearch([bugBite.search, challenge]);
-    assert.equal(search, "bug&@bug&" + challenge + ",@poison&" + challenge + ",@rock&" + challenge, "rerolls retain each Bug Bite OR branch");
+    assert.equal(search, "bug&@bug,@poison,@rock&" + challenge, "rerolls preserve mandatory Bug typing and OR move alternatives");
   }
 });
 

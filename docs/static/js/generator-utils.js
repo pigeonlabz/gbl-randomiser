@@ -142,45 +142,78 @@
     return { parts: parts, error: "" };
   }
 
+  function hasUnquotedGrouping(value) {
+    let quote = "";
+    let escaped = false;
+    for (const character of value) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (character === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (quote) {
+        if (character === quote) quote = "";
+        continue;
+      }
+      if (character === "\"") quote = character;
+      else if (character === "(" || character === ")") return true;
+    }
+    return false;
+  }
+
   function validateSearchExpression(expression) {
     const value = String(expression == null ? "" : expression).trim();
-    if (!value) return { valid: true, normalized: "", alternatives: [], error: "" };
-
-    const orParts = splitSearchLevel(value, ",;:");
-    if (orParts.error) return { valid: false, normalized: "", alternatives: [], error: orParts.error };
-    const alternatives = [];
-    for (const branch of orParts.parts) {
-      if (!branch) return { valid: false, normalized: "", alternatives: [], error: "Add a search term on both sides of each OR separator." };
-      const andParts = splitSearchLevel(branch, "&");
-      if (andParts.error) return { valid: false, normalized: "", alternatives: [], error: andParts.error };
-      if (andParts.parts.some((term) => !term || term === "!")) {
-        return { valid: false, normalized: "", alternatives: [], error: "Add a search term after each AND or exclusion marker." };
-      }
-      alternatives.push(andParts.parts);
+    if (!value) return { valid: true, normalized: "", groups: [], error: "" };
+    if (hasUnquotedGrouping(value)) {
+      return { valid: false, normalized: "", groups: [], error: "Parentheses cannot group Pokémon GO searches. Use comma-separated OR groups joined with &." };
     }
-    const normalized = alternatives.map((terms) => terms.join("&")).join(",");
-    return { valid: true, normalized: normalized, alternatives: alternatives, error: "" };
+
+    const andParts = splitSearchLevel(value, "&|");
+    if (andParts.error) return { valid: false, normalized: "", groups: [], error: andParts.error };
+    const groups = [];
+    for (const group of andParts.parts) {
+      if (!group) return { valid: false, normalized: "", groups: [], error: "Add a search term on both sides of each AND separator." };
+      const orParts = splitSearchLevel(group, ",;:");
+      if (orParts.error) return { valid: false, normalized: "", groups: [], error: orParts.error };
+      if (orParts.parts.some((term) => !term || term === "!")) {
+        return { valid: false, normalized: "", groups: [], error: "Add a search term on both sides of each OR separator and after each exclusion marker." };
+      }
+      groups.push(orParts.parts);
+    }
+    const normalized = groups.map((terms) => terms.join(",")).join("&");
+    return { valid: true, normalized: normalized, groups: groups, error: "" };
   }
 
   function stripCpTerms(expression) {
     const parsed = validateSearchExpression(expression);
-    if (!parsed.valid || !parsed.alternatives.length) return "";
-    const alternatives = parsed.alternatives.map((terms) => terms.filter((term) => !/^!?cp(?:$|[-\d])/i.test(term)));
-    // A cup OR branch without any non-CP term is unrestricted, so it contributes no cup filter.
-    if (alternatives.some((terms) => !terms.length)) return "";
-    return alternatives.map((terms) => terms.join("&")).join(",");
+    if (!parsed.valid || !parsed.groups.length) return "";
+    const groups = parsed.groups.filter((terms) => {
+      const cpTerms = terms.filter((term) => /^!?cp(?:$|[-\d])/i.test(term));
+      if (!cpTerms.length) return true;
+      if (cpTerms.length !== terms.length) {
+        throw new Error("A CP search joined to OR alternatives cannot be separated from Cup eligibility. Rewrite the Cup filter so CP is its own AND condition.");
+      }
+      return false;
+    });
+    return groups.map((terms) => terms.join(",")).join("&");
   }
 
   function removeSearchTerms(expression, removedTerms) {
     const parsed = validateSearchExpression(expression);
-    if (!parsed.valid || !parsed.alternatives.length) return "";
+    if (!parsed.valid || !parsed.groups.length) return "";
     const removed = new Set((Array.isArray(removedTerms) ? removedTerms : [removedTerms])
       .map((term) => String(term || "").replace(/^!+/, "").toLowerCase()).filter(Boolean));
-    return parsed.alternatives
-      .map((terms) => terms.filter((term) => !removed.has(term.replace(/^!+/, "").toLowerCase())))
-      .filter((terms) => terms.length)
-      .map((terms) => terms.join("&"))
-      .join(",");
+    const groups = parsed.groups.filter((terms) => {
+      const remaining = terms.filter((term) => !removed.has(term.replace(/^!+/, "").toLowerCase()));
+      if (remaining.length && remaining.length !== terms.length) {
+        throw new Error("A term joined to OR alternatives cannot be removed without changing the group's meaning.");
+      }
+      return remaining.length > 0;
+    });
+    return groups.map((terms) => terms.join(",")).join("&");
   }
 
   function sizeSearchForSelection(includeXL, includeXXL) {
@@ -194,26 +227,43 @@
     const expressions = parts.map((part) => String(part == null ? "" : part).trim()).filter(Boolean);
     if (!expressions.length) return "";
 
-    let clauses = [[]];
+    const groups = [];
     for (const expression of expressions) {
       const parsed = validateSearchExpression(expression);
       if (!parsed.valid) throw new Error(parsed.error);
-      let expanded = [];
-      for (const clause of clauses) {
-        for (const alternative of parsed.alternatives) {
-          const terms = clause.slice();
-          alternative.forEach((term) => {
-            if (!terms.some((existing) => existing.toLowerCase() === term.toLowerCase())) terms.push(term);
-          });
-          if (!expanded.some((existing) => existing.join("&").toLowerCase() === terms.join("&").toLowerCase())) {
-            expanded.push(terms);
-          }
-          if (expanded.length > 4096) throw new Error("This filter has too many OR combinations. Simplify one of its search expressions.");
+      for (const terms of parsed.groups) {
+        const uniqueTerms = terms.filter((term, index) =>
+          terms.findIndex((candidate) => candidate.toLowerCase() === term.toLowerCase()) === index);
+        const key = uniqueTerms.map((term) => term.toLowerCase()).sort().join("\u0000");
+        if (!groups.some((existing) => existing.key === key)) {
+          groups.push({ key: key, terms: uniqueTerms });
         }
       }
-      clauses = expanded;
     }
-    return clauses.map((clause) => clause.join("&")).join(",");
+    const cpGroups = [];
+    groups.forEach((group, index) => {
+      if (group.terms.length !== 1) return;
+      const match = /^cp(\d+)?(?:-(\d*))?$/i.exec(group.terms[0]);
+      if (!match || match[1] == null && match[2] == null) return;
+      const minCp = match[1] == null ? 0 : Number(match[1]);
+      const maxCp = match[2] == null ? (match[1] == null ? Infinity : minCp) : match[2] === "" ? Infinity : Number(match[2]);
+      cpGroups.push({ index, minCp, maxCp });
+    });
+    if (cpGroups.length > 1) {
+      const minCp = Math.max(...cpGroups.map((range) => range.minCp));
+      const maxCp = Math.min(...cpGroups.map((range) => range.maxCp));
+      if (minCp > maxCp) throw new Error("The combined CP search constraints have no overlapping values.");
+      const firstIndex = cpGroups[0].index;
+      const cpTerm = minCp === maxCp ? "cp" + minCp : cpSearchForRange(minCp, maxCp);
+      groups[firstIndex] = { key: cpTerm.toLowerCase(), terms: [cpTerm] };
+      const redundantIndexes = new Set(cpGroups.slice(1).map((range) => range.index));
+      for (let index = groups.length - 1; index >= 0; index -= 1) {
+        if (redundantIndexes.has(index)) groups.splice(index, 1);
+      }
+    }
+    const termCount = groups.reduce((count, group) => count + group.terms.length, 0);
+    if (termCount > 4096) throw new Error("This filter has too many OR alternatives. Simplify one of its search expressions.");
+    return groups.map((group) => group.terms.join(",")).join("&");
   }
 
   function cpSearchForRange(minCp, maxCp) {

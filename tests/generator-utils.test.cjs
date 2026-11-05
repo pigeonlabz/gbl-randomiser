@@ -142,9 +142,9 @@ test("cup eligibility follows the selected league CP ceiling without imposing a 
   const halloween = cupData.find((cup) => cup.id === "halloween");
   const greatSearch = utils.combineSearch([utils.normalizeCpConstraint(leagues.great, []).search, halloween.search]);
   const ultraSearch = utils.combineSearch([utils.normalizeCpConstraint(leagues.ultra, []).search, halloween.search]);
-  assert.equal(greatSearch, "cp0-1500&poison,cp0-1500&bug,cp0-1500&ghost,cp0-1500&dark,cp0-1500&fairy");
-  assert.equal(ultraSearch, "cp0-2500&poison,cp0-2500&bug,cp0-2500&ghost,cp0-2500&dark,cp0-2500&fairy");
-  assert.ok(ultraSearch.split(",").every((branch) => (branch.match(/\bcp[^&,]*/g) || []).length === 1));
+  assert.equal(greatSearch, "cp0-1500&poison,bug,ghost,dark,fairy");
+  assert.equal(ultraSearch, "cp0-2500&poison,bug,ghost,dark,fairy");
+  assert.equal((ultraSearch.match(/\bcp[^&,]*/g) || []).length, 1);
   assert.equal(utils.normalizeCpConstraint(leagues.master, []).search, "");
 });
 
@@ -187,13 +187,14 @@ test("cup CP terms are removed and league ceilings remain the single CP authorit
     ultra: { search: "cp0-2500", minCp: null, maxCp: 2500 },
     master: { search: "", minCp: null, maxCp: null }
   };
-  const legacyHalloween = "cp0-1500&poison,cp0-1500&bug,cp0-1500&ghost";
+  const legacyHalloween = "cp0-1500&poison,bug,ghost";
   const eligibility = utils.stripCpTerms(legacyHalloween);
   assert.equal(eligibility, "poison,bug,ghost");
-  assert.equal(utils.combineSearch([leagues.great.search, eligibility]), "cp0-1500&poison,cp0-1500&bug,cp0-1500&ghost");
-  assert.equal(utils.combineSearch([leagues.ultra.search, eligibility]), "cp0-2500&poison,cp0-2500&bug,cp0-2500&ghost");
+  assert.equal(utils.combineSearch([leagues.great.search, eligibility]), "cp0-1500&poison,bug,ghost");
+  assert.equal(utils.combineSearch([leagues.ultra.search, eligibility]), "cp0-2500&poison,bug,ghost");
   assert.equal(utils.combineSearch([leagues.master.search, eligibility]), eligibility);
-  assert.equal(utils.stripCpTerms("cp0-1500,ghost"), "", "an unrestricted OR branch removes the whole Cup-only restriction");
+  assert.throws(() => utils.stripCpTerms("cp0-1500,ghost"), /CP search joined to OR alternatives/,
+    "a CP alternative cannot be stripped without silently changing the OR condition");
   assert.equal(utils.stripCpTerms("cp0-1500&!@rock"), "!@rock");
 
   const randomCp = { family: "cp", search: "cp0-4000", minCp: 0, maxCp: 4000 };
@@ -408,7 +409,7 @@ test("rule family cards keep every family, concise labels, and tooltip explanati
   assert.match(html, /id="extra-filter"[^>]*placeholder="e\.g\. !shadow&@water"/);
   assert.match(html, /id="custom-cup-apply"[^>]*>Apply Custom Cup/);
   assert.match(app, /function openCustomCupEditor\(\)[\s\S]*?customCupSettings\.additionalRules/);
-  assert.match(app, /function applyCustomCupEditor\(\)[\s\S]*?customCupSettings = \{/);
+  assert.match(app, /function applyCustomCupEditor\(\)[\s\S]*?nextSettings = \{[\s\S]*?customCupSettings = nextSettings/);
   assert.match(app, /function additionalRuleExpressions\(\) \{\s*if \(cupSelect\.value !== "custom"\) return \[\]/);
   assert.match(app, /localStorage\.setItem\(CUSTOM_CUP_SETTINGS_KEY/);
   assert.match(app, /customCupEditor\.addEventListener\("close"[\s\S]*?restoreCupPrefixInput\(\)/);
@@ -535,23 +536,90 @@ test("published generator markup keeps result and controls in one form", () => {
   assert.match(html, /<p class="site-version">v1\.0\.0<\/p>/);
 });
 
-test("search composition distributes AND across OR groups and validates empty branches", () => {
+test("search composition keeps OR groups compact and applies AND across them", () => {
   assert.equal(
     utils.combineSearch(["fire,water", "shiny,shadow"]),
-    "fire&shiny,fire&shadow,water&shiny,water&shadow"
+    "fire,water&shiny,shadow"
   );
-  assert.equal(utils.combineSearch(["0attack,1attack", "water"]), "0attack&water,1attack&water");
+  assert.equal(utils.combineSearch(["0attack,1attack", "water"]), "0attack,1attack&water");
   assert.equal(
     utils.combineSearch(["fighting,psychic,dark", "!282&!570"]),
-    "fighting&!282&!570,psychic&!282&!570,dark&!282&!570"
+    "fighting,psychic,dark&!282&!570"
   );
-  assert.equal(utils.validateSearchExpression("fire:water;grass").normalized, "fire,water,grass");
-  for (const invalid of ["fire,,water", "fire&", "&water", "!", "\"unclosed"]) {
+  assert.equal(utils.validateSearchExpression("fire:water;grass&shiny").normalized, "fire,water,grass&shiny");
+  assert.deepEqual(utils.validateSearchExpression("fire,water&shiny").groups, [["fire", "water"], ["shiny"]]);
+  assert.equal(utils.validateSearchExpression("fire|water").normalized, "fire&water");
+  for (const invalid of ["fire,,water", "fire&", "&water", "!", "\"unclosed", "(fire,water)&shiny"]) {
     assert.equal(utils.validateSearchExpression(invalid).valid, false, invalid);
     assert.throws(() => utils.combineSearch([invalid]), Error);
   }
   assert.equal(utils.validateSearchExpression("@King's Shield").valid, true);
   assert.equal(utils.combineSearch(["water", "water"]), "water");
+  assert.equal(utils.combineSearch(["fire,water", "water,fire"]), "fire,water", "duplicate OR groups are removed");
+  assert.equal(utils.combineSearch(["cp0-1500", "cp-1500", "water"]), "cp0-1500&water", "overlapping structural CP limits collapse to one range");
+  assert.equal(utils.combineSearch(["cp1500-", "cp-1500"]), "cp1500", "a shared inclusive boundary becomes one exact CP term");
+  assert.throws(() => utils.combineSearch(["cp-500", "cp1000-1500"]), /CP search constraints have no overlapping values/);
+  assert.throws(() => utils.removeSearchTerms("fire,water", ["fire"]), /joined to OR alternatives/,
+    "removing one OR alternative is rejected instead of silently changing the group's meaning");
+});
+
+test("user-confirmed A/B search examples follow Pokémon GO OR-before-AND semantics", () => {
+  const matches = (expression, pokemon) => {
+    const parsed = utils.validateSearchExpression(expression);
+    assert.equal(parsed.valid, true, expression);
+    const termMatches = (term) => {
+      const negative = term.startsWith("!");
+      const key = negative ? term.slice(1) : term;
+      const cpLimit = /^cp0-(\d+)$/.exec(key) || /^cp-(\d+)$/.exec(key);
+      const result = cpLimit ? pokemon.cp <= Number(cpLimit[1])
+        : key.startsWith("@") ? pokemon.moves.includes(key.slice(1))
+          : key === "shiny" ? pokemon.shiny
+            : key === "xl" ? pokemon.size === "xl"
+              : key === "xxl" ? pokemon.size === "xxl"
+                : key.endsWith("*") ? pokemon.appraisal === key
+                  : pokemon.types.includes(key);
+      return negative ? !result : result;
+    };
+    return parsed.groups.every((group) => group.some(termMatches));
+  };
+  const evaluatePair = (a, b, witnesses, expected) => {
+    assert.deepEqual(witnesses.map((pokemon) => [matches(a, pokemon), matches(b, pokemon)]), expected);
+  };
+
+  // In-game witness counts supplied by the user: CP + type A=0, B=213.
+  evaluatePair("cp0-1500&fire&water", "cp0-1500&fire,water", [
+    { cp: 1200, types: ["fire"], moves: [], shiny: false },
+    { cp: 1200, types: ["water"], moves: [], shiny: false },
+    { cp: 1700, types: ["fire"], moves: [], shiny: false }
+  ], [[false, true], [false, true], [false, false]]);
+
+  // Bug Bite/move OR grouping A=19, B=320; cup prefix must stay mandatory.
+  evaluatePair("bug&@bug&shiny,@poison&shiny,@rock&shiny", "bug&@bug,@poison,@rock&shiny", [
+    { cp: 1000, types: ["bug"], moves: ["poison"], shiny: true },
+    { cp: 1000, types: ["poison"], moves: ["poison"], shiny: true },
+    { cp: 1000, types: ["bug"], moves: ["rock"], shiny: false }
+  ], [[false, true], [false, false], [false, false]]);
+
+  // Size OR grouping A=9, B=52.
+  evaluatePair("xl&shiny,xxl&shiny", "xl,xxl&shiny", [
+    { cp: 1000, types: [], moves: [], shiny: true, size: "xl" },
+    { cp: 1000, types: [], moves: [], shiny: true, size: "xxl" },
+    { cp: 1000, types: [], moves: [], shiny: false, size: "xxl" }
+  ], [[true, true], [false, true], [false, false]]);
+
+  // Appraisal OR grouping A=4, B=290.
+  evaluatePair("3*&shiny,4*&shiny", "3*,4*&shiny", [
+    { cp: 1000, types: [], moves: [], shiny: true, appraisal: "3*" },
+    { cp: 1000, types: [], moves: [], shiny: true, appraisal: "4*" },
+    { cp: 1000, types: [], moves: [], shiny: false, appraisal: "3*" }
+  ], [[true, true], [false, true], [false, false]]);
+
+  // Type exclusion polarity A=404, B=1129: AND excludes both types; OR is deliberately broader.
+  evaluatePair("!fire&!water", "!fire,!water", [
+    { cp: 1000, types: ["fire"], moves: [], shiny: false },
+    { cp: 1000, types: ["water"], moves: [], shiny: false },
+    { cp: 1000, types: ["grass"], moves: [], shiny: false }
+  ], [[false, true], [false, true], [true, true]]);
 });
 
 test("obsolete primal raid terms are absent from rules, presets, and rerolled searches", () => {
@@ -600,7 +668,7 @@ test("bundled species and official cup snapshots cover supported presets", () =>
   const banned = willpower.speciesBans.map((dex) => "!" + dex).join("&");
   assert.equal(
     utils.combineSearch([willpower.search, banned]),
-    "fighting&!282&!570&!571,psychic&!282&!570&!571,dark&!282&!570&!571"
+    "fighting,psychic,dark&!282&!570&!571"
   );
 });
 
@@ -774,10 +842,10 @@ test("individual IV rules use grouped appraisal bands and retain their AND seman
     assert.match(matches[0].search, /^(?:[0-4](?:attack|defense|hp))(?:,(?:[0-4](?:attack|defense|hp)))+$/);
   }
   assert.ok(ruleData.rules.every((rule) => !/(?:^|[&,])(?:attack|defense)-\d/.test(rule.search)));
-  assert.equal(utils.combineSearch([expected["iv-attack"], "water"]), "0attack&water,1attack&water");
+  assert.equal(utils.combineSearch([expected["iv-attack"], "water"]), "0attack,1attack&water");
   assert.equal(
     utils.combineSearch([expected["iv-attack"], expected["iv-defense"]]),
-    "0attack&3defense,0attack&4defense,1attack&3defense,1attack&4defense"
+    "0attack,1attack&3defense,4defense"
   );
 });
 

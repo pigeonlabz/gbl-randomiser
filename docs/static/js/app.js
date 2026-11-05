@@ -1109,18 +1109,25 @@
       (prefix.valid ? extraFilterInput : cupPrefixInput).focus();
       return;
     }
-    const nextRules = additionalRules.map((rule) => {
-      const parsed = GENERATOR_UTILS.validateSearchExpression(rule.search);
-      return parsed.valid ? Object.assign({}, rule, {
-        search: GENERATOR_UTILS.stripCpTerms(parsed.normalized),
-        label: rule.kind === "pokemon" ? rule.label : GENERATOR_UTILS.stripCpTerms(parsed.normalized)
-      }) : null;
-    }).filter((rule) => rule && rule.search);
-    customCupSettings = {
-      prefix: GENERATOR_UTILS.stripCpTerms(prefix.normalized),
-      additionalRules: nextRules,
-      extraFilter: GENERATOR_UTILS.stripCpTerms(expression.normalized)
-    };
+    let nextSettings;
+    try {
+      const nextRules = additionalRules.map((rule) => {
+        const parsed = GENERATOR_UTILS.validateSearchExpression(rule.search);
+        return parsed.valid ? Object.assign({}, rule, {
+          search: GENERATOR_UTILS.stripCpTerms(parsed.normalized),
+          label: rule.kind === "pokemon" ? rule.label : GENERATOR_UTILS.stripCpTerms(parsed.normalized)
+        }) : null;
+      }).filter((rule) => rule && rule.search);
+      nextSettings = {
+        prefix: GENERATOR_UTILS.stripCpTerms(prefix.normalized),
+        additionalRules: nextRules,
+        extraFilter: GENERATOR_UTILS.stripCpTerms(expression.normalized)
+      };
+    } catch (error) {
+      customCupEditorError.textContent = error.message;
+      return;
+    }
+    customCupSettings = nextSettings;
     saveCustomCupSettings();
     additionalRules = customCupSettings.additionalRules.map((rule) => Object.assign({}, rule));
     customCupEditor.close("apply");
