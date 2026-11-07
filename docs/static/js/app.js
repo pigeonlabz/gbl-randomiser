@@ -560,12 +560,46 @@
     if (cup.id === "rock-challenge") return "Rock Challenge";
     return cup.name.replace(/\s+Cup(?::)?/i, "").replace(/:\s*/, " ").replace(/\s+League$/i, "").trim();
   }
+  function interleaveCupLeagues(cups) {
+    const leagueIds = ["ultra", "master", "little"];
+    const leaguePositions = [Math.round(cups.length / 3), Math.round(cups.length * 2 / 3), cups.length];
+    const items = [];
+    let nextLeague = 0;
+    for (let index = 0; index <= cups.length; index += 1) {
+      while (nextLeague < leagueIds.length && leaguePositions[nextLeague] <= index) {
+        items.push({ kind: "league", id: leagueIds[nextLeague] });
+        nextLeague += 1;
+      }
+      if (index < cups.length) items.push({ kind: "cup", cup: cups[index] });
+    }
+    return items;
+  }
+  function createLeagueQuickTile(id) {
+    const league = leagues[id];
+    if (!league) return null;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "cup-quick-tile cup-quick-league-tile";
+    button.dataset.leagueId = id;
+    button.setAttribute("aria-label", "Open " + league.label + ", no Cup restrictions");
+    button.setAttribute("aria-pressed", String(!cupSelect.value && selectedLeagueId() === id));
+    button.title = "Open " + league.label;
+    const icon = document.createElement("span");
+    icon.className = "cup-quick-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "🏟️";
+    const label = document.createElement("span");
+    label.className = "cup-quick-label";
+    label.textContent = "Open " + (id === "little" ? "Little" : id.charAt(0).toUpperCase() + id.slice(1));
+    button.append(icon, label);
+    return button;
+  }
   function isHomegrownCup(cup) {
     return cup && cup.origin === "homegrown";
   }
   function scrollSelectedCupIntoView() {
-    const selected = Array.from(cupTileRow.querySelectorAll("[data-cup-id]"))
-      .find((button) => button.dataset.cupId === cupSelect.value);
+    if (!cupSelect.value) return;
+    const selected = cupTileRow.querySelector(`[data-cup-id="${cupSelect.value}"]`);
     if (!selected) return;
     const rowBounds = cupTileRow.getBoundingClientRect();
     const tileBounds = selected.getBoundingClientRect();
@@ -584,6 +618,11 @@
       button.setAttribute("aria-pressed", String(selected));
       button.classList.toggle("is-selected", selected);
     });
+    cupTileRow.querySelectorAll("[data-league-id]").forEach((button) => {
+      const selected = !selectedId && button.dataset.leagueId === selectedLeagueId();
+      button.setAttribute("aria-pressed", String(selected));
+      button.classList.toggle("is-selected", selected);
+    });
     scrollSelectedCupIntoView();
   }
   function renderCupQuickSelections() {
@@ -592,16 +631,17 @@
     openButton.type = "button";
     openButton.className = "cup-quick-tile cup-open-tile";
     openButton.dataset.cupId = "";
-    openButton.setAttribute("aria-label", "Open League, no Cup restrictions");
+    openButton.setAttribute("aria-label", "No Cup restrictions");
     openButton.setAttribute("aria-pressed", String(cupSelect.value === ""));
     const openIcon = document.createElement("span");
     openIcon.className = "cup-quick-icon";
     openIcon.setAttribute("aria-hidden", "true");
     openIcon.textContent = "○";
     const openLabel = document.createElement("span");
-    openLabel.textContent = "None";
+    openLabel.textContent = "No Cup";
     openButton.append(openIcon, openLabel);
     cupTileRow.appendChild(openButton);
+    cupTileRow.appendChild(createLeagueQuickTile("great"));
 
     const ids = recentCupIds.filter((id) => id && cupPickerItem(id));
     if (cupSelect.value && cupPickerItem(cupSelect.value)) ids.unshift(cupSelect.value);
@@ -609,7 +649,10 @@
     const orderedCups = orderedIds.map(cupPickerItem).filter(Boolean);
     const homegrownCups = orderedCups.filter(isHomegrownCup);
     const otherCups = orderedCups.filter((cup) => !isHomegrownCup(cup) && cup.id !== "custom");
-    const cupGroups = [homegrownCups, otherCups];
+    const cupGroups = [
+      homegrownCups.map((cup) => ({ kind: "cup", cup })),
+      interleaveCupLeagues(otherCups)
+    ];
     cupGroups.forEach((group, groupIndex) => {
       if (!group.length) return;
       if (groupIndex > 0 && homegrownCups.length && otherCups.length) {
@@ -617,10 +660,16 @@
         divider.className = "cup-carousel-divider";
         divider.setAttribute("role", "separator");
         divider.setAttribute("aria-orientation", "vertical");
-        divider.setAttribute("aria-label", "Other Cups");
+        divider.setAttribute("aria-label", "Official leagues and other Cups");
         cupTileRow.appendChild(divider);
       }
-      group.forEach((cup) => {
+      group.forEach((item) => {
+        if (item.kind === "league") {
+          const button = createLeagueQuickTile(item.id);
+          if (button) cupTileRow.appendChild(button);
+          return;
+        }
+        const cup = item.cup;
         const button = document.createElement("button");
         button.type = "button";
         button.className = "cup-quick-tile";
@@ -791,6 +840,11 @@
     renderCupPickerOptions();
     renderCupQuickSelections();
     cupTileRow.addEventListener("click", (event) => {
+      const leagueButton = event.target.closest("[data-league-id]");
+      if (leagueButton) {
+        requestLeagueSelection(leagueButton.dataset.leagueId);
+        return;
+      }
       const cupButton = event.target.closest("[data-cup-id]");
       if (!cupButton) return;
       requestCupSelection(cupButton.dataset.cupId);
@@ -842,6 +896,16 @@
     if (cupSelect.value === id) return;
     cupSelect.value = id;
     cupSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  function requestLeagueSelection(id) {
+    const input = leagueInputs.find((candidate) => candidate.value === id);
+    if (!input) return;
+    requestCupSelection("");
+    if (!input.checked) {
+      input.checked = true;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    updateCupPickerSelection();
   }
   function cupPresetSearch(cup) {
     const bannedSpecies = (cup.speciesBans || []).map((dex) => "!" + dex).join("&");
