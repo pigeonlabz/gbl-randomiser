@@ -76,6 +76,7 @@
             <button class="info-trigger" type="button" aria-label="Cup eligibility information" aria-haspopup="dialog" aria-expanded="false" aria-controls="cup-info-tooltip" aria-describedby="cup-info-tooltip" data-context-tooltip-trigger>
               <span aria-hidden="true">ⓘ</span>
             </button>
+            <button id="cup-shuffle" class="cup-shuffle-button" type="button" aria-label="Shuffle suggested Cups">⟳ <span>Shuffle</span></button>
             <button id="cup-library-open" class="icon-action cup-library-button" type="button" aria-label="Search all Cups" aria-haspopup="dialog" aria-expanded="false" aria-controls="cup-picker-popup" data-tooltip="Browse all Cups">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4.2 4.2"/></svg>
             </button>
@@ -86,7 +87,14 @@
               <p id="cup-no-selection-info" hidden>No cup restrictions selected.</p>
             </div>
           </div>
-          <div id="cup-tiles" class="cup-tile-row" role="group" aria-label="Cup carousel"></div>
+          <div id="cup-tiles" class="cup-tile-row" role="group" aria-label="Suggested Cups and league shortcuts"></div>
+          <section class="selected-cup-section" aria-labelledby="selected-cup-heading" aria-live="polite">
+            <h3 id="selected-cup-heading">Selected Cup</h3>
+            <div id="selected-cup-content" class="selected-cup-content">
+              <span id="selected-cup-none" class="selected-cup-none">None</span>
+              <button id="selected-cup-remove" class="selected-cup-remove" type="button" aria-label="Remove selected Cup" title="Remove selected Cup" hidden>×</button>
+            </div>
+          </section>
           <div id="cup-format-info" class="cup-format-info" role="status" aria-live="polite"></div>
           <select id="cup-select" name="cup" hidden aria-hidden="true" tabindex="-1">
             <option value="" selected>None — Open League</option>
@@ -338,6 +346,7 @@
   <script src="./static/js/species-data.js"></script>
   <script src="./static/js/cup-data.js"></script>
   <script src="./static/js/generator-utils.js"></script>
+  <script src="./static/js/cup-discovery.js"></script>
   <script src="./static/js/pvpoke-data.js"></script>
   <script src="./static/js/app.js"></script>
 </body>

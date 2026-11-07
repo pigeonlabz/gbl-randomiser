@@ -263,7 +263,7 @@ test("Cup-only filters keep the selected CP limit and omit mutators until enable
   assert.equal(compose(master, false, false), "shiny", "Open League still applies its generated mutator");
 });
 
-test("cup selection replaces the active cup and Open League clears cup restrictions", () => {
+test("cup selection replaces one active cup while league shortcuts remain independent", () => {
   const html = fs.readFileSync(path.join(__dirname, "../docs/index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
@@ -272,6 +272,8 @@ test("cup selection replaces the active cup and Open League clears cup restricti
   const getCup = (id) => cupData.find((cup) => cup.id === id);
 
   assert.match(html, /<select id="cup-select" name="cup" hidden aria-hidden="true"/);
+  assert.match(html, /id="cup-shuffle"/);
+  assert.match(html, /id="selected-cup-remove"/);
   assert.match(html, /id="cup-library-open" class="icon-action cup-library-button"[^>]*aria-label="Search all Cups"/);
   assert.match(html, /class="label-help-row"[\s\S]*?button id="cup-library-open"[\s\S]*?id="cup-tiles" class="cup-tile-row"/);
   assert.doesNotMatch(html, /class="cup-carousel"/);
@@ -285,7 +287,9 @@ test("cup selection replaces the active cup and Open League clears cup restricti
   assert.match(setupCupPicker, /event\.key === "Escape"[\s\S]*?closeCupPicker\(true\)/);
   assert.match(setupCupPicker, /!cupTileRow\.contains\(event\.target\) && !cupLibraryButton\.contains\(event\.target\)/);
   assert.match(css, /\.cup-tile-row\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*overflow-x:\s*auto/);
-  assert.match(css, /\.cup-library-button\s*\{[^}]*margin-left:\s*auto/);
+  assert.match(css, /\.cup-library-button\s*\{[^}]*margin-left:\s*0/);
+  assert.match(app, /function requestLeagueSelection\(id\)\s*\{\s*const input = leagueInputs\.find/);
+  assert.doesNotMatch(app, /function requestLeagueSelection\(id\)\s*\{[\s\S]*?requestCupSelection\(""\)/);
   assert.match(selectionHandler, /currentCup = CUP_PRESETS\.find\(\(cup\) => cup\.id === id\) \|\| null/);
   assert.match(selectionHandler, /if \(currentCup\) \{\s*cupPrefixInput\.value = cupPresetSearch\(currentCup\)/);
   assert.match(selectionHandler, /else if \(id === "custom"\) \{\s*cupPrefixInput\.value = customCupSettings\.prefix/);
@@ -293,15 +297,22 @@ test("cup selection replaces the active cup and Open League clears cup restricti
   assert.doesNotMatch(selectionHandler, /cupPrefixInput\.value\s*\+=|cupPrefixInput\.value\s*=\s*cupPrefixInput\.value/);
 
   let activeCupPrefix = "";
+  let activeLeague = "master";
   const selectCup = (id) => {
     const cup = getCup(id);
     activeCupPrefix = cup ? cup.search : "";
     return activeCupPrefix;
   };
+  const selectLeague = (id) => {
+    activeLeague = id;
+    return activeCupPrefix;
+  };
   selectCup("halloween");
+  assert.equal(selectLeague("ultra"), getCup("halloween").search, "switching leagues retains the selected cup restriction");
+  assert.equal(activeLeague, "ultra");
   assert.equal(selectCup("fossil"), getCup("fossil").search);
   assert.equal(activeCupPrefix.includes(getCup("halloween").search), false, "switching cups replaces the previous restriction");
-  assert.equal(selectCup(""), "", "Open League clears all cup search restrictions");
+  assert.equal(selectCup(""), "", "removing the cup clears all cup search restrictions");
 });
 
 test("guidance is available in accessible viewport-aware contextual tooltips", () => {
@@ -436,7 +447,7 @@ test("updated family names, tooltip removals, cup editor and output sizing are r
     const definition = app.slice(app.indexOf('id: "' + id + '"'), app.indexOf("},", app.indexOf('id: "' + id + '"')));
     assert.doesNotMatch(definition, /primary:\s*true/);
   }
-  assert.match(app, /openLabel\.textContent = "None"/);
+  assert.match(app, /none\.textContent = "None"/);
   assert.match(app, /cupNoSelectionInfo\.hidden = Boolean\(cupSelect\.value \|\| rawPrefix\)/);
   assert.match(html, /id="cup-no-selection-info" hidden>No cup restrictions selected\./);
   assert.match(html, /<legend class="visually-hidden">Randomness<\/legend>/);
@@ -672,7 +683,7 @@ test("bundled species and official cup snapshots cover supported presets", () =>
   );
 });
 
-test("built-in Cup emojis are unique and carousel exposes every Cup", () => {
+test("built-in Cup emojis are unique and carousel samples the searchable catalogue", () => {
   const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
   const quickPicker = app.slice(app.indexOf("function renderCupQuickSelections"), app.indexOf("function renderCupPickerOptions"));
@@ -682,18 +693,11 @@ test("built-in Cup emojis are unique and carousel exposes every Cup", () => {
   assert.ok(emojis.every((emoji) => typeof emoji === "string" && emoji.trim()), "every built-in Cup has an emoji");
   assert.equal(new Set(emojis).size, cups.length, "built-in Cup emojis are distinct");
   assert.match(app, /return emoji \|\| \(cup && cup\.official \? "🏆" : "🧩"\)/, "user-created cups have a fallback emoji");
-  assert.match(quickPicker, /ids\.unshift\(cupSelect\.value\)/, "the selected Cup remains prioritised within its origin group");
-  assert.match(quickPicker, /ids\.concat\(CUP_PRESETS\.map\(\(cup\) => cup\.id\), "custom"\)/, "the carousel includes every preset and custom filter entry");
-  assert.match(quickPicker, /orderedIds\.map\(cupPickerItem\)/);
-  assert.match(quickPicker, /const homegrownCups = orderedCups\.filter\(isHomegrownCup\)/, "homegrown Cups form the first carousel group");
-  assert.match(quickPicker, /const otherCups = orderedCups\.filter\(\(cup\) => !isHomegrownCup\(cup\) && cup\.id !== "custom"\)/, "other Cups retain their preset order in the second group");
-  assert.match(quickPicker, /cupGroups\.forEach/);
-  assert.match(quickPicker, /cup-carousel-divider/);
-  assert.match(quickPicker, /homegrownMark\.textContent = "🧪"/);
-  assert.match(quickPicker, /button\.appendChild\(homegrownMark\)/, "the homegrown marker is positioned on its carousel tile");
-  assert.doesNotMatch(quickPicker, /cup-quick-number|cupIndex \+ 1/, "carousel numbering is omitted");
-  assert.match(quickPicker, /unofficial homegrown cup/, "homegrown status is included in accessible carousel names");
-  assert.match(quickPicker, /icon\.textContent = cupEmoji\(cup\)/);
+  assert.match(quickPicker, /interleaveCupLeagues\(suggestedCups\)/, "six rotating suggestions are interspersed with league shortcuts");
+  assert.match(app, /cup-suggestion-heading/, "suggestions retain individual cup artwork and titles");
+  assert.match(app, /cup-suggestion-badge/, "suggestions identify official, homegrown and wildcard slots");
+  assert.match(app, /mark\.textContent = "🧪"/, "homegrown Cups keep their indicator");
+  assert.match(app, /icon\.textContent = cupEmoji\(cup\)/, "suggestions retain each cup's unique emoji");
   assert.match(app, /emoji\.textContent = cupEmoji\(cup\)/, "Browse All options show the same emoji");
   assert.match(app, /RECENT_CUPS_KEY = "gbl-filter-recent-cups-v1"/);
   assert.match(app, /recentCupIds = \[id\]\.concat\(recentCupIds\.filter\(\(recentId\) => recentId !== id\)\)\.slice\(0, 5\)/, "existing recent Cup persistence remains intact");
@@ -701,8 +705,7 @@ test("built-in Cup emojis are unique and carousel exposes every Cup", () => {
   assert.match(app, /function scrollSelectedCupIntoView\(\)/);
   assert.match(app, /cupTileRow\.scrollTo\(\{ left: nextScrollLeft, behavior: "smooth" \}\)/);
   assert.match(css, /\.cup-quick-tile\s*\{[^}]*scroll-snap-align:\s*start/);
-  assert.match(css, /\.cup-carousel-divider\s*\{[^}]*border-left:\s*1px solid/);
-  assert.match(css, /\.cup-quick-tile\s*>\s*\.cup-homegrown-mark\s*\{[^}]*top:\s*4px;\s*right:\s*6px/);
+  assert.match(css, /\.cup-suggestion-card\s*\{[^}]*flex-basis:\s*154px/);
   assert.match(css, /\.cup-picker-option\s*\{[^}]*min-height:\s*44px/);
 });
 

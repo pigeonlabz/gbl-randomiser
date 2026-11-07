@@ -80,3 +80,22 @@ test("cup controls, collapsed ranking lists, and the optional lookup stay compac
   assert.match(css, /\.pain-cup-eligible-list ul\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
   assert.match(css, /\.cup-controls-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
 });
+
+test("rotating Cup suggestions retain one active selection and the searchable catalogue", () => {
+  const discovery = fs.readFileSync(path.join(docsRoot, "static/js/cup-discovery.js"), "utf8");
+  assert.match(html, /id="cup-shuffle"/);
+  assert.match(html, /id="selected-cup-content"/);
+  assert.match(html, /id="selected-cup-remove"/);
+  assert.match(html, /id="cup-picker-search"/);
+  assert.match(app, /CUP_DISCOVERY\.chooseSuggestions\(CUP_PRESETS\)/);
+  assert.match(app, /cupSelect\.dispatchEvent\(new Event\("change", \{ bubbles: true \}\)\)/);
+  assert.match(app, /cupSelect\.value === id \? "" : id/);
+  assert.match(app, /selectedCupRemove\.addEventListener\("click", \(\) => requestCupSelection\(""\)\)/);
+  assert.match(app, /function requestLeagueSelection\(id\)\s*\{\s*const input = leagueInputs\.find/);
+  assert.doesNotMatch(app, /function requestLeagueSelection\(id\)\s*\{\s*const input = leagueInputs\.find\([\s\S]*?requestCupSelection\(""\)/);
+  assert.match(discovery, /take\(available\.filter\(\(cup\) => cup\.official\), 3, "official"\)/);
+  assert.match(discovery, /take\(available\.filter\(\(cup\) => cup\.origin === "homegrown"\), 2, "homegrown"\)/);
+  assert.match(css, /\.cup-suggestion-card\s*\{[^}]*flex-basis:\s*154px/);
+  assert.match(css, /\.cup-suggestion-card\s*\{[^}]*flex-basis:\s*142px[^}]*min-height:\s*88px/);
+  assert.match(css, /\.selected-cup-remove\s*\{/);
+});
