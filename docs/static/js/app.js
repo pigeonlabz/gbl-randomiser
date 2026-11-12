@@ -565,40 +565,6 @@
     if (cup.id === "rock-challenge") return "Rock Challenge";
     return cup.name.replace(/\s+Cup(?::)?/i, "").replace(/:\s*/, " ").replace(/\s+League$/i, "").trim();
   }
-  function interleaveCupLeagues(cups) {
-    const leagueIds = ["ultra", "master", "little"];
-    const leaguePositions = [Math.round(cups.length / 3), Math.round(cups.length * 2 / 3), cups.length];
-    const items = [];
-    let nextLeague = 0;
-    for (let index = 0; index <= cups.length; index += 1) {
-      while (nextLeague < leagueIds.length && leaguePositions[nextLeague] <= index) {
-        items.push({ kind: "league", id: leagueIds[nextLeague] });
-        nextLeague += 1;
-      }
-      if (index < cups.length) items.push({ kind: "cup", cup: cups[index] });
-    }
-    return items;
-  }
-  function createLeagueQuickTile(id) {
-    const league = leagues[id];
-    if (!league) return null;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "cup-quick-tile cup-quick-league-tile";
-    button.dataset.leagueId = id;
-    button.setAttribute("aria-label", "Select " + league.label + " League, keep Cup selection unchanged");
-    button.setAttribute("aria-pressed", String(!cupSelect.value && selectedLeagueId() === id));
-    button.title = "Select " + league.label + " League";
-    const icon = document.createElement("span");
-    icon.className = "cup-quick-icon";
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = "🏟️";
-    const label = document.createElement("span");
-    label.className = "cup-quick-label";
-    label.textContent = (id === "little" ? "Little" : id.charAt(0).toUpperCase() + id.slice(1)) + " League";
-    button.append(icon, label);
-    return button;
-  }
   function isHomegrownCup(cup) {
     return cup && cup.origin === "homegrown";
   }
@@ -620,11 +586,6 @@
     });
     cupTileRow.querySelectorAll("[data-cup-id]").forEach((button) => {
       const selected = button.dataset.cupId === selectedId;
-      button.setAttribute("aria-pressed", String(selected));
-      button.classList.toggle("is-selected", selected);
-    });
-    cupTileRow.querySelectorAll("[data-league-id]").forEach((button) => {
-      const selected = button.dataset.leagueId === selectedLeagueId();
       button.setAttribute("aria-pressed", String(selected));
       button.classList.toggle("is-selected", selected);
     });
@@ -678,7 +639,7 @@
     button.className = "cup-quick-tile cup-suggestion-card";
     button.dataset.cupId = cup.id;
     const slotLabel = suggestion.slot === "official" ? "Official" :
-      suggestion.slot === "homegrown" ? "Pigeon Labs homegrown" : "Wildcard";
+      suggestion.slot === "homegrown" ? "Homegrown" : "Wildcard";
     const cupName = cupDisplayName(cup) + (isHomegrownCup(cup) ? ", unofficial homegrown cup" : "");
     button.setAttribute("aria-label", cupName + ", " + slotLabel + " suggestion");
     button.setAttribute("aria-pressed", String(cup.id === cupSelect.value));
@@ -709,19 +670,10 @@
   }
   function renderCupQuickSelections() {
     cupTileRow.replaceChildren();
-    const greatTile = createLeagueQuickTile("great");
-    if (greatTile) cupTileRow.appendChild(greatTile);
-    const items = interleaveCupLeagues(suggestedCups);
-    items.forEach((item) => {
-      if (item.kind === "league") {
-        const button = createLeagueQuickTile(item.id);
-        if (button) cupTileRow.appendChild(button);
-        return;
-      }
-      const button = createCupSuggestionTile(item.cup);
+    suggestedCups.forEach((suggestion) => {
+      const button = createCupSuggestionTile(suggestion);
       if (button) cupTileRow.appendChild(button);
     });
-
     updateCupPickerSelection();
   }
   function renderCupPickerOptions() {
@@ -862,11 +814,6 @@
     cupShuffleButton.addEventListener("click", randomizeCupSuggestions);
     selectedCupRemove.addEventListener("click", () => requestCupSelection(""));
     cupTileRow.addEventListener("click", (event) => {
-      const leagueButton = event.target.closest("[data-league-id]");
-      if (leagueButton) {
-        requestLeagueSelection(leagueButton.dataset.leagueId);
-        return;
-      }
       const cupButton = event.target.closest("[data-cup-id]");
       if (!cupButton) return;
       requestCupSelection(cupButton.dataset.cupId);
@@ -919,15 +866,6 @@
     if (cupSelect.value === nextId) return;
     cupSelect.value = nextId;
     cupSelect.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-  function requestLeagueSelection(id) {
-    const input = leagueInputs.find((candidate) => candidate.value === id);
-    if (!input) return;
-    if (!input.checked) {
-      input.checked = true;
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-    }
-    updateCupPickerSelection();
   }
   function cupPresetSearch(cup) {
     const bannedSpecies = (cup.speciesBans || []).map((dex) => "!" + dex).join("&");

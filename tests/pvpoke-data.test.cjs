@@ -258,7 +258,7 @@ test("manual snapshot import builds a validated multi-league dataset from one pi
   assert.equal(snapshot.meta.counts.rankingsByLeague["10000"], 300);
   assert.equal(pvpoke.validateDataset(snapshot).valid, true);
 
-  const tempDirectory = await fs.promises.mkdtemp(path.join(__dirname, ".pvpoke-import-test-"));
+  const tempDirectory = await fs.promises.mkdtemp(path.join(os.tmpdir(), "gblr-pvpoke-import-test-"));
   const requests = [];
   const fakeFetch = async (url) => {
     requests.push(url);

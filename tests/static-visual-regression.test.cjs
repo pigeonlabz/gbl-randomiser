@@ -91,11 +91,10 @@ test("rotating Cup suggestions retain one active selection and the searchable ca
   assert.match(app, /cupSelect\.dispatchEvent\(new Event\("change", \{ bubbles: true \}\)\)/);
   assert.match(app, /cupSelect\.value === id \? "" : id/);
   assert.match(app, /selectedCupRemove\.addEventListener\("click", \(\) => requestCupSelection\(""\)\)/);
-  assert.match(app, /function requestLeagueSelection\(id\)\s*\{\s*const input = leagueInputs\.find/);
-  assert.doesNotMatch(app, /function requestLeagueSelection\(id\)\s*\{\s*const input = leagueInputs\.find\([\s\S]*?requestCupSelection\(""\)/);
+  assert.doesNotMatch(app, /data-league-id|function requestLeagueSelection\(/);
   assert.match(discovery, /take\(available\.filter\(\(cup\) => cup\.official\), 3, "official"\)/);
   assert.match(discovery, /take\(available\.filter\(\(cup\) => cup\.origin === "homegrown"\), 2, "homegrown"\)/);
-  assert.match(css, /\.cup-suggestion-card\s*\{[^}]*flex-basis:\s*154px/);
-  assert.match(css, /\.cup-suggestion-card\s*\{[^}]*flex-basis:\s*142px[^}]*min-height:\s*88px/);
+  assert.match(css, /\.cup-suggestion-card\s*\{[^}]*flex-basis:\s*126px/);
+  assert.match(css, /\.cup-tile-row\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit/);
   assert.match(css, /\.selected-cup-remove\s*\{/);
 });

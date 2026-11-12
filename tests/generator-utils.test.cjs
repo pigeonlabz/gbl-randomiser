@@ -263,7 +263,7 @@ test("Cup-only filters keep the selected CP limit and omit mutators until enable
   assert.equal(compose(master, false, false), "shiny", "Open League still applies its generated mutator");
 });
 
-test("cup selection replaces one active cup while league shortcuts remain independent", () => {
+test("cup selection replaces one active cup while league selection remains independent", () => {
   const html = fs.readFileSync(path.join(__dirname, "../docs/index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "../docs/static/js/app.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "../docs/static/css/app.css"), "utf8");
@@ -288,8 +288,7 @@ test("cup selection replaces one active cup while league shortcuts remain indepe
   assert.match(setupCupPicker, /!cupTileRow\.contains\(event\.target\) && !cupLibraryButton\.contains\(event\.target\)/);
   assert.match(css, /\.cup-tile-row\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*overflow-x:\s*auto/);
   assert.match(css, /\.cup-library-button\s*\{[^}]*margin-left:\s*0/);
-  assert.match(app, /function requestLeagueSelection\(id\)\s*\{\s*const input = leagueInputs\.find/);
-  assert.doesNotMatch(app, /function requestLeagueSelection\(id\)\s*\{[\s\S]*?requestCupSelection\(""\)/);
+  assert.doesNotMatch(app, /data-league-id|function requestLeagueSelection\(/);
   assert.match(selectionHandler, /currentCup = CUP_PRESETS\.find\(\(cup\) => cup\.id === id\) \|\| null/);
   assert.match(selectionHandler, /if \(currentCup\) \{\s*cupPrefixInput\.value = cupPresetSearch\(currentCup\)/);
   assert.match(selectionHandler, /else if \(id === "custom"\) \{\s*cupPrefixInput\.value = customCupSettings\.prefix/);
@@ -375,10 +374,12 @@ test("compact mobile result keeps filter actions and rule explanations accessibl
 
   const mobileStyles = css.slice(css.indexOf("@media (max-width: 640px)"), css.indexOf("@media (prefers-reduced-motion"));
   const mutatorMobileStyles = css.slice(css.lastIndexOf("@media (max-width: 640px)"));
-  assert.match(mobileStyles, /\.league-tile\s*\{[^}]*min-height:\s*98px/);
-  assert.match(mobileStyles, /\.league-ball\s*\{[^}]*width:\s*26px;\s*height:\s*26px/);
-  assert.match(mutatorMobileStyles, /\.mutator-settings\s*\{[^}]*grid-template-columns:\s*76px minmax\(0, 1fr\)/);
+  assert.match(mobileStyles, /\.league-tile\s*\{[^}]*min-height:\s*72px/);
+  assert.match(mobileStyles, /\.league-ball\s*\{[^}]*width:\s*24px;\s*height:\s*24px/);
+  assert.match(mutatorMobileStyles, /\.mutator-settings\s*\{[^}]*grid-template-columns:\s*72px minmax\(0, 1fr\)/);
   assert.match(mutatorMobileStyles, /\.mutator-settings \.randomness-control\s*\{\s*display:\s*block/);
+  assert.match(mutatorMobileStyles, /\.cup-tile-row\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit[^}]*overflow:\s*visible/);
+  assert.match(css, /@media \(max-width: 380px\)\s*\{\s*\.league-grid\s*\{[^}]*repeat\(2,/);
   assert.match(mobileStyles, /\.copy-label\s*\{\s*display:\s*none;/);
 });
 
@@ -693,7 +694,8 @@ test("built-in Cup emojis are unique and carousel samples the searchable catalog
   assert.ok(emojis.every((emoji) => typeof emoji === "string" && emoji.trim()), "every built-in Cup has an emoji");
   assert.equal(new Set(emojis).size, cups.length, "built-in Cup emojis are distinct");
   assert.match(app, /return emoji \|\| \(cup && cup\.official \? "🏆" : "🧩"\)/, "user-created cups have a fallback emoji");
-  assert.match(quickPicker, /interleaveCupLeagues\(suggestedCups\)/, "six rotating suggestions are interspersed with league shortcuts");
+  assert.match(quickPicker, /suggestedCups\.forEach\(\(suggestion\) =>/);
+  assert.doesNotMatch(app, /interleaveCupLeagues|createLeagueQuickTile/, "Cup suggestions contain only Cups");
   assert.match(app, /cup-suggestion-heading/, "suggestions retain individual cup artwork and titles");
   assert.match(app, /cup-suggestion-badge/, "suggestions identify official, homegrown and wildcard slots");
   assert.match(app, /mark\.textContent = "🧪"/, "homegrown Cups keep their indicator");
@@ -705,8 +707,8 @@ test("built-in Cup emojis are unique and carousel samples the searchable catalog
   assert.match(app, /function scrollSelectedCupIntoView\(\)/);
   assert.match(app, /cupTileRow\.scrollTo\(\{ left: nextScrollLeft, behavior: "smooth" \}\)/);
   assert.match(css, /\.cup-quick-tile\s*\{[^}]*scroll-snap-align:\s*start/);
-  assert.match(css, /\.cup-suggestion-card\s*\{[^}]*flex-basis:\s*154px/);
-  assert.match(css, /\.cup-picker-option\s*\{[^}]*min-height:\s*44px/);
+  assert.match(css, /\.cup-suggestion-card\s*\{[^}]*flex-basis:\s*126px/);
+  assert.match(css, /\.cup-picker-option\s*\{[^}]*min-height:\s*40px/);
 });
 
 test("Cup library search indexes names, league, type and custom eligibility metadata", () => {
